@@ -1,0 +1,27 @@
+# Production-scale synthetic stress test configuration.
+# Consumed by src/run_scale_stress.py; CLI flags override.
+#
+# Reviewer concern: benchmark catalogs (<= ML-20M) are below production/web
+# scale. This stress test measures COST (build time, index size, RSS,
+# latency at a calibrated agreement-recall target) on synthetic vectors at
+# larger catalog sizes. It deliberately measures NO recommendation quality:
+# every output row carries quality_measured=false to prevent overclaiming.
+
+catalog_sizes: [10000, 50000, 100000, 500000, 1000000]
+dims: [64, 128, 256]
+methods: [flat, hnsw, ivfflat, ivfpq, flatpq]
+
+# synthetic vector generation (seeded Gaussian mixture; clustered like real
+# item embeddings so IVF training is meaningful)
+n_clusters: 64
+cluster_std: 0.3
+
+calibration_target: 0.95
+topk: 100
+calibration_queries: 500
+timed_queries: 300
+budget_mb: 100
+seed: 42
+
+# Estimated peak RAM for the largest cell (1M x 256 float32 vectors ~ 1 GB
+# + index) — ensure the machine fits it or trim catalog_sizes/dims.

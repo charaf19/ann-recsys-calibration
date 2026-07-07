@@ -1,0 +1,29 @@
+| dataset | weighting | latency_budget_p95_ms | recall_floor | recommended_method | param_name | param_value | calibration_target | achieved_recall_vs_exact | latency_p95_ms | rationale | u2i_ndcg_at_k_mean | u2i_long_tail_exposure | i2i_ndcg_at_k_mean | i2i_long_tail_exposure |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| goodbooks | bm25 | 1.0000 | 0.9000 | ivfflat | nprobe | 8 | 0.9500 | 0.9511 | 0.0285 | meets latency budget and recall floor | 0.0147 | 0.0592 | 0.1078 | 0.0955 |
+| goodbooks | bm25 | 1.0000 | 0.9500 | ivfflat | nprobe | 8 | 0.9500 | 0.9511 | 0.0285 | meets latency budget and recall floor | 0.0147 | 0.0592 | 0.1078 | 0.0955 |
+| goodbooks | bm25 | 1.0000 | 0.9800 | ivfflat | nprobe | 32 | 0.9800 | 0.9917 | 0.0652 | meets latency budget and recall floor | 0.0147 | 0.0592 | 0.1078 | 0.0955 |
+| goodbooks | bm25 | 5.0000 | 0.9000 | ivfflat | nprobe | 8 | 0.9500 | 0.9511 | 0.0285 | meets latency budget and recall floor | 0.0147 | 0.0592 | 0.1078 | 0.0955 |
+| goodbooks | bm25 | 5.0000 | 0.9500 | ivfflat | nprobe | 8 | 0.9500 | 0.9511 | 0.0285 | meets latency budget and recall floor | 0.0147 | 0.0592 | 0.1078 | 0.0955 |
+| goodbooks | bm25 | 5.0000 | 0.9800 | ivfflat | nprobe | 32 | 0.9800 | 0.9917 | 0.0652 | meets latency budget and recall floor | 0.0147 | 0.0592 | 0.1078 | 0.0955 |
+| goodbooks | bm25 | 20.0000 | 0.9000 | ivfflat | nprobe | 8 | 0.9500 | 0.9511 | 0.0285 | meets latency budget and recall floor | 0.0147 | 0.0592 | 0.1078 | 0.0955 |
+| goodbooks | bm25 | 20.0000 | 0.9500 | ivfflat | nprobe | 8 | 0.9500 | 0.9511 | 0.0285 | meets latency budget and recall floor | 0.0147 | 0.0592 | 0.1078 | 0.0955 |
+| goodbooks | bm25 | 20.0000 | 0.9800 | ivfflat | nprobe | 32 | 0.9800 | 0.9917 | 0.0652 | meets latency budget and recall floor | 0.0147 | 0.0592 | 0.1078 | 0.0955 |
+| ml-1m | bm25 | 1.0000 | 0.9000 | ivfflat | nprobe | 16 | 0.9000 | 0.9422 | 0.0315 | meets latency budget and recall floor | 0.0489 | 0.0007 | 0.0582 | 0.0166 |
+| ml-1m | bm25 | 1.0000 | 0.9500 | ivfflat | nprobe | 32 | 0.9500 | 0.9854 | 0.0411 | meets latency budget and recall floor | 0.0489 | 0.0007 | 0.0582 | 0.0166 |
+| ml-1m | bm25 | 1.0000 | 0.9800 | ivfflat | nprobe | 32 | 0.9500 | 0.9854 | 0.0411 | meets latency budget and recall floor | 0.0489 | 0.0007 | 0.0582 | 0.0166 |
+| ml-1m | bm25 | 5.0000 | 0.9000 | ivfflat | nprobe | 16 | 0.9000 | 0.9422 | 0.0315 | meets latency budget and recall floor | 0.0489 | 0.0007 | 0.0582 | 0.0166 |
+| ml-1m | bm25 | 5.0000 | 0.9500 | ivfflat | nprobe | 32 | 0.9500 | 0.9854 | 0.0411 | meets latency budget and recall floor | 0.0489 | 0.0007 | 0.0582 | 0.0166 |
+| ml-1m | bm25 | 5.0000 | 0.9800 | ivfflat | nprobe | 32 | 0.9500 | 0.9854 | 0.0411 | meets latency budget and recall floor | 0.0489 | 0.0007 | 0.0582 | 0.0166 |
+| ml-1m | bm25 | 20.0000 | 0.9000 | ivfflat | nprobe | 16 | 0.9000 | 0.9422 | 0.0315 | meets latency budget and recall floor | 0.0489 | 0.0007 | 0.0582 | 0.0166 |
+| ml-1m | bm25 | 20.0000 | 0.9500 | ivfflat | nprobe | 32 | 0.9500 | 0.9854 | 0.0411 | meets latency budget and recall floor | 0.0489 | 0.0007 | 0.0582 | 0.0166 |
+| ml-1m | bm25 | 20.0000 | 0.9800 | ivfflat | nprobe | 32 | 0.9500 | 0.9854 | 0.0411 | meets latency budget and recall floor | 0.0489 | 0.0007 | 0.0582 | 0.0166 |
+| ml-20m | bm25 | 1.0000 | 0.9000 | ivfflat | nprobe | 8 | 0.9000 | 0.9055 | 0.0500 | meets latency budget and recall floor | 0.0445 | 0.0000 | 0.0517 | 0.0029 |
+| ml-20m | bm25 | 1.0000 | 0.9500 | ivfflat | nprobe | 16 | 0.9500 | 0.9657 | 0.0752 | meets latency budget and recall floor | 0.0445 | 0.0000 | 0.0517 | 0.0029 |
+| ml-20m | bm25 | 1.0000 | 0.9800 | ivfflat | nprobe | 32 | 0.9800 | 0.9904 | 0.1128 | meets latency budget and recall floor | 0.0445 | 0.0000 | 0.0517 | 0.0029 |
+| ml-20m | bm25 | 5.0000 | 0.9000 | ivfflat | nprobe | 8 | 0.9000 | 0.9055 | 0.0500 | meets latency budget and recall floor | 0.0445 | 0.0000 | 0.0517 | 0.0029 |
+| ml-20m | bm25 | 5.0000 | 0.9500 | ivfflat | nprobe | 16 | 0.9500 | 0.9657 | 0.0752 | meets latency budget and recall floor | 0.0445 | 0.0000 | 0.0517 | 0.0029 |
+| ml-20m | bm25 | 5.0000 | 0.9800 | ivfflat | nprobe | 32 | 0.9800 | 0.9904 | 0.1128 | meets latency budget and recall floor | 0.0445 | 0.0000 | 0.0517 | 0.0029 |
+| ml-20m | bm25 | 20.0000 | 0.9000 | ivfflat | nprobe | 8 | 0.9000 | 0.9055 | 0.0500 | meets latency budget and recall floor | 0.0445 | 0.0000 | 0.0517 | 0.0029 |
+| ml-20m | bm25 | 20.0000 | 0.9500 | ivfflat | nprobe | 16 | 0.9500 | 0.9657 | 0.0752 | meets latency budget and recall floor | 0.0445 | 0.0000 | 0.0517 | 0.0029 |
+| ml-20m | bm25 | 20.0000 | 0.9800 | ivfflat | nprobe | 32 | 0.9800 | 0.9904 | 0.1128 | meets latency budget and recall floor | 0.0445 | 0.0000 | 0.0517 | 0.0029 |

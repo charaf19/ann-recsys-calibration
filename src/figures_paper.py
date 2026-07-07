@@ -9,6 +9,11 @@ Figures (results/figures_paper/):
     fig_long_tail_exposure       long_tail_exposure by method and dataset
     fig_effect_sizes             Cliff's delta vs Flat (NDCG)
     fig_scaling                  latency vs catalog size (if scaling ran)
+
+Reviewer-limitation module figures (regenerated from module CSVs when
+present; identical to the ones the run_* scripts emit, via utils/figures_ext):
+    pq_* (3), exposure_* / user_popularity_* (3), embedding_backbone_sensitivity,
+    scale_stress_* (3)
 """
 import argparse
 from pathlib import Path
@@ -19,6 +24,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from utils.paths import RESULTS
+from utils import figures_ext as FX
 
 SCRIPT = "figures_paper"
 
@@ -167,6 +173,33 @@ def main():
         fig_scaling(pd.read_csv(scaling), out_dir)
     else:
         print(f"[{SCRIPT}] INFO: {scaling} not found (scaling study optional).")
+
+    # reviewer-limitation module figures (skip silently-missing inputs)
+    module_figures = [
+        (f"{RESULTS['paper_tables']}/pq_diagnostics_summary.csv",
+         [FX.fig_pq_reconstruction_error_by_dataset,
+          FX.fig_pq_neighbor_overlap_vs_quality_delta]),
+        (f"{RESULTS['pq_diagnostics']}/pq_diagnostics_all.csv",
+         [FX.fig_pq_popularity_decile_effect]),
+        (f"{RESULTS['exposure_analysis']}/exposure_analysis_all.csv",
+         [FX.fig_exposure_by_popularity_decile,
+          FX.fig_user_popularity_calibration_error,
+          FX.fig_exposure_gini_by_method]),
+        (f"{RESULTS['embedding_sensitivity']}/embedding_backbone_sensitivity_all.csv",
+         [FX.fig_embedding_backbone_sensitivity]),
+        (f"{RESULTS['scale_stress']}/scale_stress_all.csv",
+         [FX.fig_scale_stress_latency, FX.fig_scale_stress_memory,
+          FX.fig_scale_stress_index_size]),
+    ]
+    for csv_path, fig_fns in module_figures:
+        p = Path(csv_path)
+        if not p.is_file():
+            print(f"[{SCRIPT}] INFO: {p} not found (module optional); skipping.")
+            continue
+        df = pd.read_csv(p)
+        for fn in fig_fns:
+            for written in fn(df, out_dir):
+                print(f"[{SCRIPT}] output path: {written}")
 
     print(f"[{SCRIPT}] completed.")
 

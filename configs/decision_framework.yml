@@ -1,0 +1,39 @@
+# Calibrated, modality-aware, effect-size-aware ANN selection framework.
+# Consumed by src/ann_decision_framework.py; CLI flags override.
+
+# Scoring weights (normalized internally). Quality retention is binned from
+# the effect-size label so that methods with NEGLIGIBLE quality loss compete
+# only on latency / memory / exposure — a negligible-delta method never
+# outranks a faster negligible-delta method unless it wins clearly on memory
+# or long-tail exposure.
+weights:
+  quality_retention: 0.45
+  latency: 0.30
+  memory: 0.15
+  long_tail_exposure: 0.10
+
+# quality retention score per effect-size magnitude of delta-NDCG vs Flat
+quality_retention_by_effect:
+  negligible: 1.00
+  small: 0.70
+  medium: 0.30
+  large: 0.00
+
+# clear-advantage margins used in tie-breaks among negligible-delta methods
+memory_advantage_ratio: 0.70      # rss must be < 70% of the faster method's
+exposure_advantage_abs: 0.02      # long_tail_uplift must exceed by >= 0.02
+
+# operating constraints used for use-case labeling
+latency_budget_p95_ms: 20.0       # online-serving budget
+memory_budget_mb: 2048            # edge-device style RSS ceiling
+min_agreement_recall: 0.90        # below this, not_recommended
+
+# role policy (reviewer concern: Flat-PQ must be offline/batch-only)
+allow_flatpq_online: false
+
+method_roles:
+  flat: exact_reference
+  hnsw: online_candidate
+  ivfflat: online_candidate
+  ivfpq: memory_constrained_candidate
+  flatpq: offline_batch_candidate

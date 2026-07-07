@@ -141,6 +141,46 @@ python src/tables_paper.py
 python src/figures_paper.py
 ```
 
+## 12. Reviewer-limitation modules (run after steps 5–8)
+
+All of these are optional analyses layered on the main results; each skips
+gracefully when its inputs are missing. Mapping to reviewer concerns:
+`docs/reviewer_limitation_to_code_map.md`.
+
+```bash
+# ANN decision framework (scores + use-case labels from measured CSVs)
+python src/ann_decision_framework.py
+
+# PQ diagnostics (replaces the speculative regularization claim with evidence)
+python src/run_pq_diagnostics.py --datasets ml-1m ml-20m goodbooks --seed 42
+
+# Exposure-proxy analysis (deciles, head/mid/tail, popularity calibration)
+python src/run_exposure_analysis.py
+
+# Embedding backbone sensitivity (ann_ranking_stability vs svd_bm25)
+python src/run_embedding_backbone_sensitivity.py
+
+# Production-scale synthetic stress test (cost only; quality_measured=false)
+python src/run_scale_stress.py
+
+# Optional ANN backend comparison (ScaNN/NGT recorded as unavailable if not installed)
+python src/run_optional_ann_backend_comparison.py --item_vecs data/emb_ml1m_bm25_d128/item_vecs.npy --dataset_label ml-1m
+
+# Energy measurement (RAPL on Linux; honest NA fallback on Windows)
+python src/run_energy_measurement.py --datasets ml-1m ml-20m goodbooks --queries 5000 --seed 42
+
+# Claim-support audit (regenerate after every stage)
+python src/claim_support_audit.py
+
+# refresh consolidated tables/figures (now also covers the modules above)
+python src/tables_paper.py
+python src/figures_paper.py
+```
+
+Optional dependencies (not in requirements.txt, install only if wanted):
+`torch` (two_tower_mlp backbone), `hnswlib` / `scann` (Linux) / `ngt`
+(backend comparison), `pynvml` (supplementary GPU energy).
+
 ## Determinism notes
 
 - Temporal leave-one-out split: stable mergesort on (user_id, timestamp);

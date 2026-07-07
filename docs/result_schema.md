@@ -101,3 +101,50 @@ stage is run.
 - `scaling.csv` — n_items, n_users, n_interactions, method, target_recall,
   target_reached, param_name, calibrated_param_value,
   achieved_recall_vs_exact, latency_p50_ms, latency_p95_ms, seed.
+
+## Reviewer-limitation module outputs
+
+- `results/deployment_guidance/ann_decision_framework_scores.csv` (+
+  `paper_tables/ann_decision_framework_scores.{csv,md,tex}`) — dataset,
+  modality, method, weighting, embedding_backend, ndcg_at_10, recall_at_100,
+  ann_recall_vs_flat_at_100, latency_p95_ms, qps, rss_mb, long_tail_uplift,
+  delta_ndcg_vs_flat, effect_size_label, deployment_score, deployment_rank,
+  recommended_use_case (exact_reference | online_serving_recommended |
+  memory_constrained_online_serving | offline_batch_only | not_recommended),
+  recommendation_reason.
+- `results/pq_diagnostics/pq_diagnostics_all.csv` — long format: dataset,
+  weighting, dim, method, metric, decile, value, seed. Summary
+  (`paper_tables/pq_diagnostics_summary.*`) adds interpretation_label
+  (compression_hurts_quality | compression_preserves_quality |
+  compression_may_smooth_noise | insufficient_evidence) and the
+  cross-dataset correlations (NaN when <3 points).
+- `results/exposure_analysis/exposure_analysis_all.csv` — long format:
+  dataset, weighting, modality, method, metric, k, decile, group, value,
+  fairness_scope (long_tail_exposure_proxy_only |
+  popularity_calibration_proxy | provider_proxy_if_metadata_available |
+  not_full_fairness_evaluation), notes.
+- `results/embedding_sensitivity/embedding_backbone_sensitivity_all.csv` —
+  dataset, backbone, embedding_backend, modality, method, dim, ndcg_at_10,
+  recall_at_10, ann_recall_vs_exact_at_k_mean, long_tail_uplift,
+  ann_ranking_stability (Spearman of method ranking vs svd_bm25), seed.
+- `results/scale_stress/scale_stress_all.csv` — n_items, dim, method,
+  build_wall_time_sec, index_size_mb, rss_mb_after, rss_mb_delta,
+  calibration fields, latency_p50/p95_ms, **quality_measured=false**, seed.
+- `results/optional_backends/optional_ann_backend_comparison.csv` — backend,
+  backend_available, backend_error_message, vectors_source, n_items, dim,
+  build_time_sec, recall_vs_exact_at_10, latency_p50/p95_ms, seed.
+- `results/energy/energy_measurement_all.csv` — dataset, modality, method,
+  measurement_backend, direct_energy_available, cpu_energy_joules,
+  gpu_energy_joules, wall_time_sec, queries, energy_per_query_joules,
+  cpu_utilization_mean, rss_mb, notes (NA energy fields when
+  direct_energy_available=false; see docs/energy_measurement_protocol.md).
+- `results/paper_tables/claim_support_audit.{csv,md,tex}` — see
+  docs/claim_support_schema.md.
+
+### Per-query npz extensions (eval_modalities.py)
+
+In addition to the per-query metric arrays, each npz now stores:
+`recall_at_100`, `ann_recall_vs_exact_at_100` (per query),
+`exposure_counts_at_k`, `exposure_counts_at_100`, `pop_counts` (per item),
+`recs_at_k` (queries × metric_topk, -1 padded), `hist_pop_mean` (per query) —
+consumed by run_exposure_analysis.py.

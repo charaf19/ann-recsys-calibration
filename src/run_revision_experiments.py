@@ -241,6 +241,8 @@ def main():
                     "map_at_k_mean": estats.get("map_at_k_mean"),
                     "mrr_at_k_mean": estats.get("mrr_at_k_mean"),
                     "ann_recall_vs_exact_at_k_mean": estats.get("ann_recall_vs_exact_at_k_mean"),
+                    "recall_at_100_mean": estats.get("recall_at_100_mean"),
+                    "ann_recall_vs_exact_at_100_mean": estats.get("ann_recall_vs_exact_at_100_mean"),
                     "coverage_at_k": estats.get("coverage_at_k"),
                     "gini_exposure": estats.get("gini_exposure"),
                     "long_tail_exposure": estats.get("long_tail_exposure"),

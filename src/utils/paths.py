@@ -45,4 +45,20 @@ RESULTS = {
     "paper_tables": "results/paper_tables",
     "figures_paper": "results/figures_paper",
     "scaling": "results/scaling",
+    "embedding_sensitivity": "results/embedding_sensitivity",
+    "pq_diagnostics": "results/pq_diagnostics",
+    "exposure_analysis": "results/exposure_analysis",
+    "scale_stress": "results/scale_stress",
+    "optional_backends": "results/optional_backends",
+    "energy": "results/energy",
 }
+
+
+def first_existing(*candidates):
+    """Return the first existing path among candidates (or the first candidate
+    if none exist). Lets consumers accept alternate result filenames, e.g.
+    summary_main.csv vs main_results_all.csv."""
+    for c in candidates:
+        if Path(c).is_file():
+            return str(c)
+    return str(candidates[0])

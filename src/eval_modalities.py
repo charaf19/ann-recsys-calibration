@@ -102,17 +102,31 @@ def evaluate_modality(modality, item_vecs, ann, exact, train_idx_list, test_idx,
     exact_ranked = _ranked_lists(exact, Q, exclusions, topk, N)
 
     k = int(metric_topk)
-    per_query = {name: np.zeros(len(ann_ranked), dtype=np.float64)
+    k100 = min(100, int(topk))
+    n_q = len(ann_ranked)
+    per_query = {name: np.zeros(n_q, dtype=np.float64)
                  for name in M.PER_QUERY_METRICS}
-    ann_agreement = np.zeros(len(ann_ranked), dtype=np.float64)
+    ann_agreement = np.zeros(n_q, dtype=np.float64)
+    recall_100 = np.zeros(n_q, dtype=np.float64)
+    ann_agreement_100 = np.zeros(n_q, dtype=np.float64)
     exposure_counts = np.zeros(N, dtype=np.int64)
+    exposure_counts_at_100 = np.zeros(N, dtype=np.int64)
+    recs_at_k = np.full((n_q, k), -1, dtype=np.int32)
+    hist_pop_mean = np.zeros(n_q, dtype=np.float64)
 
     for i, (ranked, gt_ranked, pos) in enumerate(zip(ann_ranked, exact_ranked, positives)):
         for name, fn in M.PER_QUERY_METRICS.items():
             per_query[name][i] = fn(ranked, pos, k)
         ann_agreement[i] = M.recall_at_k(ranked, set(gt_ranked[:k]), k)
-        for iid in ranked[:k]:
+        recall_100[i] = M.recall_at_k(ranked, pos, k100)
+        ann_agreement_100[i] = M.recall_at_k(ranked, set(gt_ranked[:k100]), k100)
+        top_k = ranked[:k]
+        recs_at_k[i, :len(top_k)] = top_k
+        hist_pop_mean[i] = float(np.mean(pop_counts[train_idx_list[i]]))
+        for iid in top_k:
             exposure_counts[iid] += 1
+        for iid in ranked[:k100]:
+            exposure_counts_at_100[iid] += 1
 
     tail_mask = M.tail_mask_from_popularity(pop_counts, tail_frac)
     aggregate = {
@@ -122,6 +136,8 @@ def evaluate_modality(modality, item_vecs, ann, exact, train_idx_list, test_idx,
         "metric_topk": k,
         **{f"{name}_at_k_mean": float(v.mean()) for name, v in per_query.items()},
         "ann_recall_vs_exact_at_k_mean": float(ann_agreement.mean()),
+        "recall_at_100_mean": float(recall_100.mean()),
+        "ann_recall_vs_exact_at_100_mean": float(ann_agreement_100.mean()),
         "coverage_at_k": M.coverage_at_k(exposure_counts),
         "gini_exposure": M.gini_exposure(exposure_counts),
         "long_tail_exposure": M.long_tail_exposure(exposure_counts, tail_mask),
@@ -129,7 +145,17 @@ def evaluate_modality(modality, item_vecs, ann, exact, train_idx_list, test_idx,
         "tail_frac": float(tail_frac),
     }
     per_query["ann_recall_vs_exact"] = ann_agreement
-    return aggregate, per_query, exposure_counts
+    per_query["recall_at_100"] = recall_100
+    per_query["ann_recall_vs_exact_at_100"] = ann_agreement_100
+    # extras consumed by exposure_analysis.py (raw counts, not just proxies)
+    extras = {
+        "exposure_counts_at_k": exposure_counts,
+        "exposure_counts_at_100": exposure_counts_at_100,
+        "pop_counts": pop_counts.astype(np.int64),
+        "recs_at_k": recs_at_k,
+        "hist_pop_mean": hist_pop_mean,
+    }
+    return aggregate, per_query, exposure_counts, extras
 
 
 def main():
@@ -187,7 +213,7 @@ def main():
     perquery_dir.mkdir(parents=True, exist_ok=True)
 
     for mod in modalities:
-        aggregate, per_query, exposure_counts = evaluate_modality(
+        aggregate, per_query, exposure_counts, extras = evaluate_modality(
             mod, item_vecs, ann, exact, train_idx_list, test_idx,
             pop_counts, args.topk, args.metric_topk, args.tail_frac)
         aggregate.update({
@@ -213,6 +239,7 @@ def main():
                              "metric_topk": int(args.metric_topk),
                              "seed": int(args.seed)}),
             exposure_proxy=M.exposure_proxy(exposure_counts),
+            **extras,
             **per_query,
         )
         print(f"[{SCRIPT}] output path: {agg_path}")

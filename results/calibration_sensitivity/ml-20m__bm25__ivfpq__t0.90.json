@@ -1,0 +1,102 @@
+{
+  "method": "ivfpq",
+  "param_name": "nprobe",
+  "target_recall": 0.9,
+  "target_reached": false,
+  "calibrated_param_value": 256,
+  "achieved_recall_vs_exact": 0.88429,
+  "latency_ms_at_calibrated": {
+    "mean": 0.33965999999054475,
+    "p50": 0.3378500000508211,
+    "p95": 0.3555150003194285
+  },
+  "topk": 100,
+  "n_calibration_queries": 1000,
+  "seed": 42,
+  "sweep": [
+    {
+      "param_value": 1,
+      "recall_vs_exact": 0.44434,
+      "latency_ms": {
+        "mean": 0.04824719999123772,
+        "p50": 0.047700000322947744,
+        "p95": 0.053004999790573486
+      }
+    },
+    {
+      "param_value": 2,
+      "recall_vs_exact": 0.61854,
+      "latency_ms": {
+        "mean": 0.037305400022887625,
+        "p50": 0.03600000036385609,
+        "p95": 0.04471999932320612
+      }
+    },
+    {
+      "param_value": 4,
+      "recall_vs_exact": 0.75814,
+      "latency_ms": {
+        "mean": 0.04252119998272974,
+        "p50": 0.04090000038559083,
+        "p95": 0.05630500027109519
+      }
+    },
+    {
+      "param_value": 8,
+      "recall_vs_exact": 0.83849,
+      "latency_ms": {
+        "mean": 0.05015899996942608,
+        "p50": 0.04949999993186793,
+        "p95": 0.057405000507060315
+      }
+    },
+    {
+      "param_value": 16,
+      "recall_vs_exact": 0.87172,
+      "latency_ms": {
+        "mean": 0.06894879998981196,
+        "p50": 0.06804999975429382,
+        "p95": 0.07916500021565293
+      }
+    },
+    {
+      "param_value": 32,
+      "recall_vs_exact": 0.88156,
+      "latency_ms": {
+        "mean": 0.10362280001754698,
+        "p50": 0.10270000029777293,
+        "p95": 0.11843500019494965
+      }
+    },
+    {
+      "param_value": 64,
+      "recall_vs_exact": 0.88375,
+      "latency_ms": {
+        "mean": 0.1748391999899468,
+        "p50": 0.17190000016853446,
+        "p95": 0.19281500012766628
+      }
+    },
+    {
+      "param_value": 128,
+      "recall_vs_exact": 0.88428,
+      "latency_ms": {
+        "mean": 0.2954645999816421,
+        "p50": 0.29600000016216654,
+        "p95": 0.31361999958789966
+      }
+    },
+    {
+      "param_value": 256,
+      "recall_vs_exact": 0.88429,
+      "latency_ms": {
+        "mean": 0.33965999999054475,
+        "p50": 0.3378500000508211,
+        "p95": 0.3555150003194285
+      }
+    }
+  ],
+  "dataset": "ml-20m",
+  "weighting": "bm25",
+  "dim": 128
+}
