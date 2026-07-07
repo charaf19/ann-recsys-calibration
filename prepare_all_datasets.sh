@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 set -e
-python src/prepare_dataset.py --dataset ml-1m --out data/ml1m.csv
-python src/prepare_dataset.py --dataset ml-20m --out data/ml20m.csv
-python src/prepare_dataset.py --dataset goodbooks --out data/goodbooks.csv
-python src/prepare_dataset.py --dataset amazon-books --out data/amazon_books.csv
+PYTHON="${PYTHON:-python}"
+if [ -x ".venv/Scripts/python.exe" ]; then
+  PYTHON=".venv/Scripts/python.exe"
+elif [ -x ".venv/bin/python" ]; then
+  PYTHON=".venv/bin/python"
+fi
+
+"$PYTHON" src/download_datasets.py --datasets ml-1m ml-20m goodbooks
 
 echo "[prepare_all] done."

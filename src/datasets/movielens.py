@@ -1,6 +1,9 @@
-\
-import os, zipfile, pandas as pd
+import os
+import zipfile
 from pathlib import Path
+
+import pandas as pd
+
 from .common import _download
 
 ML1M_URL = "https://files.grouplens.org/datasets/movielens/ml-1m.zip"

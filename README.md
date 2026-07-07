@@ -1,6 +1,8 @@
 # Tiny-Index, Big Impact (Local-Only Benchmark)
 
-Everything runs **locally**: dataset prep, training, index build, latency/memory measurement, end-to-end quality, figures, and a Markdown report.
+Everything runs **locally** and **CPU-only**: dataset prep, training, index build, latency/memory measurement, end-to-end quality, figures, and a Markdown report.
+
+**Revision pipeline** (effect-size-aware, modality-separated ANN calibration and deployment evaluation): see the [Revision pipeline](#revision-pipeline-calibration-modalities-statistics) section below and the full step-by-step recipe in [reproduction.md](reproduction.md).
 
 ## Install
 ```bash
@@ -11,15 +13,23 @@ pip install -r requirements.txt
 
 ## Download datasets (auto, normalized to `user_id,item_id,timestamp`)
 ```bash
-python src/prepare_dataset.py --dataset ml-1m          --out data/ml1m.csv
-python src/prepare_dataset.py --dataset ml-20m         --out data/ml20m.csv
-python src/prepare_dataset.py --dataset goodbooks      --out data/goodbooks.csv
-python src/prepare_dataset.py --dataset oulad          --out data/oulad.csv
-python src/prepare_dataset.py --dataset bookcrossing   --out data/bookcrossing.csv
-python src/prepare_dataset.py --dataset movietweetings --out data/movietweetings.csv
+python src/download_datasets.py
 ```
 
-*(Alternatively)* run all at once:
+By default this prepares the three benchmark datasets: `ml-1m`, `ml-20m`, and
+`goodbooks`. You can still prepare a single dataset directly:
+
+```bash
+python src/prepare_dataset.py --dataset ml-1m --out data/ml1m.csv
+```
+
+Amazon Books is also supported explicitly:
+
+```bash
+python src/download_datasets.py --datasets amazon-books
+```
+
+*(Alternatively)* run the default dataset downloader:
 ```bash
 ./prepare_all_datasets.sh     # or:  ./prepare_all_datasets.ps1  (PowerShell)
 ```
@@ -84,3 +94,34 @@ Outputs to `results/`: per-dataset CSVs, `summary_all.csv`, figures, and `report
 python src/sweep.py --dataset ml-1m --method hnsw --budget_mb 100 --ef_list 32 64 128
 python src/sweep.py --dataset ml-1m --method ivfpq --budget_mb 100 --nprobe_list 4 8 16 32 --m_list 16 32 --with_opq --without_opq
 ```
+
+---
+
+## Revision pipeline (calibration, modalities, statistics)
+
+New, backward-compatible layer on top of the original benchmark:
+
+- **BM25 / TF-IDF / none weighting** before SVD: `train_embeddings.py --weighting bm25 --bm25_k1 1.2 --bm25_b 0.75 --normalize l2 --seed 42` (`src/utils/weighting.py`). Defaults reproduce the original unweighted embeddings.
+- **Modality-separated evaluation** (`src/eval_modalities.py`): user-to-item (U2I; user = mean of training item vectors, training items excluded) and item-to-item (I2I; anchor = last training item) under a deterministic **temporal leave-one-out** split (`src/utils/splits.py`). Per-query metrics are saved for statistics.
+- **ANN calibration vs exact Flat** (`src/calibrate.py`): smallest `ef`/`nprobe` reaching a target agreement recall@k, with latency at each grid point. **Sensitivity across targets 0.90 / 0.95 / 0.98**: `src/run_calibration_sensitivity.py` + `configs/calibration_thresholds.yml`.
+- **Bootstrap CIs + paired significance** (`src/bootstrap_significance.py`) and **effect sizes** — paired Cohen's d and Cliff's delta vs Flat (`src/effect_size_tables.py`).
+- **Long-tail exposure metrics** (`long_tail_exposure`, `long_tail_uplift`, `exposure_proxy` in `src/utils/metrics.py`) instead of generic fairness terms.
+- **Deployment guidance** (`src/deployment_guidance.py`): constraint-based index recommendations derived from the measured CSVs.
+- **CPU-only reproducibility**: `src/capture_hardware.py`, `configs/hardware_profiles.yml`, `docs/hardware_protocol.md`; deterministic seeds everywhere (`--seed`, default 42).
+- **Paper tables & figures**: `src/tables_paper.py`, `src/figures_paper.py` (post-processing only; skip gracefully when inputs are missing).
+- **Synthetic scaling** (optional): `src/synthetic_scaling.py`.
+
+Quick start (after dataset prep, see above):
+
+```bash
+python src/capture_hardware.py --out_dir results/hardware --main_experiments_gpu_used false
+python src/run_revision_experiments.py --datasets ml-1m ml-20m goodbooks --modalities u2i i2i --methods flat hnsw ivfflat ivfpq flatpq --weighting bm25 --dim 128 --budget_mb 100 --calibration_targets 0.90 0.95 0.98 --queries_large 10000 --queries_ml1m full --cpu_only --seed 42
+python src/run_calibration_sensitivity.py
+python src/bootstrap_significance.py
+python src/effect_size_tables.py
+python src/deployment_guidance.py
+python src/tables_paper.py
+python src/figures_paper.py
+```
+
+All outputs land under `results/` (see `docs/result_schema.md`). Docs: `docs/artifact_description.md`, `docs/reviewer_revision_map.md`, `docs/hardware_protocol.md`, `docs/limitations_code_level.md`. Full recipe: [reproduction.md](reproduction.md).

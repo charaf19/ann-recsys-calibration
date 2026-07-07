@@ -1,0 +1,34 @@
+{
+  "datasets": [
+    "ml-1m",
+    "ml-20m",
+    "goodbooks"
+  ],
+  "modalities": [
+    "u2i",
+    "i2i"
+  ],
+  "methods": [
+    "flat",
+    "hnsw",
+    "ivfflat",
+    "ivfpq",
+    "flatpq"
+  ],
+  "weighting": "bm25",
+  "dim": 128,
+  "budget_mb": 100,
+  "calibration_targets": [
+    0.9,
+    0.95,
+    0.98
+  ],
+  "primary_target": 0.95,
+  "queries_large": "10000",
+  "queries_ml1m": "full",
+  "latency_queries": 2000,
+  "topk": 100,
+  "metric_topk": 10,
+  "cpu_only": true,
+  "seed": 42
+}

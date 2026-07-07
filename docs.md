@@ -345,14 +345,14 @@ Let `ranked[0..K-1]` be top‑K ANN results for a query, `positives` be the user
 ## 13) Reproducibility & environment
 
 * **Python:** 3.10–3.11
-* **Core deps:** `numpy`, `pandas`, `faiss-cpu`, `hnswlib`, `psutil`, `matplotlib`
-* **Windows:** Use `faiss-cpu` wheel from PyPI.
+* **Core deps:** `numpy`, `pandas`, `faiss-cpu`, `psutil`, `matplotlib`
+* **Windows:** HNSW uses FAISS, so no local C++ build tools are required.
 * **Virtual env:**
 
   ```bash
   python -m venv .venv
   .\.venv\Scripts\activate
-  pip install -r requirements.txt  # or pip install numpy pandas faiss-cpu hnswlib psutil matplotlib
+  pip install -r requirements.txt  # or pip install numpy pandas faiss-cpu psutil matplotlib
   ```
 
 **Performance knobs:**

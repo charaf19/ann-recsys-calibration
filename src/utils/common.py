@@ -1,6 +1,20 @@
 \
-import os, time, json, math, psutil, numpy as np
+import os, time, json, math, random, psutil, numpy as np
 from contextlib import contextmanager
+
+DEFAULT_SEED = 42
+
+def set_global_seed(seed: int = DEFAULT_SEED):
+    """Seed Python and NumPy global RNGs and return a numpy Generator.
+
+    Scripts should prefer the returned Generator for sampling; the global
+    seeding covers legacy np.random.* call sites for reproducibility.
+    """
+    seed = int(seed)
+    random.seed(seed)
+    np.random.seed(seed)
+    os.environ.setdefault("PYTHONHASHSEED", str(seed))
+    return np.random.default_rng(seed)
 
 def ensure_dir(path: str):
     os.makedirs(path, exist_ok=True)

@@ -1,4 +1,4 @@
-import argparse, os, numpy as np, faiss, hnswlib, math, json
+import argparse, os, numpy as np, faiss, math, json
 from pathlib import Path
 
 def human(n):
@@ -37,12 +37,13 @@ def main():
     print(f"[build_index] method={args.method} N={N} D={D} budget={args.budget_mb}MB out={out}")
 
     if args.method == "hnsw":
-        index = hnswlib.Index(space='l2', dim=D)
-        index.init_index(max_elements=N, ef_construction=args.efc, M=args.M)
-        index.add_items(item_vecs, np.arange(N))
-        index_path = out / "hnsw_index.bin"; index.save_index(str(index_path))
-        vecs_path = out / "vectors.npy"; np.save(vecs_path, item_vecs)
-        size = index_path.stat().st_size + vecs_path.stat().st_size
+        index = faiss.IndexHNSWFlat(D, args.M)
+        index.hnsw.efConstruction = int(args.efc)
+        index.add(item_vecs)
+        index_path = out / "faiss_hnsw.index"
+        faiss.write_index(index, str(index_path))
+        np.save(out / "item_ids.npy", item_ids)
+        size = index_path.stat().st_size + (out / "item_ids.npy").stat().st_size
         print(f"[build_index] HNSW saved. ~size={human(size)} budget={args.budget_mb}MB")
 
     elif args.method == "ivfpq":

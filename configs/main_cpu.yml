@@ -1,0 +1,28 @@
+# Main CPU-only experiment configuration.
+# Consumed by src/run_revision_experiments.py; any CLI flag overrides these.
+
+datasets: [ml-1m, ml-20m, goodbooks]
+modalities: [u2i, i2i]
+methods: [flat, hnsw, ivfflat, ivfpq, flatpq]
+
+weighting: bm25          # none | tfidf | bm25
+bm25_k1: 1.2
+bm25_b: 0.75
+dim: 128
+normalize: l2
+
+budget_mb: 100
+topk: 100
+metric_topk: 10
+
+# calibration against exact Flat (ANN agreement recall @ topk)
+calibration_targets: [0.90, 0.95, 0.98]
+primary_target: 0.95     # operating point used for latency + quality runs
+
+# evaluation query counts (temporal LOO test users)
+queries_large: 10000     # ml-20m, goodbooks
+queries_ml1m: full       # evaluate every eligible ml-1m user
+latency_queries: 2000
+
+cpu_only: true
+seed: 42

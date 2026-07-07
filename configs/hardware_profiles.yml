@@ -1,0 +1,32 @@
+# Hardware profiles for reporting and thread pinning.
+# Record the profile actually used with:
+#   python src/capture_hardware.py --out_dir results/hardware --label <profile>
+# The captured results/hardware/hardware.json is the ground truth for the
+# paper; these profiles document the intended protocol (docs/hardware_protocol.md).
+
+profiles:
+  laptop_cpu:
+    description: "Consumer laptop, CPU-only reference profile"
+    expected_cores_min: 4
+    ram_gb_min: 8
+    gpu_used: false
+    thread_env:
+      OMP_NUM_THREADS: "4"
+      OPENBLAS_NUM_THREADS: "4"
+      MKL_NUM_THREADS: "4"
+
+  workstation_cpu:
+    description: "Desktop/workstation, CPU-only profile for the full grid"
+    expected_cores_min: 8
+    ram_gb_min: 32
+    gpu_used: false
+    thread_env:
+      OMP_NUM_THREADS: "8"
+      OPENBLAS_NUM_THREADS: "8"
+      MKL_NUM_THREADS: "8"
+
+# Protocol notes:
+# - Single-query (batch size 1) latency; 200-query warmup before timing.
+# - Report p50/p95 percentiles, never only means.
+# - Fix thread env vars BEFORE launching Python; capture_hardware.py records them.
+# - No GPU is used anywhere in the main experiments (faiss-cpu only).

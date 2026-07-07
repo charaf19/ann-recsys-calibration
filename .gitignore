@@ -6,6 +6,7 @@ __pycache__/
 .Python
 
 # Virtual Environment
+.venv/
 venv/
 env/
 ENV/
@@ -28,6 +29,7 @@ venv.bak/
 Thumbs.db
 
 # Data files (large datasets)
+data/
 *.csv
 *.tsv
 *.parquet
@@ -49,9 +51,19 @@ Thumbs.db
 *.log
 
 # Results and outputs
+# Policy: small text outputs under results/ (csv, md, json, tex) stay
+# trackable; heavy binary artifacts (figures, per-query arrays) are ignored,
+# but the directory scaffold is kept via .gitkeep files.
 results/runs/
-results/figures/
-results/figures_paper/
+results/figures/*
+!results/figures/.gitkeep
+results/figures_paper/*
+!results/figures_paper/.gitkeep
+results/main/perquery/*
+!results/main/perquery/.gitkeep
+
+# Per-query metric arrays and other large numpy archives
+*.npz
 
 # Temporary files
 *.tmp

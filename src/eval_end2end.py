@@ -4,7 +4,6 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import faiss
-import hnswlib
 
 
 # ----------------------------
@@ -18,6 +17,7 @@ def _resolve_index_path(p: str) -> Path:
         raise ValueError(f"Index path not found: {p}")
     known = [
         "index.faiss",
+        "faiss_hnsw.index",
         "hnsw.bin",
         "hnsw_index.bin",
         "faiss_ivfpq.index",
@@ -37,23 +37,8 @@ def _resolve_index_path(p: str) -> Path:
 
 
 def _prepare_ann(fpath: Path, dim: int, N: int, nprobe: int = None, ef: int = None):
-    if fpath.suffix.lower() == ".bin" or fpath.name in {"hnsw_index.bin", "hnsw.bin"}:
-        method = "hnsw"
-        p = hnswlib.Index(space="l2", dim=dim)
-        p.load_index(str(fpath), max_elements=N)
-        if ef is not None:
-            p.set_ef(int(ef))
-
-        def _search(Q, topk: int):
-            ids = []
-            for i in range(Q.shape[0]):
-                I, _ = p.knn_query(Q[i], k=topk)
-                ids.append(I[0])
-            return np.vstack(ids)
-
-        return method, _search
-
     index = faiss.read_index(str(fpath))
+    index_dc = faiss.downcast_index(index)
     ivf = None
     try:
         ivf = faiss.extract_index_ivf(index)
@@ -68,8 +53,12 @@ def _prepare_ann(fpath: Path, dim: int, N: int, nprobe: int = None, ef: int = No
         if nprobe is not None:
             ivf.nprobe = int(nprobe)
     else:
-        base_dc = faiss.downcast_index(index)
-        method = "flatpq" if isinstance(base_dc, faiss.IndexPQ) else "flat"
+        if isinstance(index_dc, faiss.IndexHNSWFlat):
+            method = "hnsw"
+            if ef is not None:
+                index_dc.hnsw.efSearch = int(ef)
+        else:
+            method = "flatpq" if isinstance(index_dc, faiss.IndexPQ) else "flat"
 
     def _search(Q, topk: int):
         _, I = index.search(Q, topk)

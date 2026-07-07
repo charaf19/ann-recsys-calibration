@@ -6,7 +6,6 @@ from pathlib import Path
 
 import numpy as np
 import faiss
-import hnswlib
 import psutil  # kept for env parity; rss_mb comes from utils.common
 from utils.common import percentiles, rss_mb
 
@@ -26,7 +25,7 @@ def _resolve_index_path(p: str) -> Path:
         raise ValueError(f"Index path not found: {p}")
 
     # Known names first
-    known = ["index.faiss", "hnsw.bin", "hnsw_index.bin",
+    known = ["index.faiss", "faiss_hnsw.index", "hnsw.bin", "hnsw_index.bin",
              "faiss_ivfpq.index", "faiss_ivfflat.index",
              "faiss_flatpq.index", "faiss_flat.index"]
     for name in known:
@@ -51,33 +50,8 @@ def _detect_method_and_prepare(fpath: Path, dim: int, N: int, args: argparse.Nam
       warmup_fn: callable () -> None
     Applies nprobe to IVF if present, ef to HNSW if present.
     """
-    # HNSW path(s)
-    if fpath.suffix.lower() == ".bin" or fpath.name in {"hnsw_index.bin"}:
-        method = "hnsw"
-        p = hnswlib.Index(space="l2", dim=dim)
-        # max_elements is only used to pre-allocate; use N (catalog size)
-        p.load_index(str(fpath), max_elements=N)
-        p.set_ef(getattr(args, "ef", 64))
-
-        def warmup():
-            for _ in range(200):
-                q = np.random.randint(0, N)
-                _ = p.knn_query(item_vecs[q], k=args.topk)
-
-        def search_fn(Q, topk: int):
-            # hnswlib supports batch queries via lists; we’ll map row-wise
-            I_list = []
-            D_list = []
-            for i in range(Q.shape[0]):
-                I, D = p.knn_query(Q[i], k=topk)
-                I_list.append(I[0])
-                D_list.append(D[0])
-            return np.vstack(I_list), np.vstack(D_list)
-
-        return method, search_fn, warmup
-
-    # FAISS path
     index = faiss.read_index(str(fpath))
+    index_dc = faiss.downcast_index(index)
 
     # Try to detect IVF even through pretransform (e.g., OPQ + IVF)
     ivf = None
@@ -97,10 +71,12 @@ def _detect_method_and_prepare(fpath: Path, dim: int, N: int, args: argparse.Nam
         # Apply nprobe
         if getattr(args, "nprobe", None) is not None:
             ivf.nprobe = int(args.nprobe)
+    elif isinstance(index_dc, faiss.IndexHNSWFlat):
+        method = "hnsw"
+        index_dc.hnsw.efSearch = int(getattr(args, "ef", 64))
     else:
         # Non-IVF: flat exact or flat-PQ
-        base_dc = faiss.downcast_index(index)
-        if isinstance(base_dc, faiss.IndexPQ):
+        if isinstance(index_dc, faiss.IndexPQ):
             method = "flatpq"
         else:
             method = "flat"
