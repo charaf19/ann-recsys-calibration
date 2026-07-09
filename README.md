@@ -1,6 +1,43 @@
-# Tiny-Index, Big Impact (Local-Only Benchmark)
+# IndexWise-Recsys
 
-Everything runs **locally** and **CPU-only**: dataset prep, training, index build, latency/memory measurement, end-to-end quality, figures, and a Markdown report.
+**IndexWise-Recsys** is a reproducible recommender-retrieval framework for
+calibrated approximate-nearest-neighbor (ANN) evaluation: modality-separated
+U2I / I2I retrieval, effect-size-aware statistics, long-tail exposure
+analysis, PQ diagnostics, synthetic scaling, deployment guidance, and
+optional GPU-aware experimentation.
+
+Everything runs **locally**. The **canonical, reproducible benchmark is
+CPU-only** (deterministic seeds everywhere, single-threaded FAISS index
+construction by default). GPU support exists as an **optional, exploratory
+extension** (`--use_gpu`, outputs isolated under `results/gpu_experiments/`)
+and is not part of the main results — GPU kernels may introduce
+nondeterminism (see [docs/hardware_protocol.md](docs/hardware_protocol.md)).
+
+## Quick Start (CPU baseline)
+
+> These commands are provided for **users to run manually**. They download a
+> dataset and run experiments — they must NOT be executed by any automated
+> agent working on this repository.
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements-cpu.txt
+
+python src/capture_hardware.py --out_dir results/hardware --main_experiments_gpu_used false
+python src/prepare_dataset.py --dataset ml-1m --out data/ml1m.csv
+python src/run_revision_experiments.py --datasets ml-1m --modalities u2i i2i --methods flat hnsw ivfflat ivfpq flatpq --weighting bm25 --dim 128 --budget_mb 100 --calibration_targets 0.90 0.95 0.98 --queries_ml1m full --cpu_only --seed 42
+```
+
+Then validate what was produced:
+
+```bash
+python src/validate_results.py --allow_missing_optional
+```
+
+Optional extras (torch backbone, extra ANN backends, GPU/NVML tooling) are in
+`requirements-optional.txt` — none are needed for the main results. The full
+pipeline recipe is in [reproduction.md](reproduction.md).
 
 **Revision pipeline** (effect-size-aware, modality-separated ANN calibration and deployment evaluation): see the [Revision pipeline](#revision-pipeline-calibration-modalities-statistics) section below and the full step-by-step recipe in [reproduction.md](reproduction.md).
 
@@ -23,9 +60,12 @@ By default this prepares the three benchmark datasets: `ml-1m`, `ml-20m`, and
 python src/prepare_dataset.py --dataset ml-1m --out data/ml1m.csv
 ```
 
-Amazon Books is also supported explicitly:
+Amazon Books is supported as an **optional** dataset (large; listed under
+`datasets.optional` in `configs/main_cpu.yml`, so the orchestrator only runs
+it when you name it explicitly via `--datasets amazon-books`):
 
 ```bash
+python src/prepare_dataset.py --dataset amazon-books --out data/amazon_books.csv
 python src/download_datasets.py --datasets amazon-books
 ```
 

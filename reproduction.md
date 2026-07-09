@@ -14,8 +14,16 @@ Approximate wall-clock on an 8-core CPU: ml-1m minutes, ml-20m a few hours
 ```bash
 python -m venv .venv
 .venv\Scripts\activate          # Windows;  Linux/macOS: source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements-cpu.txt
 ```
+
+`requirements-cpu.txt` is the canonical CPU-only dependency set
+(`requirements.txt` is kept as a backward-compatible copy). Optional extras
+— torch backbone, extra ANN backends, GPU/NVML tooling — live in
+`requirements-optional.txt` and are never needed for the main results.
+GPU experiments (`--use_gpu` flags on build_index/run_device/calibrate) are
+exploratory, may be nondeterministic, and write to
+`results/gpu_experiments/` — they are not part of this reproduction.
 
 ## 1. Capture hardware / software environment
 
@@ -31,6 +39,14 @@ Outputs: `results/hardware/hardware.json`, `hardware.md`, `env_freeze.txt`.
 python src/prepare_dataset.py --dataset ml-1m --out data/ml1m.csv
 python src/prepare_dataset.py --dataset ml-20m --out data/ml20m.csv
 python src/prepare_dataset.py --dataset goodbooks --out data/goodbooks.csv
+```
+
+Amazon Books is **optional** (large download; `datasets.optional` in
+`configs/main_cpu.yml`) and only runs when named explicitly:
+
+```bash
+python src/prepare_dataset.py --dataset amazon-books --out data/amazon_books.csv
+# then: add "--datasets ml-1m ml-20m goodbooks amazon-books" in step 5
 ```
 
 ## 3. Dataset statistics table
@@ -62,13 +78,18 @@ python src/run_revision_experiments.py --datasets ml-1m ml-20m goodbooks --modal
 ```
 
 Defaults come from `configs/main_cpu.yml`; CLI flags override. Add
-`--reuse_existing` to resume without rebuilding embeddings/indexes.
+`--reuse_existing` to resume without rebuilding embeddings/indexes. Index
+builds default to `--omp_threads 1` (bit-reproducible); pass a higher value
+only if you accept small run-to-run variation (documented in
+`docs/limitations_code_level.md`).
 
 Outputs:
 - `results/main/summary_main.csv` — one row per dataset × modality × method
 - `results/main/*.json` — aggregate metrics per combination
 - `results/main/perquery/*.npz` — per-query metrics (bootstrap input)
 - `results/main/calibration/*.json` — calibration records per target
+- `results/status/status_{dataset}_{method}.json` — per-step status
+  (failed steps skip downstream steps for that method; the grid continues)
 
 ## 6. Calibration sensitivity (0.90 / 0.95 / 0.98)
 
@@ -175,6 +196,9 @@ python src/claim_support_audit.py
 # refresh consolidated tables/figures (now also covers the modules above)
 python src/tables_paper.py
 python src/figures_paper.py
+
+# validate existence + schema of everything produced so far
+python src/validate_results.py --allow_missing_optional
 ```
 
 Optional dependencies (not in requirements.txt, install only if wanted):

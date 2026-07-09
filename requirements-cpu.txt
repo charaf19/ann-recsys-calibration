@@ -1,0 +1,11 @@
+# IndexWise-Recsys — canonical CPU-only benchmark dependencies (pinned).
+# This is the ONLY file needed to reproduce the main results.
+numpy==1.26.4
+scipy==1.11.4
+pandas==2.1.4
+scikit-learn==1.3.2
+psutil==5.9.8
+faiss-cpu==1.7.4
+requests==2.32.3
+matplotlib==3.8.4
+PyYAML==6.0.2

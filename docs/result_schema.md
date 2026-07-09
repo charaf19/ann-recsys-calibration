@@ -5,6 +5,23 @@ a `seed` column where sampling is involved. Nothing under `results/` is
 committed with fabricated values; files appear only after the corresponding
 stage is run.
 
+Conventions:
+- `modality` columns always use the canonical labels `u2i` / `i2i`
+  (`utils.common.normalize_modality_label`; validate_results.py rejects
+  anything else).
+- Reproducibility fields: `seed` and (where indexes are built) `omp_threads`.
+  With `omp_threads=1` builds are bit-reproducible; with more threads exact
+  numeric agreement may vary slightly across runs (see
+  docs/limitations_code_level.md).
+- GPU runs never write into the CPU result files; they live under
+  `results/gpu_experiments/` and carry `gpu_used: true`.
+
+## data/index_*/index_meta.json (written by build_index.py)
+
+- method, N, D, budget_mb, method hyperparameters (M/efConstruction or
+  nlist/m/bits/opq + train_sample_size), `omp_threads`, `seed`,
+  `use_gpu_requested`, `gpu_used_for_training`, index_file.
+
 ## results/hardware/
 
 - `hardware.json` — platform, cpu {physical_cores, logical_cores, freq},
@@ -31,6 +48,7 @@ stage is run.
 | long_tail_uplift | long_tail_exposure minus the tail's share of training interactions |
 | calibration_target, calibrated_param_name, calibrated_param_value | operating point used (ef / nprobe; empty for flat/flatpq) |
 | latency_p50_ms, latency_p95_ms, rss_mb_after | serving cost at that operating point |
+| omp_threads | FAISS build threads (1 = bit-reproducible builds) |
 | seed | RNG seed |
 
 - `{dataset}__{weighting}__{modality}__{method}.json` — the same aggregate
@@ -140,6 +158,38 @@ stage is run.
   direct_energy_available=false; see docs/energy_measurement_protocol.md).
 - `results/paper_tables/claim_support_audit.{csv,md,tex}` — see
   docs/claim_support_schema.md.
+
+## Operational outputs
+
+- `results/status/status_{dataset}_{method}.json` (run_revision_experiments.py)
+  — dataset, method, started/finished_at_utc, `overall`
+  (ok | partial | failed | skipped | running) and `steps.{build, calibration,
+  latency, eval_u2i, eval_i2i}` each with status (ok | failed | skipped |
+  pending), error, finished_at_utc. A failed step skips downstream steps for
+  that method; the grid continues.
+- `results/validation/validation_report.{csv,md}` (validate_results.py) —
+  artifact, stage, required, status (ok | missing_required |
+  missing_optional | schema_mismatch | empty | unreadable), rows,
+  missing_fields, detail.
+- `results/gpu_experiments/` — OPTIONAL exploratory GPU runs
+  (latency/calibration JSONs with `gpu_used: true`); never mixed with the
+  canonical CPU outputs above.
+
+## Schema addenda (reviewer-hardening pass)
+
+- `embedding_backbone_sensitivity_all.csv` additionally carries
+  `backend_available` (bool), `status` (ok | skipped_missing_dependency),
+  `error_message` (e.g. `torch_not_installed`) on every row, so skipped
+  optional backbones remain visible.
+- `scale_stress_all.csv` additionally carries `quality_metric` ("none") and
+  `quality_notes` alongside `quality_measured=false`.
+- `ann_decision_framework_scores.csv` additionally carries the audit columns
+  `quality_retention`, `latency_score`, `memory_score`, `exposure_score`,
+  `w_quality`, `w_latency`, `w_memory`, `w_exposure`, so every
+  `deployment_score` is recomputable from its own row.
+- `hardware.json` distinguishes GPU presence (`cuda_available`,
+  `faiss_gpu_available`, `gpu.*`, probed) from usage
+  (`main_experiments_gpu_used`, declared).
 
 ### Per-query npz extensions (eval_modalities.py)
 

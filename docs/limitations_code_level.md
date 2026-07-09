@@ -14,10 +14,14 @@ scientific limitations discussed in the paper).
    one positive per test user, so recall@k and hit-rate@k coincide per query
    and per-query metric distributions are heavily zero-inflated. This is why
    Cliff's delta is reported next to Cohen's d.
-4. **HNSW build nondeterminism.** hnswlib graph construction with multiple
-   threads is not bit-reproducible across runs/machines; search parameters
-   are recalibrated per build, which absorbs most of the variation, but exact
-   per-query results can differ slightly between builds.
+4. **HNSW / k-means build determinism is thread-bound.** With the default
+   `build_index.py --omp_threads 1`, FAISS HNSW construction and seeded IVF/PQ
+   k-means are bit-reproducible. Enabling `--omp_threads > 1` trades that for
+   speed: thread-order-dependent HNSW insertion and reordered floating-point
+   reductions can shift individual neighbors, so exact numeric agreement
+   across runs may vary slightly (aggregate metrics move negligibly, and
+   per-build recalibration absorbs most of it). The thread count used is
+   recorded in each index's `index_meta.json` and in `summary_main.csv`.
 5. **Latency is machine-relative.** Absolute milliseconds depend on CPU,
    cache, and thread settings (see `docs/hardware_protocol.md`). Only
    relative orderings and calibrated-parameter trends transfer.
@@ -27,14 +31,22 @@ scientific limitations discussed in the paper).
 7. **Bootstrap p-values are resampling-based.** With `--n_boot 1000` the
    smallest resolvable two-sided p-value is 0.002; increase `--n_boot` if
    smaller granularity is needed.
-8. **hnswlib query path is row-wise.** Batch queries are looped per row for
-   determinism and per-query timing, which slightly understates hnswlib's
-   batched throughput (irrelevant for the single-query serving protocol).
+8. **Single-query timing protocol.** Latency is measured one query at a
+   time (the recommender serving pattern), which understates FAISS's batched
+   throughput; QPS derived from p50 is a single-stream figure, not a
+   saturated-throughput figure.
 9. **IVF-PQ training subsamples.** Codebook/centroid training uses a seeded
    subsample (FAISS heuristics), so index contents are deterministic per
    seed but depend on that heuristic sample size.
 10. **Memory accounting is coarse.** RSS deltas include allocator noise;
     on-disk index size is exact, resident working set is approximate.
-11. **Amazon-Books is plumbed but not part of the default grid** (very slow
-    to prepare on some connections); pass it explicitly via `--datasets` if
-    desired.
+11. **Amazon-Books is optional, not part of the default grid** (very slow to
+    prepare on some connections); it is listed under `datasets.optional` in
+    `configs/main_cpu.yml` and runs only when passed explicitly via
+    `--datasets amazon-books`.
+12. **GPU paths are exploratory and may be nondeterministic.** `--use_gpu`
+    (default false, requires faiss-gpu) does not guarantee deterministic
+    reductions, does not support HNSW/Flat-PQ search, and freezes the
+    calibration parameter at its pre-clone CPU value. GPU outputs are
+    isolated under `results/gpu_experiments/` and are never part of the
+    canonical CPU results.

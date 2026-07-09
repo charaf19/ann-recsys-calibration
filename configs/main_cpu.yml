@@ -1,7 +1,16 @@
 # Main CPU-only experiment configuration.
 # Consumed by src/run_revision_experiments.py; any CLI flag overrides these.
 
-datasets: [ml-1m, ml-20m, goodbooks]
+# `main` datasets run by default; `optional` ones (large/slow to prepare)
+# run only when named explicitly: --datasets amazon-books
+# (a flat list is still accepted for backward compatibility)
+datasets:
+  main:
+    - ml-1m
+    - ml-20m
+    - goodbooks
+  optional:
+    - amazon-books
 modalities: [u2i, i2i]
 methods: [flat, hnsw, ivfflat, ivfpq, flatpq]
 
@@ -25,4 +34,5 @@ queries_ml1m: full       # evaluate every eligible ml-1m user
 latency_queries: 2000
 
 cpu_only: true
+omp_threads: 1           # FAISS build threads; 1 = bit-reproducible HNSW/IVF
 seed: 42

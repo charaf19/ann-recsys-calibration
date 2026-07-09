@@ -22,7 +22,7 @@ def _save(fig, fig_dir, name):
     paths = []
     for ext in ("pdf", "png"):
         p = fig_dir / f"{name}.{ext}"
-        fig.savefig(p, dpi=200, bbox_inches="tight")
+        fig.savefig(p, dpi=300, bbox_inches="tight")  # publication quality
         paths.append(str(p))
     plt.close(fig)
     return paths

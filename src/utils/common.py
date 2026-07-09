@@ -16,6 +16,22 @@ def set_global_seed(seed: int = DEFAULT_SEED):
     os.environ.setdefault("PYTHONHASHSEED", str(seed))
     return np.random.default_rng(seed)
 
+MODALITY_ALIASES = {
+    "u2i": "u2i", "usertoitem": "u2i", "user2item": "u2i", "useritem": "u2i",
+    "i2i": "i2i", "itemtoitem": "i2i", "item2item": "i2i", "itemitem": "i2i",
+}
+
+def normalize_modality_label(value: str) -> str:
+    """Normalize any modality spelling to the canonical 'u2i' / 'i2i'.
+
+    Accepts e.g. 'U2I', 'user-to-item', 'item_to_item'. Raises ValueError on
+    anything unrecognized so schema drift fails loudly at write time.
+    """
+    key = str(value).strip().lower().replace("-", "").replace("_", "")
+    if key in MODALITY_ALIASES:
+        return MODALITY_ALIASES[key]
+    raise ValueError(f"Unknown modality label '{value}' (expected u2i or i2i)")
+
 def ensure_dir(path: str):
     os.makedirs(path, exist_ok=True)
 

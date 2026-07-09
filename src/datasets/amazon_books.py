@@ -9,7 +9,7 @@ from typing import Iterable, Optional, Union, List
 import pandas as pd
 import numpy as np
 
-from .common import _download
+from .common import _ProgressBar, _download
 
 
 # Known public mirrors for the Amazon “Books” 5-core reviews.
@@ -43,18 +43,19 @@ def _resolve_source(dst_dir: Path) -> Path:
     if local_path.is_file():
         return local_path
 
-    last_err: Optional[Exception] = None
+    errors: List[str] = []
     for url in CANDIDATE_URLS:
         try:
             _download(url, str(local_path))
             return local_path
         except Exception as e:
-            last_err = e
+            errors.append(f"{url}: {e}")
+            print(f"[amazon_books] source failed: {url} ({e})")
 
     raise FileNotFoundError(
         "Could not obtain Amazon Books 5-core reviews. "
         "Set AMAZON_BOOKS_URL to a valid .json.gz (one JSON object per line) or place a file at "
-        f"{local_path}. Last error: {last_err}"
+        f"{local_path}. Attempts:\n  - " + "\n  - ".join(errors)
     )
 
 
@@ -63,25 +64,53 @@ def _read_jsonl_gz_in_chunks(path: Union[str, Path], chunksize: int = 1_000_000)
     Stream a large .json.gz (one JSON object per line) into DataFrame chunks.
     Keeps only the columns we need to minimize memory: reviewerID, asin, unixReviewTime, overall.
     """
+    path = Path(path)
     wanted = {"reviewerID", "asin", "unixReviewTime", "overall"}
     buf: List[dict] = []
-    n = 0
+    rows_seen = 0
+    rows_kept = 0
+    total_bytes = path.stat().st_size if path.is_file() else None
+    progress = _ProgressBar(f"parse {path.name}", total=total_bytes, unit="B")
+    last_pos = 0
+    completed = False
 
-    with gzip.open(path, "rb") as f:
-        for line in f:
-            if not line:
-                continue
-            rec = json.loads(line)
-            # Keep only the wanted keys
-            rec_small = {k: rec.get(k, None) for k in wanted}
-            # Discard rows missing core ids
-            if rec_small.get("reviewerID") is None or rec_small.get("asin") is None:
-                continue
-            buf.append(rec_small)
-            n += 1
-            if n % chunksize == 0:
-                yield pd.DataFrame.from_records(buf)
-                buf.clear()
+    try:
+        with open(path, "rb") as raw:
+            with gzip.GzipFile(fileobj=raw, mode="rb") as f:
+                for line in f:
+                    if not line:
+                        continue
+
+                    rows_seen += 1
+                    if rows_seen % 50_000 == 0:
+                        last_pos = raw.tell()
+                        progress.update(
+                            last_pos,
+                            suffix=f"rows={rows_seen:,} kept={rows_kept:,}",
+                        )
+
+                    rec = json.loads(line)
+                    # Keep only the wanted keys
+                    rec_small = {k: rec.get(k, None) for k in wanted}
+                    # Discard rows missing core ids
+                    if rec_small.get("reviewerID") is None or rec_small.get("asin") is None:
+                        continue
+                    buf.append(rec_small)
+                    rows_kept += 1
+                    if rows_kept % chunksize == 0:
+                        last_pos = raw.tell()
+                        progress.update(
+                            last_pos,
+                            suffix=f"rows={rows_seen:,} kept={rows_kept:,}",
+                            force=True,
+                        )
+                        yield pd.DataFrame.from_records(buf)
+                        buf.clear()
+
+        completed = True
+    finally:
+        final_pos = total_bytes if completed and total_bytes else last_pos
+        progress.finish(final_pos, suffix=f"rows={rows_seen:,} kept={rows_kept:,}")
 
     if buf:
         yield pd.DataFrame.from_records(buf)
@@ -106,9 +135,12 @@ def prepare_amazon_books(
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     src_path = _resolve_source(Path("data/raw"))
+    print(f"[amazon_books] source {src_path} ({src_path.stat().st_size:,} bytes)")
+    print("[amazon_books] parsing reviews JSONL...")
 
     # Accumulate per chunk, then concatenate
     parts: List[pd.DataFrame] = []
+    rows_after_filter = 0
     for df in _read_jsonl_gz_in_chunks(src_path, chunksize=1_000_000):
         # Rename & filter columns
         df = df.rename(
@@ -132,10 +164,12 @@ def prepare_amazon_books(
 
         df = df[keep]
         parts.append(df)
+        rows_after_filter += len(df)
 
     if not parts:
         raise RuntimeError("No data parsed from Amazon Books JSONL; file empty or unreadable.")
 
+    print(f"[amazon_books] concatenating {len(parts)} chunks ({rows_after_filter:,} rows)...")
     full = pd.concat(parts, ignore_index=True)
 
     # Ensure types
@@ -163,6 +197,7 @@ def prepare_amazon_books(
         full["timestamp"] = full["timestamp"].astype(np.int64, errors="ignore")
 
     # Write final CSV
+    print(f"[amazon_books] writing {out_path}...")
     full.to_csv(out_path, index=False)
 
     print(

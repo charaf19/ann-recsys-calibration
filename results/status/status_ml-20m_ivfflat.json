@@ -1,0 +1,34 @@
+{
+  "dataset": "ml-20m",
+  "method": "ivfflat",
+  "started_at_utc": "2026-07-09T15:27:04.039835+00:00",
+  "overall": "ok",
+  "steps": {
+    "build": {
+      "status": "ok",
+      "error": null,
+      "finished_at_utc": "2026-07-09T15:27:04.495227+00:00"
+    },
+    "calibration": {
+      "status": "ok",
+      "error": null,
+      "finished_at_utc": "2026-07-09T15:27:05.413648+00:00"
+    },
+    "latency": {
+      "status": "ok",
+      "error": null,
+      "finished_at_utc": "2026-07-09T15:27:05.911560+00:00"
+    },
+    "eval_u2i": {
+      "status": "ok",
+      "error": null,
+      "finished_at_utc": "2026-07-09T15:27:30.271365+00:00"
+    },
+    "eval_i2i": {
+      "status": "ok",
+      "error": null,
+      "finished_at_utc": "2026-07-09T15:27:53.333299+00:00"
+    }
+  },
+  "finished_at_utc": "2026-07-09T15:27:53.333299+00:00"
+}

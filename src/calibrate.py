@@ -65,6 +65,12 @@ def calibrate_index(ann, item_vecs, target, topk, n_queries, seed,
     exact_I = exact.search(Q, topk)
 
     param_name = CALIBRATION_PARAM.get(ann.method)
+    if param_name is not None and getattr(ann, "gpu_used", False):
+        # GPU-cloned indexes have their runtime parameter frozen (applied on
+        # CPU before cloning); sweeping is unsupported, so measure as-is.
+        print(f"[{SCRIPT}] WARN: GPU index parameters are frozen; measuring "
+              f"at the pre-set {param_name} instead of sweeping.")
+        param_name = None
     sweep = []
 
     if param_name is None:
@@ -120,20 +126,28 @@ def main():
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--dataset", default=None, help="dataset tag for the output record")
     ap.add_argument("--weighting", default="none", help="weighting tag for the output record")
+    ap.add_argument("--use_gpu", default="false",
+                    help="OPTIONAL exploratory GPU search (true/false; default "
+                         "false; outputs go to results/gpu_experiments/)")
     ap.add_argument("--out", default=None,
                     help="output JSON (default: results/main/calibration/"
-                         "{dataset}__{weighting}__{method}__t{target}.json)")
+                         "{dataset}__{weighting}__{method}__t{target}.json; "
+                         "results/gpu_experiments/calibration/ when --use_gpu)")
     args = ap.parse_args()
+    use_gpu = str(args.use_gpu).strip().lower() in ("1", "true", "yes", "y")
 
     print(f"[{SCRIPT}] starting...")
     print(f"[{SCRIPT}] input path: {args.item_vecs}")
     print(f"[{SCRIPT}] input path: {args.index}")
+    if use_gpu:
+        print(f"[{SCRIPT}] WARN: --use_gpu is an exploratory extension; the "
+              f"canonical reproducible benchmark is CPU-only.")
 
     set_global_seed(args.seed)
 
     item_vecs = np.load(args.item_vecs).astype("float32")
     N, D = item_vecs.shape
-    ann = load_ann_index(args.index, D, N)
+    ann = load_ann_index(args.index, D, N, use_gpu=use_gpu)
 
     result = calibrate_index(ann, item_vecs, args.target, args.topk,
                              args.queries, args.seed,
@@ -141,10 +155,14 @@ def main():
                              timed_queries=args.timed_queries)
     dataset = args.dataset or Path(args.index).name
     result.update({"dataset": dataset, "weighting": args.weighting,
-                   "index_path": str(args.index), "N": int(N), "D": int(D)})
+                   "index_path": str(args.index), "N": int(N), "D": int(D),
+                   "gpu_used": bool(getattr(ann, "gpu_used", False))})
 
     if args.out:
         out_path = Path(args.out)
+    elif getattr(ann, "gpu_used", False):
+        out_path = Path("results/gpu_experiments/calibration") / (
+            f"{dataset}__{args.weighting}__{ann.method}__t{args.target:.2f}.json")
     else:
         out_path = Path("results/main/calibration") / (
             f"{dataset}__{args.weighting}__{ann.method}__t{args.target:.2f}.json")

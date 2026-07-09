@@ -10,6 +10,8 @@
   "map_at_k_mean": 0.039901984126984126,
   "mrr_at_k_mean": 0.039901984126984126,
   "ann_recall_vs_exact_at_k_mean": 1.0,
+  "recall_at_100_mean": 0.2738,
+  "ann_recall_vs_exact_at_100_mean": 1.0,
   "coverage_at_k": 0.34928334207306416,
   "gini_exposure": 0.8863981812620171,
   "long_tail_exposure": 0.00289,

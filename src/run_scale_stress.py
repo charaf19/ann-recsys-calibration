@@ -93,9 +93,21 @@ def main():
     ap.add_argument("--methods", nargs="*", default=None)
     ap.add_argument("--seed", type=int, default=None)
     ap.add_argument("--out_dir", default=RESULTS["scale_stress"])
+    ap.add_argument("--measure_quality", default="false",
+                    help="end-to-end recommendation quality at synthetic scale "
+                         "(true/false; default false — NOT implemented, raises)")
     ap.add_argument("--dry_run", action="store_true",
                     help="print the plan without generating/building anything")
     args = ap.parse_args()
+
+    if str(args.measure_quality).strip().lower() in ("1", "true", "yes", "y"):
+        raise NotImplementedError(
+            "--measure_quality true: end-to-end recommendation quality at "
+            "synthetic scale is deliberately not implemented (synthetic "
+            "vectors carry no user relevance signal). The stress test already "
+            "reports index-fidelity via achieved_recall_vs_exact; for "
+            "recommendation quality use the real-dataset pipeline "
+            "(run_revision_experiments.py).")
 
     cfg = load_config(args.config)
     sizes = args.catalog_sizes or cfg.get("catalog_sizes",
@@ -169,6 +181,10 @@ def main():
                     "latency_p50_ms": cal["latency_ms_at_calibrated"]["p50"],
                     "latency_p95_ms": cal["latency_ms_at_calibrated"]["p95"],
                     "quality_measured": False,
+                    "quality_metric": "none",
+                    "quality_notes": ("synthetic vectors carry no relevance "
+                                      "signal; only index fidelity "
+                                      "(achieved_recall_vs_exact) is reported"),
                     "seed": seed,
                 })
                 # checkpoint after every cell (long-running grid)

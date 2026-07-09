@@ -16,6 +16,17 @@ Outputs:
 
 Long-tail terminology: long_tail_exposure, long_tail_uplift, exposure_proxy
 (see utils/metrics.py).
+
+Metric semantics — two distinct notions, never to be conflated:
+  - agreement recall (`ann_recall_vs_exact*`): overlap between the ANN top-k
+    and the exact Flat top-k. Measures index fidelity; used for calibration.
+  - recommendation relevance (`recall/precision/hr/ndcg/map/mrr`): whether
+    the held-out interaction appears in the top-k. Measures usefulness to
+    the user. An index can have perfect agreement recall and poor relevance
+    (that is an embedding problem, not an index problem).
+
+Modality labels are normalized to the canonical 'u2i' / 'i2i'
+(utils.common.normalize_modality_label) before anything is written.
 """
 import argparse
 import json
@@ -27,7 +38,7 @@ import pandas as pd
 from utils import metrics as M
 from utils.ann_io import load_ann_index, build_exact_index
 from utils.splits import temporal_leave_one_out, build_eval_cases
-from utils.common import set_global_seed
+from utils.common import set_global_seed, normalize_modality_label
 
 SCRIPT = "eval_modalities"
 
@@ -208,7 +219,8 @@ def main():
     ann = load_ann_index(args.index, D, N, ef=args.ef, nprobe=args.nprobe)
     exact = build_exact_index(item_vecs)
 
-    modalities = ["u2i", "i2i"] if args.modality == "both" else [args.modality]
+    modalities = (["u2i", "i2i"] if args.modality == "both"
+                  else [normalize_modality_label(args.modality)])
     out_dir.mkdir(parents=True, exist_ok=True)
     perquery_dir.mkdir(parents=True, exist_ok=True)
 

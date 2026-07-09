@@ -1,0 +1,34 @@
+{
+  "dataset": "goodbooks",
+  "method": "ivfflat",
+  "started_at_utc": "2026-07-09T15:30:47.826108+00:00",
+  "overall": "ok",
+  "steps": {
+    "build": {
+      "status": "ok",
+      "error": null,
+      "finished_at_utc": "2026-07-09T15:30:48.210107+00:00"
+    },
+    "calibration": {
+      "status": "ok",
+      "error": null,
+      "finished_at_utc": "2026-07-09T15:30:48.783466+00:00"
+    },
+    "latency": {
+      "status": "ok",
+      "error": null,
+      "finished_at_utc": "2026-07-09T15:30:49.178674+00:00"
+    },
+    "eval_u2i": {
+      "status": "ok",
+      "error": null,
+      "finished_at_utc": "2026-07-09T15:30:56.702786+00:00"
+    },
+    "eval_i2i": {
+      "status": "ok",
+      "error": null,
+      "finished_at_utc": "2026-07-09T15:31:03.312605+00:00"
+    }
+  },
+  "finished_at_utc": "2026-07-09T15:31:03.312605+00:00"
+}

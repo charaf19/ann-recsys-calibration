@@ -22,7 +22,7 @@ import pandas as pd
 
 import energy_measurement as EM
 from utils.ann_io import load_ann_index
-from utils.common import set_global_seed
+from utils.common import set_global_seed, normalize_modality_label
 from utils.paths import emb_dir, index_dir, RESULTS
 from utils.reporting import write_table
 
@@ -64,6 +64,7 @@ def main():
     print(f"[{SCRIPT}] input path: data/index_* (built indexes)")
     print(f"[{SCRIPT}] output path: {out_dir}")
 
+    args.modalities = [normalize_modality_label(m) for m in args.modalities]
     set_global_seed(args.seed)
     if EM.rapl_available():
         print(f"[{SCRIPT}] Intel RAPL detected: direct CPU energy will be recorded.")

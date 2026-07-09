@@ -20,7 +20,9 @@ import psutil
 SCRIPT = "capture_hardware"
 
 PACKAGES = ["numpy", "scipy", "pandas", "scikit-learn", "faiss-cpu",
-            "psutil", "matplotlib", "PyYAML"]
+            "psutil", "matplotlib", "PyYAML",
+            # optional (recorded as null when absent):
+            "faiss-gpu", "torch", "pynvml"]
 THREAD_ENV_VARS = ["OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS",
                    "NUMEXPR_NUM_THREADS", "VECLIB_MAXIMUM_THREADS"]
 
@@ -39,6 +41,35 @@ def _faiss_threads():
         return int(faiss.omp_get_max_threads())
     except Exception:
         return None
+
+
+def _gpu_presence():
+    """Record GPU *presence* on the machine — strictly distinct from GPU
+    *usage* in the experiments (main_experiments_gpu_used). No fake values:
+    every probe degrades to false/None when the stack is absent."""
+    info = {"cuda_available": False, "gpu_count": 0, "gpu_names": [],
+            "faiss_gpu_available": False, "nvidia_smi_present": False}
+    import shutil
+    info["nvidia_smi_present"] = shutil.which("nvidia-smi") is not None
+    try:
+        import pynvml
+        pynvml.nvmlInit()
+        n = pynvml.nvmlDeviceGetCount()
+        info["cuda_available"] = n > 0
+        info["gpu_count"] = int(n)
+        for i in range(n):
+            h = pynvml.nvmlDeviceGetHandleByIndex(i)
+            name = pynvml.nvmlDeviceGetName(h)
+            info["gpu_names"].append(name.decode() if isinstance(name, bytes) else str(name))
+    except Exception:
+        pass  # pynvml optional / no NVIDIA driver
+    try:
+        import faiss
+        info["faiss_gpu_available"] = bool(getattr(faiss, "get_num_gpus",
+                                                   lambda: 0)() > 0)
+    except Exception:
+        pass
+    return info
 
 
 def _str2bool(v):
@@ -66,10 +97,15 @@ def main():
     except Exception:
         pass
 
+    gpu = _gpu_presence()
     info = {
         "captured_at_utc": datetime.now(timezone.utc).isoformat(),
         "label": args.label,
+        # GPU *usage* in experiments (declared) vs GPU *presence* (probed):
         "main_experiments_gpu_used": _str2bool(args.main_experiments_gpu_used),
+        "cuda_available": gpu["cuda_available"],
+        "faiss_gpu_available": gpu["faiss_gpu_available"],
+        "gpu": gpu,
         "platform": {
             "system": platform.system(),
             "release": platform.release(),
@@ -105,7 +141,9 @@ def main():
     with open(md_path, "w", encoding="utf-8") as f:
         f.write("# Hardware / environment capture\n\n")
         f.write(f"- Captured (UTC): {info['captured_at_utc']}\n")
-        f.write(f"- GPU used for main experiments: "
+        f.write(f"- GPU present on machine: {info['cuda_available']} "
+                f"(count={gpu['gpu_count']}, faiss_gpu={info['faiss_gpu_available']})\n")
+        f.write(f"- GPU used in main experiments: "
                 f"**{info['main_experiments_gpu_used']}**\n")
         f.write(f"- OS: {info['platform']['system']} {info['platform']['release']} "
                 f"({info['platform']['machine']})\n")

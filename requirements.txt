@@ -1,3 +1,6 @@
+# Kept for backward compatibility — identical to requirements-cpu.txt.
+# Prefer:  pip install -r requirements-cpu.txt   (canonical CPU benchmark)
+# Optional extras (GPU, torch, extra ANN backends): requirements-optional.txt
 numpy==1.26.4
 scipy==1.11.4
 pandas==2.1.4

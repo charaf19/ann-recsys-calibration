@@ -9,21 +9,24 @@ def fig_latency_vs_ndcg(df, out):
     for m in sorted(df["method"].unique()):
         sub = df[df["method"]==m]
         plt.scatter(sub["latency_p95_ms"], sub["ndcg_at_k_mean"], label=m)
-    plt.xlabel("Latency p95 (ms)"); plt.ylabel("NDCG@K (mean)"); plt.legend(); plt.tight_layout(); plt.savefig(out)
+    plt.xlabel("Latency p95 (ms)"); plt.ylabel("NDCG@K (mean)"); plt.legend(); plt.tight_layout()
+    plt.savefig(out, dpi=300, bbox_inches="tight")
 
 def fig_recall_vs_latency(df, out):
     plt.figure()
     for m in sorted(df["method"].unique()):
         sub = df[df["method"]==m]
         plt.scatter(sub["recall_at_topk_mean"], sub["latency_p95_ms"], label=m)
-    plt.xlabel("Recall@K (mean)"); plt.ylabel("Latency p95 (ms)"); plt.legend(); plt.tight_layout(); plt.savefig(out)
+    plt.xlabel("Recall@K (mean)"); plt.ylabel("Latency p95 (ms)"); plt.legend(); plt.tight_layout()
+    plt.savefig(out, dpi=300, bbox_inches="tight")
 
 def fig_coverage_vs_ndcg(df, out):
     plt.figure()
     for m in sorted(df["method"].unique()):
         sub = df[df["method"]==m]
         plt.scatter(sub["coverage_at_k"], sub["ndcg_at_k_mean"], label=m)
-    plt.xlabel("Coverage@K"); plt.ylabel("NDCG@K (mean)"); plt.legend(); plt.tight_layout(); plt.savefig(out)
+    plt.xlabel("Coverage@K"); plt.ylabel("NDCG@K (mean)"); plt.legend(); plt.tight_layout()
+    plt.savefig(out, dpi=300, bbox_inches="tight")
 
 def main():
     ap = argparse.ArgumentParser()

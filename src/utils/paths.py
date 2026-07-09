@@ -51,6 +51,9 @@ RESULTS = {
     "scale_stress": "results/scale_stress",
     "optional_backends": "results/optional_backends",
     "energy": "results/energy",
+    "status": "results/status",
+    "validation": "results/validation",
+    "gpu_experiments": "results/gpu_experiments",
 }
 
 

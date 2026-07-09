@@ -151,6 +151,20 @@ def main():
         for backbone in backbones:
             emb = ensure_embeddings(backbone, dataset, dim, seed, cfg)
             if emb is None:
+                # graceful skip: keep the backbone visible in the schema
+                # instead of silently dropping it
+                rows.append({
+                    "dataset": dataset, "backbone": backbone,
+                    "embedding_backend": backbone, "modality": "u2i",
+                    "method": None, "dim": dim,
+                    "ndcg_at_10": None, "recall_at_10": None,
+                    "ann_recall_vs_exact_at_k_mean": None,
+                    "long_tail_uplift": None,
+                    "backend_available": False,
+                    "status": "skipped_missing_dependency",
+                    "error_message": "torch_not_installed",
+                    "seed": seed,
+                })
                 continue
             item_vecs = np.load(f"{emb}/item_vecs.npy").astype("float32")
             N, D = item_vecs.shape
@@ -190,6 +204,9 @@ def main():
                     "recall_at_10": e.get("recall_at_k_mean"),
                     "ann_recall_vs_exact_at_k_mean": e.get("ann_recall_vs_exact_at_k_mean"),
                     "long_tail_uplift": e.get("long_tail_uplift"),
+                    "backend_available": True,
+                    "status": "ok",
+                    "error_message": "",
                     "seed": seed,
                 })
 

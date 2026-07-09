@@ -2,7 +2,8 @@
   "datasets": [
     "ml-1m",
     "ml-20m",
-    "goodbooks"
+    "goodbooks",
+    "amazon-books"
   ],
   "modalities": [
     "u2i",
@@ -29,6 +30,7 @@
   "latency_queries": 2000,
   "topk": 100,
   "metric_topk": 10,
+  "omp_threads": 1,
   "cpu_only": true,
   "seed": 42
 }

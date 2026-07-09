@@ -8,6 +8,19 @@ binned by the measured effect size of delta-NDCG vs exact Flat, (b) calibrated
 latency, (c) memory, and (d) long-tail exposure — plus a rule-based
 use-case label.
 
+Scoring formula (weights and bins from configs/decision_framework.yml; every
+component is also emitted as a column so scores are fully auditable):
+
+    deployment_score =
+        w_quality  * quality_retention   # binned from effect_size_label
+      + w_latency  * latency_score       # min-max of -log10(p95) within group
+      + w_memory   * memory_score        # min-max of -rss within group
+      + w_exposure * exposure_score      # min-max of long_tail_uplift within group
+
+"within group" = within each (dataset, modality); min-max maps to [0,1] with
+1 = best. quality_retention bins: negligible=1.0, small=0.7, medium=0.3,
+large=0.0 (exact Flat reference = 1.0; unknown = 0.3, conservative).
+
 Key ranking property (enforced by construction): methods whose quality loss
 vs Flat is NEGLIGIBLE all receive the same quality-retention credit, so among
 them ranking is decided by latency; a slower negligible-delta method can only
@@ -30,6 +43,7 @@ import numpy as np
 import pandas as pd
 import yaml
 
+from utils.common import normalize_modality_label
 from utils.paths import RESULTS, first_existing
 from utils.reporting import write_table
 
@@ -167,6 +181,8 @@ def main():
                    if Path(calibration_csv).is_file() else None)
 
     df = summary.copy()
+    if "modality" in df.columns:
+        df["modality"] = df["modality"].map(normalize_modality_label)
     if "embedding_backend" not in df.columns:
         df["embedding_backend"] = "svd_" + df["weighting"].astype(str)
     df["qps"] = np.where(df["latency_p50_ms"].astype(float) > 0,
@@ -228,11 +244,17 @@ def main():
     df["recommended_use_case"] = [l[0] for l in labels]
     df["recommendation_reason"] = [l[1] for l in labels]
 
+    # weights as columns: every score is reproducible from its own row
+    df["w_quality"], df["w_latency"] = w_q, w_l
+    df["w_memory"], df["w_exposure"] = w_m, w_e
+
     cols = ["dataset", "modality", "method", "weighting", "embedding_backend",
             "ndcg_at_10", "recall_at_100", "ann_recall_vs_flat_at_100",
             "latency_p95_ms", "qps", "rss_mb", "long_tail_uplift",
             "delta_ndcg_vs_flat", "effect_size_label",
-            "deployment_score", "deployment_rank",
+            "quality_retention", "latency_score", "memory_score",
+            "exposure_score", "w_quality", "w_latency", "w_memory",
+            "w_exposure", "deployment_score", "deployment_rank",
             "recommended_use_case", "recommendation_reason"]
     out = df[[c for c in cols if c in df.columns]].sort_values(
         ["dataset", "modality", "deployment_rank"])

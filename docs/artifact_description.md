@@ -3,7 +3,7 @@
 **Title:** Effect-size-aware, modality-separated ANN calibration and
 deployment evaluation for recommender retrieval.
 
-**What this artifact is.** A CPU-only, fully local benchmark of FAISS/hnswlib
+**What this artifact is.** A CPU-only, fully local benchmark of FAISS
 index structures (Flat, HNSW, IVF-Flat, IVF-PQ, Flat-PQ) for recommender
 retrieval over TruncatedSVD item embeddings with optional BM25/TF-IDF
 interaction weighting. It measures (a) ANN agreement recall vs exact search
@@ -48,8 +48,9 @@ ann_io backends, reporting, path conventions).
 
 ## Requirements
 
-CPU-only. Python 3.10+, packages pinned in `requirements.txt` (faiss-cpu,
-hnswlib, numpy, scipy, pandas, scikit-learn, psutil, matplotlib, PyYAML).
+CPU-only. Python 3.10+, packages pinned in `requirements-cpu.txt` (faiss-cpu,
+numpy, scipy, pandas, scikit-learn, psutil, matplotlib, PyYAML); optional
+extras (torch, pynvml, hnswlib/scann/ngt) in `requirements-optional.txt`.
 Disk: ~15 GB for ml-20m artifacts. No GPU, no network access after dataset
 preparation.
 
