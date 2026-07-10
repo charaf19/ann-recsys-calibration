@@ -1,7 +1,7 @@
 # Claim-support audit schema
 
 `src/claim_support_audit.py` writes
-`results/paper_tables/claim_support_audit.{csv,md,tex}` with one row per
+`results/paper/tables/claim_support_audit.{csv,md,tex}` with one row per
 claim area. The audit is regenerated on demand; `evidence_available` always
 reflects the filesystem at audit time — it is honest by construction (rows
 are `False` until the corresponding pipeline stage has produced its output).

@@ -107,6 +107,8 @@ def main():
     df = pd.DataFrame(rows)
     out_dir.mkdir(parents=True, exist_ok=True)
     all_path = out_dir / "exposure_analysis_all.csv"
+    if all_path.exists():
+        raise FileExistsError(f"Refusing to overwrite existing evidence: {all_path}")
     df.to_csv(all_path, index=False)
     print(f"[{SCRIPT}] output path: {all_path}")
 

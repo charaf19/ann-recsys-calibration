@@ -108,7 +108,6 @@ def main():
                     "measurement_backend": m["measurement_backend"],
                     "direct_energy_available": m["direct_energy_available"],
                     "cpu_energy_joules": m["cpu_energy_joules"],
-                    "gpu_energy_joules": m["gpu_energy_joules"],
                     "wall_time_sec": m["wall_time_sec"],
                     "queries": int(n_q),
                     "energy_per_query_joules": EM.per_query_energy(m, n_q),
@@ -127,6 +126,8 @@ def main():
     df = pd.DataFrame(rows)
     out_dir.mkdir(parents=True, exist_ok=True)
     all_path = out_dir / "energy_measurement_all.csv"
+    if all_path.exists():
+        raise FileExistsError(f"Refusing to overwrite existing evidence: {all_path}")
     df.to_csv(all_path, index=False)
     print(f"[{SCRIPT}] output path: {all_path}")
 

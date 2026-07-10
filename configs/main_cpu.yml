@@ -33,6 +33,5 @@ queries_large: 10000     # ml-20m, goodbooks
 queries_ml1m: full       # evaluate every eligible ml-1m user
 latency_queries: 2000
 
-cpu_only: true
 omp_threads: 1           # FAISS build threads; 1 = bit-reproducible HNSW/IVF
 seed: 42

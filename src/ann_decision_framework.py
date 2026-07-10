@@ -261,6 +261,8 @@ def main():
 
     out_csv = Path(args.out_csv)
     out_csv.parent.mkdir(parents=True, exist_ok=True)
+    if out_csv.exists():
+        raise FileExistsError(f"Refusing to overwrite existing evidence: {out_csv}")
     out.to_csv(out_csv, index=False)
     print(f"[{SCRIPT}] output path: {out_csv}")
 

@@ -1,15 +1,9 @@
-"""Capture the hardware/software environment for CPU-only reproducibility.
-
-Records platform, CPU, RAM, Python and library versions, BLAS/OpenMP thread
-settings, and whether any GPU was used for the main experiments (should be
-false for this benchmark). Also writes a `pip freeze` snapshot.
-
-Outputs (results/hardware/): hardware.json, hardware.md, env_freeze.txt
-"""
+"""Capture the CPU experiment environment and passive GPU-presence metadata."""
 import argparse
 import json
 import os
 import platform
+import shutil
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -18,11 +12,8 @@ from pathlib import Path
 import psutil
 
 SCRIPT = "capture_hardware"
-
 PACKAGES = ["numpy", "scipy", "pandas", "scikit-learn", "faiss-cpu",
-            "psutil", "matplotlib", "PyYAML",
-            # optional (recorded as null when absent):
-            "faiss-gpu", "torch", "pynvml"]
+            "psutil", "matplotlib", "PyYAML", "torch"]
 THREAD_ENV_VARS = ["OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS",
                    "NUMEXPR_NUM_THREADS", "VECLIB_MAXIMUM_THREADS"]
 
@@ -44,127 +35,66 @@ def _faiss_threads():
 
 
 def _gpu_presence():
-    """Record GPU *presence* on the machine — strictly distinct from GPU
-    *usage* in the experiments (main_experiments_gpu_used). No fake values:
-    every probe degrades to false/None when the stack is absent."""
-    info = {"cuda_available": False, "gpu_count": 0, "gpu_names": [],
-            "faiss_gpu_available": False, "nvidia_smi_present": False}
-    import shutil
-    info["nvidia_smi_present"] = shutil.which("nvidia-smi") is not None
-    try:
-        import pynvml
-        pynvml.nvmlInit()
-        n = pynvml.nvmlDeviceGetCount()
-        info["cuda_available"] = n > 0
-        info["gpu_count"] = int(n)
-        for i in range(n):
-            h = pynvml.nvmlDeviceGetHandleByIndex(i)
-            name = pynvml.nvmlDeviceGetName(h)
-            info["gpu_names"].append(name.decode() if isinstance(name, bytes) else str(name))
-    except Exception:
-        pass  # pynvml optional / no NVIDIA driver
-    try:
-        import faiss
-        info["faiss_gpu_available"] = bool(getattr(faiss, "get_num_gpus",
-                                                   lambda: 0)() > 0)
-    except Exception:
-        pass
-    return info
-
-
-def _str2bool(v):
-    return str(v).strip().lower() in ("1", "true", "yes", "y")
+    """Report presence only; do not import CUDA, PyNVML, torch, or FAISS GPU APIs."""
+    detected = shutil.which("nvidia-smi") is not None
+    return {
+        "present": detected,
+        "detection": "nvidia-smi executable present" if detected else "not detected",
+    }
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out_dir", default="results/hardware")
-    ap.add_argument("--main_experiments_gpu_used", default="false",
-                    help="record whether any GPU was used for the main experiments")
+    ap.add_argument("--out_dir", default="results/_meta/hardware")
     ap.add_argument("--label", default="default", help="hardware profile label")
     args = ap.parse_args()
 
     out_dir = Path(args.out_dir)
-    print(f"[{SCRIPT}] starting...")
-    print(f"[{SCRIPT}] input path: (live system introspection)")
-    print(f"[{SCRIPT}] output path: {out_dir}")
     out_dir.mkdir(parents=True, exist_ok=True)
+    print(f"[{SCRIPT}] starting...")
+    print(f"[{SCRIPT}] output path: {out_dir}")
 
-    freq = None
     try:
-        f = psutil.cpu_freq()
-        freq = {"current_mhz": f.current, "min_mhz": f.min, "max_mhz": f.max} if f else None
+        freq_obj = psutil.cpu_freq()
+        freq = ({"current_mhz": freq_obj.current, "min_mhz": freq_obj.min,
+                 "max_mhz": freq_obj.max} if freq_obj else None)
     except Exception:
-        pass
+        freq = None
 
     gpu = _gpu_presence()
     info = {
         "captured_at_utc": datetime.now(timezone.utc).isoformat(),
         "label": args.label,
-        # GPU *usage* in experiments (declared) vs GPU *presence* (probed):
-        "main_experiments_gpu_used": _str2bool(args.main_experiments_gpu_used),
-        "cuda_available": gpu["cuda_available"],
-        "faiss_gpu_available": gpu["faiss_gpu_available"],
+        "gpu_present": gpu["present"],
+        "gpu_used_in_main_experiments": False,
         "gpu": gpu,
-        "platform": {
-            "system": platform.system(),
-            "release": platform.release(),
-            "version": platform.version(),
-            "machine": platform.machine(),
-            "processor": platform.processor(),
-        },
-        "cpu": {
-            "physical_cores": psutil.cpu_count(logical=False),
-            "logical_cores": psutil.cpu_count(logical=True),
-            "freq": freq,
-        },
-        "memory": {
-            "total_gb": round(psutil.virtual_memory().total / (1024 ** 3), 2),
-        },
-        "python": {
-            "version": sys.version,
-            "executable": sys.executable,
-        },
+        "platform": {k: getattr(platform, k)() for k in
+                     ("system", "release", "version", "machine", "processor")},
+        "cpu": {"physical_cores": psutil.cpu_count(logical=False),
+                "logical_cores": psutil.cpu_count(logical=True), "freq": freq},
+        "memory": {"total_gb": round(psutil.virtual_memory().total / 1024 ** 3, 2)},
+        "python": {"version": sys.version, "executable": sys.executable},
         "packages": {p: _pkg_version(p) for p in PACKAGES},
-        "threads": {
-            "env": {v: os.environ.get(v) for v in THREAD_ENV_VARS},
-            "faiss_omp_max_threads": _faiss_threads(),
-        },
+        "threads": {"env": {v: os.environ.get(v) for v in THREAD_ENV_VARS},
+                    "faiss_omp_max_threads": _faiss_threads()},
     }
 
-    json_path = out_dir / "hardware.json"
-    with open(json_path, "w", encoding="utf-8") as f:
-        json.dump(info, f, indent=2)
-    print(f"[{SCRIPT}] output path: {json_path}")
-
-    md_path = out_dir / "hardware.md"
-    with open(md_path, "w", encoding="utf-8") as f:
-        f.write("# Hardware / environment capture\n\n")
-        f.write(f"- Captured (UTC): {info['captured_at_utc']}\n")
-        f.write(f"- GPU present on machine: {info['cuda_available']} "
-                f"(count={gpu['gpu_count']}, faiss_gpu={info['faiss_gpu_available']})\n")
-        f.write(f"- GPU used in main experiments: "
-                f"**{info['main_experiments_gpu_used']}**\n")
-        f.write(f"- OS: {info['platform']['system']} {info['platform']['release']} "
-                f"({info['platform']['machine']})\n")
-        f.write(f"- CPU: {info['platform']['processor']} — "
-                f"{info['cpu']['physical_cores']} physical / "
-                f"{info['cpu']['logical_cores']} logical cores\n")
-        f.write(f"- RAM: {info['memory']['total_gb']} GB\n")
-        f.write(f"- Python: {sys.version.split()[0]}\n\n")
-        f.write("| package | version |\n| --- | --- |\n")
-        for p, v in info["packages"].items():
-            f.write(f"| {p} | {v or 'not installed'} |\n")
-    print(f"[{SCRIPT}] output path: {md_path}")
-
-    freeze_path = out_dir / "env_freeze.txt"
+    (out_dir / "hardware.json").write_text(json.dumps(info, indent=2), encoding="utf-8")
+    lines = ["# Hardware / environment capture", "",
+             f"- Captured (UTC): {info['captured_at_utc']}",
+             f"- GPU present on machine: {info['gpu_present']} ({gpu['detection']})",
+             "- GPU used in main experiments: **False**",
+             f"- OS: {info['platform']['system']} {info['platform']['release']}",
+             f"- CPU: {info['platform']['processor']}",
+             f"- RAM: {info['memory']['total_gb']} GB", "",
+             "| package | version |", "| --- | --- |"]
+    lines.extend(f"| {p} | {v or 'not installed'} |" for p, v in info["packages"].items())
+    (out_dir / "hardware.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     try:
-        out = subprocess.check_output([sys.executable, "-m", "pip", "freeze"], text=True)
-        freeze_path.write_text(out, encoding="utf-8")
-        print(f"[{SCRIPT}] output path: {freeze_path}")
-    except Exception as e:
-        print(f"[{SCRIPT}] WARN: pip freeze failed ({e}); skipping {freeze_path}")
-
+        freeze = subprocess.check_output([sys.executable, "-m", "pip", "freeze"], text=True)
+        (out_dir / "env_freeze.txt").write_text(freeze, encoding="utf-8")
+    except Exception as exc:
+        print(f"[{SCRIPT}] WARN: pip freeze unavailable: {exc}")
     print(f"[{SCRIPT}] completed.")
 
 

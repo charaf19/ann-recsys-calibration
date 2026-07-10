@@ -144,7 +144,7 @@ def main():
     ap.add_argument("--calibration_csv",
                     default=f"{RESULTS['calibration_sensitivity']}/calibration_sensitivity.csv")
     ap.add_argument("--effect_sizes_csv", default=f"{RESULTS['effect_sizes']}/effect_sizes.csv")
-    ap.add_argument("--scaling_csv", default=f"{RESULTS['scaling']}/scaling.csv")
+    ap.add_argument("--scaling_csv", default=f"{RESULTS['scale_stress']}/scale_stress_all.csv")
     ap.add_argument("--out_dir", default=RESULTS["figures_paper"])
     args = ap.parse_args()
 

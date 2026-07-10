@@ -1,7 +1,7 @@
 """Shared ANN index loading, calibration parameters, and backend adapters.
 
 This consolidates the index-resolution/search logic previously duplicated in
-run_device.py and eval_end2end.py, and exposes a small adapter registry so
+run_device.py and eval_modalities.py, and exposes a small adapter registry so
 additional ANN backends (e.g. Annoy, ScaNN) can be plugged in without
 touching the evaluation scripts.
 

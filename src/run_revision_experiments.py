@@ -35,7 +35,6 @@ Outputs:
 """
 import argparse
 import json
-import os
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -175,7 +174,6 @@ def main():
     ap.add_argument("--metric_topk", type=int, default=None)
     ap.add_argument("--omp_threads", type=int, default=None,
                     help="FAISS OMP threads for index builds (default 1)")
-    ap.add_argument("--cpu_only", action="store_true", default=None)
     ap.add_argument("--reuse_existing", action="store_true",
                     help="skip embedding/index building when outputs already exist")
     ap.add_argument("--seed", type=int, default=None)
@@ -203,12 +201,14 @@ def main():
     topk = int(opt("topk", 100))
     metric_topk = int(opt("metric_topk", 10))
     omp_threads = int(opt("omp_threads", 1))
-    cpu_only = bool(opt("cpu_only", True))
     seed = int(opt("seed", 42))
 
     main_dir = Path(RESULTS["main"])
     cal_dir = Path(RESULTS["calibration"])
     status_dir = Path(RESULTS["status"])
+    summary_path = main_dir / "summary_main.csv"
+    if summary_path.exists() and not args.reuse_existing:
+        raise FileExistsError(f"Refusing to overwrite existing evidence: {summary_path}")
 
     print(f"[{SCRIPT}] starting...")
     print(f"[{SCRIPT}] input path: {args.config}")
@@ -216,12 +216,10 @@ def main():
     print(f"[{SCRIPT}] output path: {status_dir}")
     print(f"[{SCRIPT}] datasets={datasets} methods={methods} modalities={modalities} "
           f"weighting={weighting} dim={dim} targets={targets} primary={primary_target} "
-          f"omp_threads={omp_threads} cpu_only={cpu_only} seed={seed}")
+          f"omp_threads={omp_threads} seed={seed}")
 
     set_global_seed(seed)
-    env = os.environ.copy()
-    if cpu_only:
-        env["CUDA_VISIBLE_DEVICES"] = ""  # belt-and-braces; faiss-cpu has no GPU anyway
+    env = None
 
     main_dir.mkdir(parents=True, exist_ok=True)
     cal_dir.mkdir(parents=True, exist_ok=True)
@@ -234,7 +232,7 @@ def main():
         "queries_large": queries_large, "queries_ml1m": queries_ml1m,
         "latency_queries": latency_queries, "topk": topk,
         "metric_topk": metric_topk, "omp_threads": omp_threads,
-        "cpu_only": cpu_only, "seed": seed,
+        "cpu_only": True, "seed": seed,
     }
     with open(main_dir / "run_config.json", "w", encoding="utf-8") as f:
         json.dump(run_meta, f, indent=2)

@@ -1,6 +1,0 @@
-| dataset | backbone | ndcg_at_10_best | ann_ranking_stability | n_methods |
-| --- | --- | --- | --- | --- |
-| ml-1m | bpr_matrix_factorization | 0.0329 | 0.8947 | 5 |
-| ml-1m | svd_bm25 | 0.0489 | 1.0000 | 5 |
-| ml-1m | svd_none | 0.0367 | 1.0000 | 5 |
-| ml-1m | svd_tfidf | 0.0422 | 1.0000 | 5 |

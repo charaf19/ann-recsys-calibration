@@ -7,16 +7,13 @@ index size, process RSS, and calibrated latency. It measures NO
 recommendation quality — every output row has quality_measured=false so the
 results cannot be misread as end-to-end quality at scale.
 
-Complements src/synthetic_scaling.py (which runs the full interaction ->
-embedding pipeline at moderate scale); here vectors are generated directly
+Vectors are generated directly
 so 1M-item catalogs are feasible without SVD training.
 
 Outputs:
-    results/scale_stress/scale_stress_all.csv
-    results/paper_tables/scale_stress_summary.csv/.tex (+ .md)
-    results/figures_paper/scale_stress_latency.pdf
-    results/figures_paper/scale_stress_memory.pdf
-    results/figures_paper/scale_stress_index_size.pdf
+    results/analyses/scale_stress/scale_stress_all.csv
+    results/paper/tables/scale_stress_summary.csv/.tex (+ .md)
+    results/paper/figures/scale_stress_*.pdf
 """
 import argparse
 import subprocess
@@ -196,6 +193,8 @@ def main():
 
     df = pd.DataFrame(rows)
     all_path = out_dir / "scale_stress_all.csv"
+    if all_path.exists():
+        raise FileExistsError(f"Refusing to overwrite existing evidence: {all_path}")
     df.to_csv(all_path, index=False)
     print(f"[{SCRIPT}] output path: {all_path}")
 

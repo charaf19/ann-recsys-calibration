@@ -9,7 +9,6 @@ profiles:
     description: "Consumer laptop, CPU-only reference profile"
     expected_cores_min: 4
     ram_gb_min: 8
-    gpu_used: false
     thread_env:
       OMP_NUM_THREADS: "4"
       OPENBLAS_NUM_THREADS: "4"
@@ -19,7 +18,6 @@ profiles:
     description: "Desktop/workstation, CPU-only profile for the full grid"
     expected_cores_min: 8
     ram_gb_min: 32
-    gpu_used: false
     thread_env:
       OMP_NUM_THREADS: "8"
       OPENBLAS_NUM_THREADS: "8"

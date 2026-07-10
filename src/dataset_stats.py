@@ -7,7 +7,7 @@ for each normalized interactions CSV.
 Usage:
     python src/dataset_stats.py --datasets ml-1m:data/ml1m.csv ml-20m:data/ml20m.csv \
         goodbooks:data/goodbooks.csv --min_user_interactions 5 \
-        --out_dir results/paper_tables
+        --out_dir results/paper/tables
 """
 import argparse
 from pathlib import Path
@@ -61,7 +61,7 @@ def main():
     ap.add_argument("--datasets", nargs="+", required=True,
                     help="name:path pairs, e.g. ml-1m:data/ml1m.csv")
     ap.add_argument("--min_user_interactions", type=int, default=1)
-    ap.add_argument("--out_dir", default="results/paper_tables")
+    ap.add_argument("--out_dir", default="results/paper/tables")
     args = ap.parse_args()
 
     print(f"[{SCRIPT}] starting...")

@@ -126,6 +126,8 @@ def main():
     df = pd.DataFrame(rows)
     out_dir.mkdir(parents=True, exist_ok=True)
     csv_path = out_dir / "optional_ann_backend_comparison.csv"
+    if csv_path.exists():
+        raise FileExistsError(f"Refusing to overwrite existing evidence: {csv_path}")
     df.to_csv(csv_path, index=False)
     print(f"[{SCRIPT}] output path: {csv_path}")
 

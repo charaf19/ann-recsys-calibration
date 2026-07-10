@@ -27,7 +27,7 @@ SCRIPT = "validate_results"
 # (artifact path, stage that produces it, required?, kind, required columns/keys)
 ARTIFACTS = [
     (f"{RESULTS['hardware']}/hardware.json", "capture_hardware.py", True, "json",
-     ["main_experiments_gpu_used", "cuda_available", "faiss_gpu_available",
+     ["gpu_present", "gpu_used_in_main_experiments",
       "platform", "cpu", "packages"]),
     (f"{RESULTS['main']}/summary_main.csv", "run_revision_experiments.py", True, "csv",
      ["dataset", "weighting", "modality", "method", "ndcg_at_k_mean",
@@ -77,8 +77,6 @@ ARTIFACTS = [
      ["dataset", "modality", "method", "measurement_backend",
       "direct_energy_available", "cpu_energy_joules", "energy_per_query_joules",
       "wall_time_sec", "queries", "cpu_utilization_mean", "rss_mb", "notes"]),
-    (f"{RESULTS['scaling']}/scaling.csv", "synthetic_scaling.py", False, "csv",
-     ["n_items", "method", "latency_p95_ms"]),
 ]
 
 MODALITY_VALUES = {"u2i", "i2i"}

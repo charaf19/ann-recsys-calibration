@@ -2,13 +2,9 @@
 # canonical CPU benchmark; install selectively for the optional extensions.
 # Every consumer degrades gracefully when a package here is absent.
 # IndexWise-Recsys is evaluated as a CPU-only framework; GPU-specific
-# acceleration is outside the present scope — faiss-gpu is intentionally
-# NOT listed here.
+# acceleration is outside the present scope; GPU packages are not listed.
 
 torch                      # two_tower_mlp embedding backbone (CPU build is fine)
-pynvml                     # passive GPU-presence capture (capture_hardware.py)
-                           # + supplementary NVML energy (run_energy_measurement.py)
-
 # --- Optional ANN backend comparison (Linux-centric wheels) ---
 # Install these selectively. On Windows, hnswlib usually requires Microsoft
 # C++ Build Tools because pip builds it from source.

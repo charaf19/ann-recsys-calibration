@@ -120,6 +120,8 @@ def main():
     if rows:
         df = pd.DataFrame(rows)
         csv_path = out_dir / "calibration_sensitivity.csv"
+        if csv_path.exists():
+            raise FileExistsError(f"Refusing to overwrite existing evidence: {csv_path}")
         df.to_csv(csv_path, index=False)
         print(f"[{SCRIPT}] output path: {csv_path}")
     else:

@@ -70,6 +70,8 @@ def main():
             })
     ci_df = pd.DataFrame(ci_rows)
     ci_path = out_dir / "bootstrap_cis.csv"
+    if ci_path.exists():
+        raise FileExistsError(f"Refusing to overwrite existing evidence: {ci_path}")
     ci_df.to_csv(ci_path, index=False)
     print(f"[{SCRIPT}] output path: {ci_path} ({len(ci_df)} rows)")
 
@@ -103,6 +105,8 @@ def main():
             })
     test_df = pd.DataFrame(test_rows)
     test_path = out_dir / "paired_tests.csv"
+    if test_path.exists():
+        raise FileExistsError(f"Refusing to overwrite existing evidence: {test_path}")
     test_df.to_csv(test_path, index=False)
     print(f"[{SCRIPT}] output path: {test_path} ({len(test_df)} rows)")
     print(f"[{SCRIPT}] completed.")
