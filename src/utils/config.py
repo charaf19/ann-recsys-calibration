@@ -25,6 +25,44 @@ from pathlib import Path
 import yaml
 
 
+REQUIRED_CORE_SECTIONS = (
+    "project",
+    "reproducibility",
+    "embedding",
+    "retrieval",
+    "index",
+    "calibration",
+    "statistics",
+)
+
+REQUIRED_CORE_KEYS = (
+    "project.name",
+    "reproducibility.seed",
+    "reproducibility.omp_threads",
+    "embedding.method",
+    "embedding.dim",
+    "embedding.weighting",
+    "embedding.normalize",
+    "embedding.bm25_k1",
+    "embedding.bm25_b",
+    "retrieval.methods",
+    "retrieval.modalities",
+    "retrieval.topk",
+    "retrieval.metric_topk",
+    "retrieval.budget_mb",
+    "index.hnsw.M",
+    "index.hnsw.ef_construction",
+    "index.ivf.nlist",
+    "index.pq.m",
+    "index.pq.bits",
+    "index.ivfpq.use_opq",
+    "calibration.targets",
+    "calibration.primary_target",
+    "calibration.queries",
+    "statistics.bootstrap_iterations",
+)
+
+
 class ConfigError(ValueError):
     """Configuration file missing, unparsable, or failing validation."""
 
@@ -62,14 +100,15 @@ def deep_merge(base: dict, override: dict) -> dict:
     return out
 
 
-def load_config(path, cli_overrides: dict | None = None) -> dict:
+def load_config(path, cli_overrides: dict | None = None,
+                validate: bool = True) -> dict:
     """Load a YAML config, resolving `inherits:` chains and CLI overrides.
 
     `inherits` is resolved relative to the config file's own directory.
     `cli_overrides` maps dotted keys to values; None values are ignored so
     argparse defaults of None never mask YAML values.
     """
-    path = Path(path)
+    path = Path(path).expanduser().resolve()
     seen = []
     chain = []
     current = path
@@ -82,6 +121,10 @@ def load_config(path, cli_overrides: dict | None = None) -> dict:
         parent = doc.pop("inherits", None)
         if parent is None:
             break
+        if not isinstance(parent, str) or not parent.strip():
+            raise ConfigError(
+                f"config key `inherits` in {current} must be a non-empty "
+                f"relative path string, got {parent!r}")
         current = (current.parent / parent).resolve()
 
     resolved: dict = {}
@@ -90,6 +133,8 @@ def load_config(path, cli_overrides: dict | None = None) -> dict:
 
     if cli_overrides:
         resolved = apply_cli_overrides(resolved, cli_overrides)
+    if validate:
+        validate_config(resolved, source=path)
     return resolved
 
 
@@ -99,6 +144,8 @@ def apply_cli_overrides(cfg: dict, overrides: dict) -> dict:
     for dotted, value in overrides.items():
         if value is None:
             continue
+        if not str(dotted).strip() or any(not p for p in str(dotted).split(".")):
+            raise ConfigError(f"invalid empty CLI override path: {dotted!r}")
         node = out
         parts = str(dotted).split(".")
         for p in parts[:-1]:
@@ -109,6 +156,39 @@ def apply_cli_overrides(cfg: dict, overrides: dict) -> dict:
             node = nxt
         node[parts[-1]] = value
     return out
+
+
+def validate_config(cfg: dict, source=None) -> dict:
+    """Validate the shared scientific configuration contract.
+
+    Experiment-specific sections (``datasets``, ``evaluation``,
+    ``embedding_sensitivity`` and ``scale_stress``) are validated by their
+    consumers because they are intentionally absent from ``defaults.yml``.
+    The core sections and keys, however, must resolve for every canonical
+    experiment configuration.
+    """
+    label = f" in {source}" if source else ""
+    if not isinstance(cfg, dict):
+        raise ConfigError(f"resolved configuration{label} must be a mapping")
+    missing_sections = [s for s in REQUIRED_CORE_SECTIONS
+                        if not isinstance(cfg.get(s), dict)]
+    if missing_sections:
+        raise ConfigError(
+            f"resolved configuration{label} is missing required mapping "
+            f"section(s): {', '.join(missing_sections)}")
+    missing_keys = []
+    for dotted in REQUIRED_CORE_KEYS:
+        node = cfg
+        for part in dotted.split("."):
+            if not isinstance(node, dict) or part not in node:
+                missing_keys.append(dotted)
+                break
+            node = node[part]
+    if missing_keys:
+        raise ConfigError(
+            f"resolved configuration{label} is missing required key(s): "
+            f"{', '.join(missing_keys)}")
+    return cfg
 
 
 _MISSING = object()
@@ -130,7 +210,14 @@ def cfg_get(cfg: dict, dotted: str, default=_MISSING, type=None, required=False)
     if type is not None and node is not None:
         try:
             if type is bool and isinstance(node, str):
-                node = node.strip().lower() in ("1", "true", "yes", "y")
+                token = node.strip().lower()
+                if token in ("1", "true", "yes", "y", "on"):
+                    node = True
+                elif token in ("0", "false", "no", "n", "off"):
+                    node = False
+                else:
+                    raise ValueError(
+                        "expected a boolean token (true/false, yes/no, 1/0)")
             else:
                 node = type(node)
         except (TypeError, ValueError) as e:

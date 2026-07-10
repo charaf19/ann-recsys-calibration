@@ -16,13 +16,16 @@ from pathlib import Path
 
 import pandas as pd
 
-from bootstrap_significance import load_perquery, METRICS
+from bootstrap_significance import (load_perquery, METRICS,
+                                    validate_pairing_contract)
+from utils.config import ConfigError, cfg_get, load_config
 from utils.metrics import cohens_d_paired, cliffs_delta, effect_size_interpretation
 from utils.paths import RESULTS
 from utils.result_io import (preflight_output, write_dataframe_atomic,
                              ResultExistsError)
 
 SCRIPT = "effect_size_tables"
+DEFAULT_CONFIG = "configs/main_cpu.yml"
 KEY = ["dataset", "weighting", "dim", "modality", "method", "baseline",
        "metric", "seed"]
 
@@ -31,13 +34,22 @@ def main():
     ap = argparse.ArgumentParser(
         description="Paired Cohen's d and Cliff's delta of every ANN method "
                     "vs the exact Flat baseline, per metric.")
+    ap.add_argument("--config", default=DEFAULT_CONFIG)
     ap.add_argument("--perquery_dir", default=RESULTS["perquery"])
     ap.add_argument("--out_dir", default=RESULTS["effect_sizes"])
-    ap.add_argument("--baseline_method", default="flat")
-    ap.add_argument("--seed", type=int, default=42)
+    ap.add_argument("--baseline_method", default="flat", choices=["flat"])
+    ap.add_argument("--seed", type=int, default=None)
     ap.add_argument("--write_mode", default="fail_if_exists",
                     choices=["fail_if_exists", "replace", "merge"])
     args = ap.parse_args()
+
+    try:
+        cfg = load_config(args.config)
+    except ConfigError as exc:
+        print(f"[{SCRIPT}] ERROR: {exc}")
+        sys.exit(1)
+    seed = (args.seed if args.seed is not None else
+            cfg_get(cfg, "reproducibility.seed", type=int, required=True))
 
     out_dir = Path(args.out_dir)
     out_path = out_dir / "effect_sizes.csv"
@@ -51,7 +63,12 @@ def main():
     print(f"[{SCRIPT}] input path: {args.perquery_dir}")
     print(f"[{SCRIPT}] output path: {out_path}")
 
-    runs = load_perquery(args.perquery_dir)
+    try:
+        runs = load_perquery(args.perquery_dir)
+        validate_pairing_contract(runs, cfg, args.baseline_method)
+    except (OSError, ValueError) as exc:
+        print(f"[{SCRIPT}] ERROR: {exc}")
+        sys.exit(1)
     if not runs:
         print(f"[{SCRIPT}] ERROR: no per-query files found in "
               f"{args.perquery_dir}. Run run_revision_experiments.py first.")
@@ -64,21 +81,19 @@ def main():
             continue
         base = runs.get((dataset, weighting, dim, modality,
                          args.baseline_method))
-        if base is None:
-            print(f"[{SCRIPT}] WARN: no {args.baseline_method} baseline for "
-                  f"{dataset}/{weighting}/d{dim}/{modality}; skipping {method}.")
-            continue
+        if base is None:  # guarded by validate_pairing_contract
+            raise RuntimeError("validated Flat baseline unexpectedly absent")
         for metric in METRICS:
             if metric == "ann_recall_vs_exact":
                 continue
             arrays, base_arrays = rec["arrays"], base["arrays"]
             if metric not in arrays or metric not in base_arrays:
-                continue
+                raise RuntimeError("validated metric unexpectedly absent")
             a, b = arrays[metric], base_arrays[metric]
             if a.shape != b.shape:
-                continue
+                raise RuntimeError("validated paired arrays unexpectedly differ")
             d = cohens_d_paired(a, b)
-            delta = cliffs_delta(a, b, seed=args.seed)
+            delta = cliffs_delta(a, b, seed=seed)
             rows.append({
                 "dataset": dataset, "weighting": weighting, "dim": dim,
                 "modality": modality, "method": method,
@@ -90,7 +105,7 @@ def main():
                 "cliffs_delta_magnitude": effect_size_interpretation(
                     delta, "cliffs_delta"),
                 "n": int(a.size),
-                "seed": rec["seed"] if rec["seed"] is not None else args.seed,
+                "seed": seed, "evaluation_seed": rec["seed"],
             })
 
     df = pd.DataFrame(rows)

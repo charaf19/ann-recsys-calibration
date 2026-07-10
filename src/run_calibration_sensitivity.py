@@ -21,8 +21,9 @@ import pandas as pd
 from calibrate import calibrate_index
 from utils.ann_io import load_ann_index, CALIBRATION_PARAM
 from utils.common import set_global_seed
-from utils.config import load_config, cfg_get, ConfigError
+from utils.config import load_config, cfg_get, config_hash, ConfigError
 from utils.paths import emb_dir, index_dir, RESULTS
+from utils.provenance import make_run_id, provenance_columns
 from utils.result_io import (preflight_output, write_dataframe_atomic,
                              write_json_atomic, ResultExistsError)
 
@@ -51,8 +52,8 @@ def main():
     ap.add_argument("--out_dir", default=RESULTS["calibration_sensitivity"])
     ap.add_argument("--write_mode", default="fail_if_exists",
                     choices=["fail_if_exists", "replace", "merge"])
-    ap.add_argument("--allow_missing_datasets", action="store_true",
-                    help="skip datasets whose embeddings/indexes are missing "
+    ap.add_argument("--allow_missing_inputs", action="store_true",
+                    help="skip combinations whose embeddings/indexes are missing "
                          "(default: fail before any calibration starts)")
     args = ap.parse_args()
 
@@ -84,14 +85,23 @@ def main():
                                          required=True)]
     weighting = cfg_get(cfg, "embedding.weighting", required=True)
     dim = cfg_get(cfg, "embedding.dim", type=int, required=True)
-    topk = cfg_get(cfg, "retrieval.topk", type=int, default=100)
+    topk = cfg_get(cfg, "retrieval.topk", type=int, required=True)
     queries = cfg_get(cfg, "calibration.queries", type=int, required=True)
-    seed = cfg_get(cfg, "reproducibility.seed", type=int, default=42)
+    seed = cfg_get(cfg, "reproducibility.seed", type=int, required=True)
+    cfg_hash = config_hash(cfg)
+    prov = provenance_columns(make_run_id(cfg_hash), cfg_hash)
 
     out_dir = Path(args.out_dir)
     csv_path = out_dir / "calibration_sensitivity.csv"
     try:
         preflight_output(csv_path, args.write_mode)
+        for dataset in datasets:
+            for method in methods:
+                for target in targets:
+                    preflight_output(
+                        out_dir / (f"{dataset}__{weighting}__d{dim}__{method}"
+                                   f"__target_{target:.2f}.json"),
+                        args.write_mode)
     except (ResultExistsError, ValueError) as e:
         print(f"[{SCRIPT}] ERROR: {e}")
         sys.exit(1)
@@ -107,7 +117,7 @@ def main():
             if not Path(index_dir(dataset, weighting, dim, method)).exists():
                 missing.append(f"{dataset}/{method}: index "
                                f"{index_dir(dataset, weighting, dim, method)}")
-    if missing and not args.allow_missing_datasets:
+    if missing and not args.allow_missing_inputs:
         print(f"[{SCRIPT}] ERROR: {len(missing)} required input(s) missing; "
               f"run run_revision_experiments.py first:")
         for m in missing:
@@ -128,7 +138,7 @@ def main():
         vec_path = Path(emb_dir(dataset, weighting, dim)) / "item_vecs.npy"
         if not vec_path.is_file():
             print(f"[{SCRIPT}] WARN: missing embeddings {vec_path}; "
-                  f"skipping {dataset} (--allow_missing_datasets).")
+                  f"skipping {dataset} (--allow_missing_inputs).")
             continue
         item_vecs = np.load(vec_path).astype("float32")
         N, D = item_vecs.shape
@@ -137,7 +147,7 @@ def main():
             idx_dir = index_dir(dataset, weighting, dim, method)
             if not Path(idx_dir).exists():
                 print(f"[{SCRIPT}] WARN: missing index {idx_dir}; skipping "
-                      f"(--allow_missing_datasets).")
+                      f"(--allow_missing_inputs).")
                 continue
             for target in targets:
                 print(f"[{SCRIPT}] calibrating {dataset}/{method} "
@@ -146,12 +156,12 @@ def main():
                 res = calibrate_index(ann, item_vecs, float(target), int(topk),
                                       int(queries), int(seed))
                 res.update({"dataset": dataset, "weighting": weighting,
-                            "dim": int(dim)})
+                            "dim": int(dim), **prov})
 
                 detail_path = out_dir / (
                     f"{dataset}__{weighting}__d{dim}__{method}"
                     f"__target_{float(target):.2f}.json")
-                write_json_atomic(res, detail_path, mode="replace")
+                write_json_atomic(res, detail_path, mode=args.write_mode)
 
                 rows.append({
                     "dataset": dataset,
@@ -169,6 +179,7 @@ def main():
                     "topk": int(topk),
                     "n_calibration_queries": res["n_calibration_queries"],
                     "seed": int(seed),
+                    **prov,
                 })
 
     if not rows:
@@ -177,6 +188,14 @@ def main():
         sys.exit(1)
 
     df = pd.DataFrame(rows)
+    expected_rows = len(datasets) * len(methods) * len(targets)
+    if len(df) != expected_rows:
+        message = (f"produced {len(df)}/{expected_rows} expected rows; "
+                   f"evidence is partial")
+        if not args.allow_missing_inputs:
+            print(f"[{SCRIPT}] ERROR: {message}")
+            sys.exit(1)
+        print(f"[{SCRIPT}] WARN: {message} (--allow_missing_inputs).")
     write_dataframe_atomic(df, csv_path, mode=args.write_mode,
                            key=KEY, sort_by=KEY)
     print(f"[{SCRIPT}] output path: {csv_path} ({len(df)} rows)")

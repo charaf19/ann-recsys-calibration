@@ -69,6 +69,13 @@ def test_merge_identical_duplicates_dedupe():
     assert len(merged) == 1
 
 
+def test_identical_duplicate_new_rows_are_deduplicated(tmp_path):
+    p = tmp_path / "out.csv"
+    row = {"dataset": "a", "method": "flat", "v": 1.0}
+    write_dataframe_atomic(df_of([row, row]), p, mode="replace", key=KEY)
+    assert len(pd.read_csv(p)) == 1
+
+
 def test_duplicate_keys_in_new_rows_rejected(tmp_path):
     bad = df_of([{"dataset": "a", "method": "flat", "v": 1},
                  {"dataset": "a", "method": "flat", "v": 2}])
@@ -81,6 +88,35 @@ def test_validate_unique_keys_direct():
     ok = df_of([{"dataset": "a", "method": "flat"},
                 {"dataset": "a", "method": "hnsw"}])
     validate_unique_keys(ok, KEY)
+
+
+def test_complete_natural_key_is_required(tmp_path):
+    bad = df_of([{"dataset": "a", "v": 1}])
+    with pytest.raises(ValueError, match="missing natural-key columns"):
+        write_dataframe_atomic(bad, tmp_path / "out.csv", mode="replace",
+                               key=KEY)
+
+
+def test_null_natural_key_is_rejected(tmp_path):
+    bad = df_of([{"dataset": "a", "method": None, "v": 1}])
+    with pytest.raises(MergeConflictError, match="null values"):
+        write_dataframe_atomic(bad, tmp_path / "out.csv", mode="replace",
+                               key=KEY)
+
+
+def test_nearly_equal_values_are_conflicting():
+    a = df_of([{"dataset": "a", "method": "flat", "v": 1.0}])
+    b = df_of([{"dataset": "a", "method": "flat", "v": 1.0 + 1e-13}])
+    with pytest.raises(MergeConflictError, match="conflicting rows"):
+        merge_dataframe(a, b, KEY)
+
+
+def test_conflicting_duplicates_in_existing_file_are_rejected(tmp_path):
+    p = tmp_path / "out.csv"
+    p.write_text("dataset,method,v\na,flat,1\na,flat,9\n", encoding="utf-8")
+    new = df_of([{"dataset": "b", "method": "flat", "v": 2}])
+    with pytest.raises(MergeConflictError, match="conflicting rows"):
+        write_dataframe_atomic(new, p, mode="merge", key=KEY)
 
 
 def test_output_ordering_deterministic(tmp_path):

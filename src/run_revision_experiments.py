@@ -29,6 +29,7 @@ Outputs:
 """
 import argparse
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -40,6 +41,7 @@ from calibrate import calibrate_index
 from utils.ann_io import load_ann_index, CALIBRATION_PARAM
 from utils.common import set_global_seed, normalize_modality_label
 from utils.config import load_config, cfg_get, config_hash, ConfigError
+from utils.index_config import build_index_command
 from utils.paths import dataset_csv, emb_dir, index_dir, RESULTS
 from utils.provenance import RunManifest, provenance_columns, utc_now
 from utils.result_io import (preflight_output, write_dataframe_atomic,
@@ -64,35 +66,22 @@ def run(cmd, env=None):
                         + " ".join(str(c) for c in full)) from e
 
 
-def build_index_cmd(method, emb, idx_dir, budget_mb, seed, omp_threads,
-                    index_cfg):
-    """Build the build_index.py invocation from the RESOLVED index config.
-
-    index_cfg carries the paper defaults from configs/defaults.yml
-    (index.hnsw/index.ivf/index.pq/index.ivfpq); nothing is hardcoded here.
-    """
-    cmd = ["python", "src/build_index.py", "--method", method,
-           "--item_vecs", f"{emb}/item_vecs.npy",
-           "--item_ids", f"{emb}/item_ids.npy",
-           "--out_dir", idx_dir, "--budget_mb", str(budget_mb),
-           "--seed", str(seed), "--omp_threads", str(omp_threads)]
-    hnsw = index_cfg.get("hnsw", {})
-    ivf = index_cfg.get("ivf", {})
-    pq = index_cfg.get("pq", {})
-    ivfpq = index_cfg.get("ivfpq", {})
-    if method == "hnsw":
-        cmd += ["--M", str(hnsw.get("M", 24)),
-                "--efc", str(hnsw.get("ef_construction", 200))]
-    elif method == "ivfflat":
-        cmd += ["--nlist", str(ivf.get("nlist", "auto"))]
-    elif method == "ivfpq":
-        cmd += ["--nlist", str(ivf.get("nlist", "auto")),
-                "--m", str(pq.get("m", 32)), "--bits", str(pq.get("bits", 8))]
-        if ivfpq.get("use_opq", True):
-            cmd += ["--opq"]
-    elif method == "flatpq":
-        cmd += ["--m", str(pq.get("m", 32)), "--bits", str(pq.get("bits", 8))]
-    return cmd
+def _require_matching_metadata(path, expected, artifact):
+    """Reject stale reusable artifacts instead of trusting path existence."""
+    path = Path(path)
+    if not path.is_file():
+        raise StepError(f"cannot reuse {artifact}: metadata missing at {path}")
+    try:
+        meta = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise StepError(f"cannot reuse {artifact}: invalid metadata {path}: "
+                        f"{exc}") from exc
+    mismatches = {k: {"expected": v, "found": meta.get(k)}
+                  for k, v in expected.items() if meta.get(k) != v}
+    if mismatches:
+        raise StepError(
+            f"refusing to reuse incompatible {artifact} at {path.parent}: "
+            f"{mismatches}")
 
 
 class StatusTracker:
@@ -206,37 +195,68 @@ def main():
     methods = list(cfg_get(cfg, "retrieval.methods", required=True))
     weighting = cfg_get(cfg, "embedding.weighting", required=True)
     dim = cfg_get(cfg, "embedding.dim", type=int, required=True)
-    normalize = cfg_get(cfg, "embedding.normalize", default="l2")
-    bm25_k1 = cfg_get(cfg, "embedding.bm25_k1", type=float, default=1.2)
-    bm25_b = cfg_get(cfg, "embedding.bm25_b", type=float, default=0.75)
-    budget_mb = cfg_get(cfg, "retrieval.budget_mb", type=int, default=100)
+    normalize = cfg_get(cfg, "embedding.normalize", required=True)
+    bm25_k1 = cfg_get(cfg, "embedding.bm25_k1", type=float, required=True)
+    bm25_b = cfg_get(cfg, "embedding.bm25_b", type=float, required=True)
+    budget_mb = cfg_get(cfg, "retrieval.budget_mb", type=int, required=True)
     targets = [float(t) for t in cfg_get(cfg, "calibration.targets",
                                          required=True)]
     primary_target = cfg_get(cfg, "calibration.primary_target", type=float,
                              required=True)
     cal_queries = cfg_get(cfg, "calibration.queries", type=int, required=True)
     queries_large = str(cfg_get(cfg, "evaluation.queries_large",
-                                default="10000"))
-    queries_ml1m = str(cfg_get(cfg, "evaluation.queries_ml1m", default="full"))
+                                required=True))
+    queries_ml1m = str(cfg_get(cfg, "evaluation.queries_ml1m", required=True))
     latency_queries = cfg_get(cfg, "evaluation.latency_queries", type=int,
-                              default=2000)
-    topk = cfg_get(cfg, "retrieval.topk", type=int, default=100)
-    metric_topk = cfg_get(cfg, "retrieval.metric_topk", type=int, default=10)
+                              required=True)
+    topk = cfg_get(cfg, "retrieval.topk", type=int, required=True)
+    metric_topk = cfg_get(cfg, "retrieval.metric_topk", type=int, required=True)
     omp_threads = cfg_get(cfg, "reproducibility.omp_threads", type=int,
-                          default=1)
-    seed = cfg_get(cfg, "reproducibility.seed", type=int, default=42)
-    index_cfg = cfg_get(cfg, "index", default={})
+                          required=True)
+    seed = cfg_get(cfg, "reproducibility.seed", type=int, required=True)
+    default_ef = cfg_get(cfg, "retrieval.runtime_defaults.ef", type=int,
+                         required=True)
+    default_nprobe = cfg_get(cfg, "retrieval.runtime_defaults.nprobe", type=int,
+                             required=True)
+    cpu_only = cfg_get(cfg, "hardware.cpu_only", type=bool, required=True)
+    if not cpu_only:
+        print(f"[{SCRIPT}] ERROR: canonical main configuration must set "
+              f"hardware.cpu_only=true")
+        sys.exit(1)
+    index_cfg = cfg_get(cfg, "index", required=True)
     cfg_hash = config_hash(cfg)
 
     main_dir = Path(RESULTS["main"])
+    meta_dir = Path(RESULTS["meta"])
     agg_dir = Path(RESULTS["aggregates"])
     cal_dir = Path(RESULTS["calibration"])
     status_dir = Path(RESULTS["status"])
     summary_path = main_dir / "summary_main.csv"
+    checkpoint_path = status_dir / "summary_main_checkpoint.csv"
+    run_config_path = meta_dir / "run_config.json"
 
     # ---- fail-fast argument/input validation (before any expensive work) --
     try:
         write_mode = preflight_output(summary_path, args.write_mode)
+        preflight_output(run_config_path, args.write_mode)
+        for dataset in datasets:
+            for method in methods:
+                if write_mode == "fail_if_exists":
+                    preflight_output(
+                        status_dir / (f"{dataset}__{weighting}__d{dim}__"
+                                      f"{method}.status.json"), write_mode)
+                if CALIBRATION_PARAM.get(method) is not None:
+                    for target in sorted(set(targets + [primary_target])):
+                        preflight_output(
+                            cal_dir / (f"{dataset}__{weighting}__d{dim}__"
+                                       f"{method}__target_{target:.2f}.json"),
+                            write_mode)
+                for modality in modalities:
+                    stem = (f"{dataset}__{weighting}__d{dim}__{modality}__"
+                            f"{method}")
+                    preflight_output(agg_dir / f"{stem}.json", write_mode)
+                    preflight_output(Path(RESULTS["perquery"]) / f"{stem}.npz",
+                                     write_mode)
     except (ResultExistsError, ValueError) as e:
         print(f"[{SCRIPT}] ERROR: {e}")
         sys.exit(1)
@@ -267,7 +287,7 @@ def main():
 
     set_global_seed(seed)
     env = None
-    for d in (main_dir, agg_dir, cal_dir, status_dir):
+    for d in (main_dir, meta_dir, agg_dir, cal_dir, status_dir):
         d.mkdir(parents=True, exist_ok=True)
 
     manifest = RunManifest.start(SCRIPT, cfg, cfg_hash, datasets=datasets,
@@ -284,25 +304,19 @@ def main():
         "queries_large": queries_large, "queries_ml1m": queries_ml1m,
         "latency_queries": latency_queries, "topk": topk,
         "metric_topk": metric_topk, "omp_threads": omp_threads,
-        "cpu_only": True, "seed": seed,
+        "cpu_only": cpu_only, "seed": seed,
     }
-    write_json_atomic(run_meta, main_dir / "run_config.json", mode="replace")
-    manifest.add_output(str(main_dir / "run_config.json"))
-
-    # existing rows to preserve when merging (loaded once, before the run)
-    base_rows = pd.read_csv(summary_path) if (write_mode == "merge"
-                                              and summary_path.exists()) else None
+    write_json_atomic(run_meta, run_config_path, mode=write_mode)
+    manifest.add_output(str(run_config_path))
 
     def checkpoint(rows):
         df = pd.DataFrame(rows)
         for col, val in prov.items():
             df[col] = val
-        if base_rows is not None:
-            from utils.result_io import merge_dataframe
-            df = merge_dataframe(base_rows, df, MAIN_KEY)
-        write_dataframe_atomic(df, summary_path, mode="replace",
+        write_dataframe_atomic(df, checkpoint_path, mode="replace",
                                key=MAIN_KEY, sort_by=MAIN_KEY)
-        print(f"[{SCRIPT}] checkpoint: {summary_path} ({len(df)} rows)")
+        print(f"[{SCRIPT}] non-final checkpoint: {checkpoint_path} "
+              f"({len(df)} rows)")
 
     rows = []
     any_failure = False
@@ -314,14 +328,26 @@ def main():
         emb = emb_dir(dataset, weighting, dim)
         try:
             if args.reuse_existing and Path(f"{emb}/item_vecs.npy").is_file():
+                _require_matching_metadata(
+                    Path(emb) / "embedding_meta.json",
+                    {"dim_requested": dim, "weighting": weighting,
+                     "bm25_k1": bm25_k1, "bm25_b": bm25_b,
+                     "normalize": normalize, "seed": seed,
+                     "config_hash": cfg_hash},
+                    f"{dataset} embeddings")
                 print(f"[{SCRIPT}] reusing embeddings {emb}")
             else:
                 run(["python", "src/train_embeddings.py", "--interactions", csv,
                      "--dim", str(dim), "--weighting", weighting,
                      "--bm25_k1", str(bm25_k1), "--bm25_b", str(bm25_b),
                      "--normalize", normalize, "--seed", str(seed),
+                     "--config_hash", cfg_hash,
                      "--out_dir", emb], env=env)
             item_vecs = np.load(f"{emb}/item_vecs.npy").astype("float32")
+            if item_vecs.ndim != 2 or item_vecs.shape[1] != dim:
+                raise StepError(
+                    f"embedding dimension mismatch for {dataset}: configured "
+                    f"d{dim}, loaded shape {item_vecs.shape}")
         except (StepError, OSError) as e:
             print(f"[{SCRIPT}] ERROR: embeddings failed for {dataset}: {e}; "
                   f"skipping dataset.")
@@ -342,10 +368,19 @@ def main():
             try:
                 if args.reuse_existing and Path(idx_dir).exists() \
                         and any(Path(idx_dir).iterdir()):
+                    _require_matching_metadata(
+                        Path(idx_dir) / "index_meta.json",
+                        {"method": method, "budget_mb": budget_mb,
+                         "omp_threads": omp_threads, "seed": seed,
+                         "config_hash": cfg_hash},
+                        f"{dataset}/{method} index")
                     print(f"[{SCRIPT}] reusing index {idx_dir}")
                 else:
-                    run(build_index_cmd(method, emb, idx_dir, budget_mb,
-                                        seed, omp_threads, index_cfg), env=env)
+                    run(build_index_command(
+                        method, Path(emb) / "item_vecs.npy",
+                        Path(emb) / "item_ids.npy", idx_dir, budget_mb,
+                        seed, omp_threads, index_cfg,
+                        configuration_hash=cfg_hash), env=env)
                 tracker.mark("build", "ok")
             except StepError as e:
                 print(f"[{SCRIPT}] ERROR: build failed for {dataset}/{method}: {e}")
@@ -355,7 +390,7 @@ def main():
                 failed = True
 
             # 3) calibration at every target (primary target drives eval)
-            ef, nprobe = 128, 16  # runtime defaults for untunable paths
+            ef, nprobe = default_ef, default_nprobe
             primary_cal = None
             if failed:
                 tracker.mark("calibration", "skipped")
@@ -372,7 +407,7 @@ def main():
                         cal_path = cal_dir / (
                             f"{dataset}__{weighting}__d{dim}__{method}"
                             f"__target_{target:.2f}.json")
-                        write_json_atomic(res, cal_path, mode="replace")
+                        write_json_atomic(res, cal_path, mode=write_mode)
                         if abs(target - primary_target) < 1e-9:
                             primary_cal = res
                     if primary_cal and primary_cal["calibrated_param_value"] is not None:
@@ -433,7 +468,10 @@ def main():
                          "--seed", str(seed),
                          "--dataset", dataset,
                          "--weighting", weighting,
-                         "--out_dir", str(main_dir)], env=env)
+                         "--config", args.config,
+                         "--aggregate_dir", str(agg_dir),
+                         "--perquery_dir", RESULTS["perquery"],
+                         "--write_mode", write_mode], env=env)
                     tracker.mark(step, "ok")
                 except StepError as e:
                     print(f"[{SCRIPT}] ERROR: {step} failed for "
@@ -482,10 +520,23 @@ def main():
         if rows:
             checkpoint(rows)
 
-    if rows:
-        checkpoint(rows)
+    expected_rows = len(datasets) * len(methods) * len(modalities)
+    if rows and not any_failure and len(rows) == expected_rows:
+        final_df = pd.DataFrame(rows)
+        for col, val in prov.items():
+            final_df[col] = val
+        write_dataframe_atomic(final_df, summary_path, mode=write_mode,
+                               key=MAIN_KEY, sort_by=MAIN_KEY)
+        if checkpoint_path.exists():
+            os.unlink(checkpoint_path)
         manifest.add_output(str(summary_path))
         print(f"[{SCRIPT}] output path: {summary_path}")
+    elif rows:
+        checkpoint(rows)
+        any_failure = True
+        print(f"[{SCRIPT}] WARN: produced {len(rows)}/{expected_rows} rows; "
+              f"partial rows remain only in {checkpoint_path}, not in final "
+              f"paper evidence.")
     else:
         print(f"[{SCRIPT}] WARN: no rows produced (missing datasets or all "
               f"steps failed — see {status_dir}).")

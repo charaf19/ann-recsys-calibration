@@ -2,8 +2,9 @@
 
 Pure post-processing: reads ONLY the canonical evidence under results/main/
 and results/analyses/ and writes ONLY under results/paper/tables/. Never
-fabricates values. Every generated table gets a <name>.sources.json sidecar
-recording source files, hashes, git commit, and timestamp.
+fabricates values. Every generated format gets a
+<full-filename>.sources.json sidecar recording source files, hashes, the
+canonical run's config hash, git commit, and timestamp.
 
 The main summary is a critical input (clear error when absent); analysis
 inputs are optional (visible warning, only the dependent table is skipped).
@@ -15,7 +16,6 @@ from pathlib import Path
 import pandas as pd
 
 from utils.paths import RESULTS
-from utils.provenance import write_sources_sidecar
 from utils.reporting import write_table
 from utils.result_io import resolve_write_mode, ResultExistsError
 
@@ -54,13 +54,8 @@ class TableEmitter:
 
     def emit(self, df, name, sources):
         base = self.out_dir / name
-        target = base.with_suffix(".csv")
-        if target.exists() and self.mode == "fail_if_exists":
-            raise ResultExistsError(
-                f"refusing to overwrite existing table: {target} "
-                f"(use --write_mode replace)")
-        self.written += write_table(df, base)
-        write_sources_sidecar(target, sources, SCRIPT)
+        self.written += write_table(
+            df, base, mode=self.mode, source_files=sources, script=SCRIPT)
 
 
 def table_main_quality(em, summary):

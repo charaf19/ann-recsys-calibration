@@ -31,8 +31,10 @@ from scipy.stats import spearmanr
 from calibrate import calibrate_index
 from utils.ann_io import load_ann_index, CALIBRATION_PARAM
 from utils.common import set_global_seed
-from utils.config import load_config, cfg_get, ConfigError
+from utils.config import load_config, cfg_get, config_hash, ConfigError
+from utils.index_config import build_index_command
 from utils.paths import dataset_csv, dataset_stem, RESULTS
+from utils.provenance import make_run_id, provenance_columns
 from utils.result_io import (preflight_output, write_dataframe_atomic,
                              ResultExistsError)
 
@@ -49,34 +51,23 @@ def run(cmd, check=True):
     return subprocess.run(full, check=check).returncode
 
 
-def build_index_cmd(method, emb, idx_dir, budget_mb, seed, omp_threads,
-                    index_cfg):
-    """Index build invocation from the RESOLVED index configuration."""
-    cmd = ["python", "src/build_index.py", "--method", method,
-           "--item_vecs", f"{emb}/item_vecs.npy",
-           "--item_ids", f"{emb}/item_ids.npy",
-           "--out_dir", idx_dir, "--budget_mb", str(budget_mb),
-           "--seed", str(seed), "--omp_threads", str(omp_threads)]
-    hnsw = index_cfg.get("hnsw", {})
-    ivf = index_cfg.get("ivf", {})
-    pq = index_cfg.get("pq", {})
-    ivfpq = index_cfg.get("ivfpq", {})
-    if method == "hnsw":
-        cmd += ["--M", str(hnsw.get("M", 24)),
-                "--efc", str(hnsw.get("ef_construction", 200))]
-    elif method == "ivfflat":
-        cmd += ["--nlist", str(ivf.get("nlist", "auto"))]
-    elif method == "ivfpq":
-        cmd += ["--nlist", str(ivf.get("nlist", "auto")),
-                "--m", str(pq.get("m", 32)), "--bits", str(pq.get("bits", 8))]
-        if ivfpq.get("use_opq", True):
-            cmd += ["--opq"]
-    elif method == "flatpq":
-        cmd += ["--m", str(pq.get("m", 32)), "--bits", str(pq.get("bits", 8))]
-    return cmd
+def _require_embedding_metadata(emb, expected, backbone):
+    path = Path(emb) / "embedding_meta.json"
+    if not path.is_file():
+        raise RuntimeError(f"metadata missing for reusable {backbone}: {path}")
+    try:
+        meta = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise RuntimeError(f"invalid embedding metadata {path}: {exc}") from exc
+    mismatch = {k: {"expected": v, "found": meta.get(k)}
+                for k, v in expected.items() if meta.get(k) != v}
+    if mismatch:
+        raise RuntimeError(
+            f"refusing stale {backbone} embeddings in {emb}: {mismatch}")
 
 
-def ensure_embeddings(backbone, dataset, dim, normalize, seed, es_cfg):
+def ensure_embeddings(backbone, dataset, dim, normalize, seed, es_cfg,
+                      embedding_cfg, cfg_hash):
     """Train (or reuse) embeddings for a backbone; returns emb dir or None
     when an optional dependency is missing."""
     csv = dataset_csv(dataset)
@@ -84,15 +75,52 @@ def ensure_embeddings(backbone, dataset, dim, normalize, seed, es_cfg):
     if backbone in SVD_BACKBONES:
         weighting = SVD_BACKBONES[backbone]
         emb = f"data/emb_{stem}_{weighting}_d{dim}"
-        if not Path(f"{emb}/item_vecs.npy").is_file():
-            run(["python", "src/train_embeddings.py", "--interactions", csv,
-                 "--dim", str(dim), "--weighting", weighting,
-                 "--normalize", normalize, "--seed", str(seed),
-                 "--out_dir", emb])
+        expected = {"dim_requested": dim, "weighting": weighting,
+                    "normalize": normalize, "seed": seed}
+        if weighting == "bm25":
+            expected.update({
+                "bm25_k1": cfg_get(embedding_cfg, "bm25_k1", type=float,
+                                   required=True),
+                "bm25_b": cfg_get(embedding_cfg, "bm25_b", type=float,
+                                  required=True),
+            })
+        if Path(f"{emb}/item_vecs.npy").is_file():
+            _require_embedding_metadata(emb, expected, backbone)
+        else:
+            cmd = ["python", "src/train_embeddings.py", "--interactions", csv,
+                   "--dim", str(dim), "--weighting", weighting,
+                   "--normalize", normalize, "--seed", str(seed),
+                   "--config_hash", cfg_hash,
+                   "--out_dir", emb]
+            if weighting == "bm25":
+                cmd += [
+                    "--bm25_k1", str(cfg_get(
+                        embedding_cfg, "bm25_k1", type=float, required=True)),
+                    "--bm25_b", str(cfg_get(
+                        embedding_cfg, "bm25_b", type=float, required=True)),
+                ]
+            run(cmd)
         return emb
 
     emb = f"data/emb_{stem}_{backbone}_d{dim}"
     if Path(f"{emb}/item_vecs.npy").is_file():
+        hp_name = "bpr" if backbone == "bpr_matrix_factorization" else "two_tower"
+        hp = cfg_get(es_cfg, hp_name, required=True)
+        expected = {"embedding_backend": backbone, "dim": dim,
+                    "normalize": normalize, "seed": seed,
+                    "epochs": int(cfg_get(hp, "epochs", required=True)),
+                    "lr": float(cfg_get(hp, "lr", required=True))}
+        if backbone == "bpr_matrix_factorization":
+            expected.update({
+                "reg": float(cfg_get(hp, "reg", required=True)),
+                "n_negatives": int(cfg_get(hp, "n_negatives", required=True)),
+            })
+        else:
+            expected.update({
+                "hidden_dim": int(cfg_get(hp, "hidden_dim", required=True)),
+                "batch_size": int(cfg_get(hp, "batch_size", required=True)),
+            })
+        _require_embedding_metadata(emb, expected, backbone)
         return emb
     if backbone == "two_tower_mlp":
         try:
@@ -105,11 +133,17 @@ def ensure_embeddings(backbone, dataset, dim, normalize, seed, es_cfg):
                     else "two_tower", {})
     cmd = ["python", "src/train_neural_embeddings.py", "--interactions", csv,
            "--backbone", backbone, "--dim", str(dim), "--normalize", normalize,
-           "--seed", str(seed), "--out_dir", emb]
-    if "epochs" in hp:
-        cmd += ["--epochs", str(hp["epochs"])]
-    if "lr" in hp:
-        cmd += ["--lr", str(hp["lr"])]
+           "--seed", str(seed), "--config_hash", cfg_hash,
+           "--out_dir", emb,
+           "--epochs", str(cfg_get(hp, "epochs", required=True)),
+           "--lr", str(cfg_get(hp, "lr", required=True))]
+    if backbone == "bpr_matrix_factorization":
+        cmd += ["--reg", str(cfg_get(hp, "reg", required=True)),
+                "--n_negatives", str(cfg_get(hp, "n_negatives",
+                                             required=True))]
+    else:
+        cmd += ["--hidden_dim", str(cfg_get(hp, "hidden_dim", required=True)),
+                "--batch_size", str(cfg_get(hp, "batch_size", required=True))]
     run(cmd)
     return emb
 
@@ -129,6 +163,9 @@ def main():
     ap.add_argument("--out_dir", default=RESULTS["embedding_sensitivity"])
     ap.add_argument("--write_mode", default="fail_if_exists",
                     choices=["fail_if_exists", "replace", "merge"])
+    ap.add_argument("--include_optional_backbones", action="store_true",
+                    help="also run configured optional backbones such as "
+                         "two_tower_mlp (off by default)")
     args = ap.parse_args()
 
     try:
@@ -149,7 +186,7 @@ def main():
     backbones = list(es.get("backbones", list(SVD_BACKBONES)
                             + ["bpr_matrix_factorization"]))
     optional_backbones = list(es.get("optional_backbones", ["two_tower_mlp"]))
-    if args.backbones is None:
+    if args.backbones is None and args.include_optional_backbones:
         backbones = backbones + [b for b in optional_backbones
                                  if b not in backbones]
     methods = list(es.get("methods",
@@ -157,21 +194,48 @@ def main():
     modalities = list(es.get("modalities", ["u2i"]))
     queries = str(es.get("queries", 10000))
     dim = cfg_get(cfg, "embedding.dim", type=int, default=128)
-    normalize = cfg_get(cfg, "embedding.normalize", default="l2")
-    topk = cfg_get(cfg, "retrieval.topk", type=int, default=100)
-    metric_topk = cfg_get(cfg, "retrieval.metric_topk", type=int, default=10)
-    budget_mb = cfg_get(cfg, "retrieval.budget_mb", type=int, default=100)
-    cal_queries = cfg_get(cfg, "calibration.queries", type=int, default=1000)
+    embedding_cfg = cfg_get(cfg, "embedding", required=True)
+    normalize = cfg_get(cfg, "embedding.normalize", required=True)
+    topk = cfg_get(cfg, "retrieval.topk", type=int, required=True)
+    metric_topk = cfg_get(cfg, "retrieval.metric_topk", type=int, required=True)
+    budget_mb = cfg_get(cfg, "retrieval.budget_mb", type=int, required=True)
+    cal_queries = cfg_get(cfg, "calibration.queries", type=int, required=True)
     primary_target = cfg_get(cfg, "calibration.primary_target", type=float,
-                             default=0.95)
+                             required=True)
     omp_threads = cfg_get(cfg, "reproducibility.omp_threads", type=int,
-                          default=1)
-    seed = cfg_get(cfg, "reproducibility.seed", type=int, default=42)
-    index_cfg = cfg_get(cfg, "index", default={})
+                          required=True)
+    seed = cfg_get(cfg, "reproducibility.seed", type=int, required=True)
+    default_ef = cfg_get(cfg, "retrieval.runtime_defaults.ef", type=int,
+                         required=True)
+    default_nprobe = cfg_get(cfg, "retrieval.runtime_defaults.nprobe", type=int,
+                             required=True)
+    index_cfg = cfg_get(cfg, "index", required=True)
+    cfg_hash = config_hash(cfg)
+    prov = provenance_columns(make_run_id(cfg_hash), cfg_hash)
+
+    required_backbones = list(es.get("backbones", []))
+    expected_datasets = ["ml-1m"]
+    expected_modalities = ["u2i"]
+    canonical_methods = list(cfg_get(cfg, "retrieval.methods", required=True))
+    if datasets != expected_datasets or modalities != expected_modalities:
+        print(f"[{SCRIPT}] ERROR: canonical sensitivity scope is "
+              f"datasets={expected_datasets}, modalities={expected_modalities}; "
+              f"resolved {datasets}/{modalities}.")
+        sys.exit(1)
+    if methods != canonical_methods:
+        print(f"[{SCRIPT}] ERROR: embedding sensitivity must use the canonical "
+              f"five methods {canonical_methods}; resolved {methods}.")
+        sys.exit(1)
+    if any(b not in backbones for b in required_backbones):
+        print(f"[{SCRIPT}] ERROR: required backbones cannot be omitted: "
+              f"{required_backbones}.")
+        sys.exit(1)
 
     out_dir = Path(args.out_dir)
     all_path = out_dir / "embedding_backbone_sensitivity_all.csv"
     eval_dir = out_dir / "eval"
+    eval_aggregate_dir = eval_dir / "aggregates"
+    eval_perquery_dir = eval_dir / "perquery"
     try:
         preflight_output(all_path, args.write_mode)
     except (ResultExistsError, ValueError) as e:
@@ -198,33 +262,44 @@ def main():
         csv = dataset_csv(dataset)
         stem = dataset_stem(dataset)
         for backbone in backbones:
-            emb = ensure_embeddings(backbone, dataset, dim, normalize, seed, es)
+            emb = ensure_embeddings(backbone, dataset, dim, normalize, seed, es,
+                                    embedding_cfg, cfg_hash)
             if emb is None:
                 # optional backbone with missing dependency: keep it visible
                 # in the schema instead of silently dropping it
-                rows.append({
-                    "dataset": dataset, "backbone": backbone,
-                    "embedding_backend": backbone, "modality": "u2i",
-                    "method": None, "dim": dim,
-                    "ndcg_at_10": None, "recall_at_10": None,
-                    "ann_recall_vs_exact_at_k_mean": None,
-                    "long_tail_uplift": None,
-                    "backend_available": False,
-                    "status": "skipped_missing_dependency",
-                    "error_message": "torch_not_installed",
-                    "seed": seed,
-                })
+                for modality in modalities:
+                    for method in methods:
+                        rows.append({
+                            "dataset": dataset, "backbone": backbone,
+                            "embedding_backend": backbone,
+                            "modality": modality, "method": method,
+                            "dim": dim, "ndcg_at_10": None,
+                            "recall_at_10": None,
+                            "ann_recall_vs_exact_at_k_mean": None,
+                            "long_tail_uplift": None,
+                            "backend_available": False,
+                            "status": "skipped_missing_dependency",
+                            "error_message": "torch_not_installed",
+                            "seed": seed, **prov,
+                        })
                 continue
             item_vecs = np.load(f"{emb}/item_vecs.npy").astype("float32")
             N, D = item_vecs.shape
+            if D != dim:
+                raise RuntimeError(
+                    f"embedding dimension mismatch for {dataset}/{backbone}: "
+                    f"configured d{dim}, loaded d{D}")
 
             for method in methods:
                 idx_dir = f"data/index_{stem}_{backbone}_d{dim}_{method}"
                 if not (Path(idx_dir).exists() and any(Path(idx_dir).iterdir())):
-                    run(build_index_cmd(method, emb, idx_dir, budget_mb,
-                                        seed, omp_threads, index_cfg))
+                    run(build_index_command(
+                        method, Path(emb) / "item_vecs.npy",
+                        Path(emb) / "item_ids.npy", idx_dir, budget_mb,
+                        seed, omp_threads, index_cfg,
+                        configuration_hash=cfg_hash))
 
-                ef, nprobe = 128, 16
+                ef, nprobe = default_ef, default_nprobe
                 if CALIBRATION_PARAM.get(method) is not None:
                     ann = load_ann_index(idx_dir, D, N)
                     cal = calibrate_index(ann, item_vecs, primary_target, topk,
@@ -244,11 +319,18 @@ def main():
                          "--topk", str(topk), "--metric_topk", str(metric_topk),
                          "--ef", str(ef), "--nprobe", str(nprobe),
                          "--seed", str(seed), "--dataset", dataset,
-                         "--weighting", backbone, "--out_dir", str(eval_dir)])
+                         "--weighting", backbone, "--config", args.config,
+                         "--aggregate_dir", str(eval_aggregate_dir),
+                         "--perquery_dir", str(eval_perquery_dir),
+                         "--write_mode", args.write_mode])
 
-                    agg = (eval_dir / "aggregates"
+                    agg = (eval_aggregate_dir
                            / f"{dataset}__{backbone}__d{D}__{modality}__{method}.json")
-                    e = json.load(open(agg)) if agg.is_file() else {}
+                    if not agg.is_file():
+                        raise RuntimeError(
+                            f"evaluation completed without aggregate {agg}")
+                    with open(agg, encoding="utf-8") as handle:
+                        e = json.load(handle)
                     rows.append({
                         "dataset": dataset, "backbone": backbone,
                         "embedding_backend": backbone, "modality": modality,
@@ -260,7 +342,7 @@ def main():
                         "backend_available": True,
                         "status": "ok",
                         "error_message": "",
-                        "seed": seed,
+                        "seed": seed, **prov,
                     })
 
     if not rows:
@@ -268,6 +350,17 @@ def main():
         sys.exit(1)
 
     df = pd.DataFrame(rows)
+
+    required_df = df[df["backbone"].isin(required_backbones)]
+    expected_required_rows = (len(datasets) * len(required_backbones)
+                              * len(modalities) * len(methods))
+    successful = ((required_df["backend_available"] == True)  # noqa: E712
+                  & (required_df["status"] == "ok"))
+    if len(required_df) != expected_required_rows or not successful.all():
+        print(f"[{SCRIPT}] ERROR: required sensitivity grid incomplete: "
+              f"expected {expected_required_rows} successful rows, found "
+              f"{int(successful.sum())}/{len(required_df)}.")
+        sys.exit(1)
 
     # ann_ranking_stability: Spearman of the method ranking vs the reference
     # backbone. Reported honestly — never required to be stable.

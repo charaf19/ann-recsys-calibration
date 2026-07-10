@@ -97,9 +97,10 @@ def test_bootstrap_code_fallback_is_paper_value():
 
 
 def test_test_tiny_config_is_marked_non_paper(repo_root):
-    text = (repo_root / "configs" / "test_tiny.yml").read_text(encoding="utf-8")
+    fixture = repo_root / "tests" / "fixtures" / "test_tiny.yml"
+    text = fixture.read_text(encoding="utf-8")
     assert "NOT for paper reproduction" in text
-    cfg = resolved(repo_root, "test_tiny.yml")
+    cfg = load_config(fixture)
     # tiny config may shrink counts, but never silently changes the protocol
     assert cfg_get(cfg, "embedding.weighting") == "bm25"
     assert cfg_get(cfg, "embedding.dim", type=int) == 128
@@ -108,10 +109,12 @@ def test_test_tiny_config_is_marked_non_paper(repo_root):
 def test_only_canonical_configs_exist(repo_root):
     found = sorted(p.name for p in (repo_root / "configs").glob("*.yml"))
     assert found == ["analyses.yml", "defaults.yml", "main_cpu.yml",
-                     "paper_evidence_manifest.yml", "test_tiny.yml"]
+                     "paper_evidence_manifest.yml"]
 
 
 def test_all_yaml_files_parse(repo_root):
-    for p in (repo_root / "configs").glob("*.yml"):
+    paths = list((repo_root / "configs").glob("*.yml"))
+    paths += list((repo_root / "tests" / "fixtures").glob("*.yml"))
+    for p in paths:
         with open(p, encoding="utf-8") as f:
             assert yaml.safe_load(f) is not None

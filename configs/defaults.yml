@@ -30,6 +30,12 @@ retrieval:
   topk: 100
   metric_topk: 10
   budget_mb: 100
+  runtime_defaults:
+    ef: 128
+    nprobe: 16
+
+evaluation:
+  tail_fraction: 0.2
 
 index:
   hnsw:

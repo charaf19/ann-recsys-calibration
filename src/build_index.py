@@ -68,6 +68,8 @@ def main():
                     help="FAISS OpenMP threads (1 = bit-reproducible builds)")
     ap.add_argument("--seed", type=int, default=42,
                     help="seed for training-sample draws and FAISS clustering")
+    ap.add_argument("--config_hash", default="unknown",
+                    help="resolved experiment configuration hash")
     args = ap.parse_args()
 
     print(f"[{SCRIPT}] starting...")
@@ -99,6 +101,7 @@ def main():
         "budget_mb": int(args.budget_mb),
         "omp_threads": int(args.omp_threads),
         "seed": int(args.seed),
+        "config_hash": str(args.config_hash),
         "item_vecs": str(args.item_vecs),
     }
 

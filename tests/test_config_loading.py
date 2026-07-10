@@ -69,9 +69,37 @@ def test_required_key_error_names_the_path():
         cfg_get({}, "statistics.bootstrap_iterations", required=True)
 
 
+def test_invalid_boolean_token_is_rejected():
+    with pytest.raises(ConfigError, match="boolean token"):
+        cfg_get({"x": "flase"}, "x", type=bool)
+
+
+def test_inherits_must_be_a_path_string(tmp_path):
+    p = tmp_path / "bad.yml"
+    p.write_text("inherits: [defaults.yml]\n", encoding="utf-8")
+    with pytest.raises(ConfigError, match="relative path string"):
+        load_config(p)
+
+
 def test_config_hash_is_deterministic(repo_root):
     a = load_config(repo_root / "configs" / "main_cpu.yml")
     b = load_config(repo_root / "configs" / "main_cpu.yml")
     assert config_hash(a) == config_hash(b)
     c = apply_cli_overrides(a, {"embedding.dim": 64})
     assert config_hash(a) != config_hash(c)
+
+
+def test_circular_inheritance_is_rejected(tmp_path):
+    a = tmp_path / "a.yml"
+    b = tmp_path / "b.yml"
+    a.write_text("inherits: b.yml\n", encoding="utf-8")
+    b.write_text("inherits: a.yml\n", encoding="utf-8")
+    with pytest.raises(ConfigError, match="circular"):
+        load_config(a)
+
+
+def test_missing_required_core_section_is_actionable(tmp_path):
+    p = tmp_path / "partial.yml"
+    p.write_text("project:\n  name: demo\n", encoding="utf-8")
+    with pytest.raises(ConfigError, match="missing required mapping section"):
+        load_config(p)

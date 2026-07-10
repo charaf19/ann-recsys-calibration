@@ -10,6 +10,10 @@ Every pipeline script uses `banner()` so logs follow the required format:
 import json
 from pathlib import Path
 
+from utils.provenance import sources_sidecar_path, write_sources_sidecar
+from utils.result_io import (preflight_output, resolve_write_mode,
+                             write_json_atomic, write_text_atomic)
+
 
 def log(script: str, msg: str):
     print(f"[{script}] {msg}")
@@ -41,11 +45,9 @@ def ensure_dir(path) -> Path:
     return p
 
 
-def save_json(obj, path):
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(obj, f, indent=2, sort_keys=False)
+def save_json(obj, path, mode="replace"):
+    """Write JSON atomically (kept for compatibility with report scripts)."""
+    return write_json_atomic(obj, path, mode=mode)
 
 
 def df_to_markdown(df, float_fmt="{:.4f}"):
@@ -64,21 +66,51 @@ def df_to_markdown(df, float_fmt="{:.4f}"):
     return "\n".join(lines) + "\n"
 
 
-def write_table(df, out_base, float_fmt="{:.4f}", latex=True, index=False):
-    """Write a DataFrame as CSV + Markdown (+ LaTeX) next to each other.
+def table_artifact_paths(out_base, latex=True):
+    """Return the concrete output paths for a multi-format table."""
+    out_base = Path(out_base)
+    suffixes = [".csv", ".md"] + ([".tex"] if latex else [])
+    return [out_base.with_suffix(suffix) for suffix in suffixes]
+
+
+def write_table(df, out_base, float_fmt="{:.4f}", latex=True, index=False,
+                mode="replace", source_files=None, script=None,
+                cfg_hash=None):
+    """Atomically write CSV + Markdown (+ LaTeX) representations.
 
     out_base: path without extension, e.g. results/paper_tables/table_main
+
+    Table formats cannot be naturally merged, so supported modes are
+    ``fail_if_exists`` and ``replace``.  When ``source_files`` is supplied,
+    each format receives its own ``<full-filename>.sources.json`` sidecar.
     """
-    out_base = Path(out_base)
-    out_base.parent.mkdir(parents=True, exist_ok=True)
-    df.to_csv(out_base.with_suffix(".csv"), index=index)
-    with open(out_base.with_suffix(".md"), "w", encoding="utf-8") as f:
-        f.write(df_to_markdown(df, float_fmt=float_fmt))
+    mode = resolve_write_mode(mode)
+    if mode == "merge":
+        raise ValueError("merge mode is not supported for rendered tables")
+    paths = table_artifact_paths(out_base, latex=latex)
+    if source_files is not None and not script:
+        raise ValueError("script is required when writing table sidecars")
+
+    planned = list(paths)
+    if source_files is not None:
+        planned.extend(sources_sidecar_path(path) for path in paths)
+    for path in planned:
+        preflight_output(path, mode)
+
+    # Render every representation before publishing any of them.  A render
+    # failure therefore leaves all pre-existing artifacts untouched.
+    rendered = {
+        ".csv": df.to_csv(index=index),
+        ".md": df_to_markdown(df, float_fmt=float_fmt),
+    }
     if latex:
-        try:
-            tex = df.to_latex(index=index, float_format=lambda v: float_fmt.format(v))
-        except Exception:
-            tex = df.to_string(index=index)
-        with open(out_base.with_suffix(".tex"), "w", encoding="utf-8") as f:
-            f.write(tex)
-    return [str(out_base.with_suffix(ext)) for ext in (".csv", ".md") + ((".tex",) if latex else ())]
+        rendered[".tex"] = df.to_latex(
+            index=index, float_format=lambda value: float_fmt.format(value))
+
+    for path in paths:
+        write_text_atomic(rendered[path.suffix], path, mode=mode)
+    if source_files is not None:
+        for path in paths:
+            write_sources_sidecar(path, source_files, script,
+                                  cfg_hash=cfg_hash, mode=mode)
+    return [str(path) for path in paths]

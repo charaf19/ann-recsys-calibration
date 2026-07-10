@@ -22,6 +22,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from utils.config import config_hash as compute_config_hash
 from utils.paths import RESULTS
 from utils.result_io import write_json_atomic, _atomic_write_text
 
@@ -47,15 +48,15 @@ def git_commit() -> str:
 
 
 def git_dirty():
-    """True/False, or None when Git metadata is unavailable."""
+    """True/False, or ``"unknown"`` when Git metadata is unavailable."""
     try:
         out = subprocess.run(["git", "status", "--porcelain"],
                              capture_output=True, text=True, timeout=10)
         if out.returncode != 0:
-            return None
+            return "unknown"
         return bool(out.stdout.strip())
     except (OSError, subprocess.SubprocessError):
-        return None
+        return "unknown"
 
 
 def package_versions(packages=PACKAGES) -> dict:
@@ -106,10 +107,10 @@ def hardware_info() -> dict:
     }
 
 
-def write_hardware_report(meta_dir=None) -> list:
+def write_hardware_report(meta_dir=None, info=None) -> list:
     """Write results/_meta/hardware.json and hardware.md; returns paths."""
     meta_dir = Path(meta_dir or RESULTS["meta"])
-    info = hardware_info()
+    info = info or hardware_info()
     json_path = meta_dir / "hardware.json"
     write_json_atomic(info, json_path, mode="replace")
     lines = [
@@ -171,7 +172,14 @@ class RunManifest:
     @classmethod
     def start(cls, script: str, resolved_config: dict, cfg_hash: str,
               datasets=None, methods=None, modalities=None, meta_dir=None):
-        path = Path(meta_dir or RESULTS["meta"]) / "run_manifest.json"
+        computed_hash = compute_config_hash(resolved_config)
+        if cfg_hash != computed_hash:
+            raise ValueError(
+                f"configuration hash mismatch: supplied {cfg_hash}, "
+                f"computed {computed_hash}")
+        meta_dir = Path(meta_dir or RESULTS["meta"])
+        path = meta_dir / "run_manifest.json"
+        hardware = hardware_info()
         doc = {
             "run_id": make_run_id(cfg_hash),
             "project": (resolved_config.get("project") or {}).get(
@@ -180,27 +188,29 @@ class RunManifest:
             "started_at_utc": utc_now(),
             "finished_at_utc": None,
             "status": "running",
-            "resolved_config": resolved_config,
-            "config_hash": cfg_hash,
+            "resolved_configuration": resolved_config,
+            "configuration_hash": cfg_hash,
             "git_commit": git_commit(),
-            "git_dirty": git_dirty(),
+            "git_dirty_state": git_dirty(),
             "python_version": sys.version,
-            "package_versions": package_versions(),
-            "hardware": hardware_info(),
-            "datasets_requested": list(datasets or []),
-            "methods_requested": list(methods or []),
-            "modalities_requested": list(modalities or []),
-            "output_paths": [],
+            "dependency_versions": package_versions(),
+            "hardware": hardware,
+            "datasets": list(datasets or []),
+            "methods": list(methods or []),
+            "modalities": list(modalities or []),
+            "outputs": [],
             "failed_combinations": [],
         }
+        write_hardware_report(meta_dir, info=hardware)
+        write_environment(meta_dir)
         m = cls(doc, path)
         m.flush()
         return m
 
     def add_output(self, path):
         p = str(path)
-        if p not in self.doc["output_paths"]:
-            self.doc["output_paths"].append(p)
+        if p not in self.doc["outputs"]:
+            self.doc["outputs"].append(p)
         self.flush()
 
     def record_failure(self, combination: dict, error: str):
@@ -243,10 +253,50 @@ def file_sha256(path, chunk=1 << 20) -> str:
     return h.hexdigest()
 
 
-def write_sources_sidecar(artifact_path, source_files, script: str,
-                          cfg_hash: str | None = None):
-    """Write <artifact>.sources.json documenting exactly what produced it."""
+def infer_config_hash(manifest_path=None) -> str:
+    """Return the hash recorded by the canonical run manifest.
+
+    Paper post-processing commands do not resolve an experiment config of
+    their own.  Their provenance therefore follows the evidence-producing
+    run recorded in ``results/_meta/run_manifest.json``.  ``"unknown"`` is
+    returned when that metadata is unavailable or unreadable; metadata is
+    never invented.
+    """
+    path = Path(manifest_path or Path(RESULTS["meta"]) / "run_manifest.json")
+    if not path.is_file():
+        return "unknown"
+    try:
+        doc = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, TypeError):
+        return "unknown"
+    value = doc.get("configuration_hash", doc.get("config_hash"))
+    if value not in (None, ""):
+        return str(value)
+    resolved = doc.get("resolved_configuration", doc.get("resolved_config"))
+    if isinstance(resolved, dict):
+        return compute_config_hash(resolved)
+    return "unknown"
+
+
+def sources_sidecar_path(artifact_path) -> Path:
+    """Return ``<full-filename>.sources.json`` for an artifact path."""
     artifact_path = Path(artifact_path)
+    return artifact_path.with_name(artifact_path.name + ".sources.json")
+
+
+def write_sources_sidecar(artifact_path, source_files, script: str,
+                          cfg_hash: str | None = None,
+                          mode: str = "replace"):
+    """Atomically write provenance for one generated artifact format.
+
+    The sidecar name retains the artifact's complete filename, so a table's
+    CSV, Markdown and LaTeX representations (and a figure's PNG and PDF)
+    each receive independent provenance.
+    """
+    artifact_path = Path(artifact_path)
+    if not artifact_path.is_file():
+        raise FileNotFoundError(
+            f"cannot write provenance for missing artifact: {artifact_path}")
     sources = []
     for s in source_files:
         s = Path(s)
@@ -257,14 +307,20 @@ def write_sources_sidecar(artifact_path, source_files, script: str,
             entry["sha256"] = None
             entry["note"] = "source missing at generation time"
         sources.append(entry)
+    source_paths = [entry["path"] for entry in sources]
+    source_hashes = {entry["path"]: entry["sha256"] for entry in sources}
     doc = {
         "artifact": artifact_path.name,
+        "artifact_path": str(artifact_path).replace("\\", "/"),
         "script": script,
         "generated_at_utc": utc_now(),
         "git_commit": git_commit(),
-        "config_hash": cfg_hash,
+        "config_hash": (str(cfg_hash) if cfg_hash is not None
+                        else infer_config_hash()),
+        "source_paths": source_paths,
+        "source_file_hashes": source_hashes,
         "sources": sources,
     }
-    sidecar = artifact_path.with_name(artifact_path.stem + ".sources.json")
-    write_json_atomic(doc, sidecar, mode="replace")
+    sidecar = sources_sidecar_path(artifact_path)
+    write_json_atomic(doc, sidecar, mode=mode)
     return sidecar

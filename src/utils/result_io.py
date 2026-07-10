@@ -17,6 +17,7 @@ os.replace(), so a failed write never damages the previous file.
 import json
 import os
 import tempfile
+from contextlib import contextmanager
 from pathlib import Path
 
 import numpy as np
@@ -49,6 +50,8 @@ def _atomic_write_text(text: str, path: Path):
     try:
         with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as f:
             f.write(text)
+            f.flush()
+            os.fsync(f.fileno())
         os.replace(tmp, path)
     except BaseException:
         try:
@@ -84,11 +87,40 @@ def write_json_atomic(obj, path, mode: str = "fail_if_exists"):
     return path
 
 
+def write_text_atomic(text: str, path, mode: str = "fail_if_exists"):
+    """Atomically write UTF-8 text under the standard write modes.
+
+    Text has no natural-key merge contract, so ``merge`` is accepted only
+    when the existing content is byte-for-byte identical.
+    """
+    mode = resolve_write_mode(mode)
+    path = Path(path)
+    if path.exists() and mode == "fail_if_exists":
+        raise ResultExistsError(f"refusing to overwrite existing file: {path}")
+    if path.exists() and mode == "merge":
+        existing = path.read_text(encoding="utf-8")
+        if existing != text:
+            raise MergeConflictError(
+                f"cannot merge conflicting text documents in {path}")
+        return path
+    _atomic_write_text(text, path)
+    return path
+
+
 def validate_unique_keys(df: pd.DataFrame, key, context: str = ""):
     """Raise if the natural key does not uniquely identify rows."""
-    key = [k for k in key if k in df.columns]
-    if not key:
-        raise ValueError(f"none of the key columns present in frame {context}")
+    requested = list(key)
+    missing = [k for k in requested if k not in df.columns]
+    if missing:
+        raise ValueError(
+            f"missing natural-key columns {missing} in frame {context}; "
+            f"required key is {requested}")
+    key = requested
+    null_rows = df[key].isna().any(axis=1)
+    if null_rows.any():
+        sample = df.loc[null_rows, key].head(5).to_dict("records")
+        raise MergeConflictError(
+            f"null values in natural keys {context or ''} on {key}: {sample}")
     dup = df.duplicated(subset=key, keep=False)
     if dup.any():
         sample = df.loc[dup, key].drop_duplicates().head(5).to_dict("records")
@@ -97,19 +129,45 @@ def validate_unique_keys(df: pd.DataFrame, key, context: str = ""):
     return key
 
 
+def _key_of(row: pd.Series, key) -> tuple:
+    return tuple("<NA>" if pd.isna(row[k]) else str(row[k]) for k in key)
+
+
+def _deduplicate_identical_keys(df: pd.DataFrame, key, context: str = ""):
+    """Collapse identical duplicate-key rows; reject conflicting ones."""
+    requested = list(key)
+    missing = [k for k in requested if k not in df.columns]
+    if missing:
+        raise ValueError(
+            f"missing natural-key columns {missing} in frame {context}; "
+            f"required key is {requested}")
+    key = requested
+    null_rows = df[key].isna().any(axis=1)
+    if null_rows.any():
+        sample = df.loc[null_rows, key].head(5).to_dict("records")
+        raise MergeConflictError(
+            f"null values in natural keys {context or ''} on {key}: {sample}")
+    kept = {}
+    order = []
+    for _, row in df.iterrows():
+        row_key = _key_of(row, key)
+        if row_key in kept:
+            if not _rows_equal(kept[row_key], row):
+                raise MergeConflictError(
+                    f"conflicting duplicate natural keys {context or ''} "
+                    f"{dict(zip(key, row_key))}")
+            continue
+        kept[row_key] = row
+        order.append(row_key)
+    return pd.DataFrame([kept[k] for k in order], columns=df.columns).reset_index(
+        drop=True)
+
+
 def _rows_equal(a: pd.Series, b: pd.Series) -> bool:
     for col in a.index:
         va, vb = a[col], b[col]
         if pd.isna(va) and pd.isna(vb):
             continue
-        if isinstance(va, float) or isinstance(vb, float):
-            try:
-                if np.isclose(float(va), float(vb), rtol=1e-9, atol=1e-12,
-                              equal_nan=True):
-                    continue
-                return False
-            except (TypeError, ValueError):
-                pass
         if va != vb:
             return False
     return True
@@ -123,35 +181,24 @@ def merge_dataframe(existing: pd.DataFrame, new: pd.DataFrame, key):
     - identical duplicate rows (same key, same values) collapse to one;
     - same key with different values raises MergeConflictError.
     """
+    requested = list(key)
+    for label, frame in (("existing", existing), ("new", new)):
+        missing = [k for k in requested if k not in frame.columns]
+        if missing:
+            raise ValueError(
+                f"{label} frame is missing natural-key columns {missing}; "
+                f"required key is {requested}")
     all_cols = list(dict.fromkeys(list(existing.columns) + list(new.columns)))
     existing = existing.reindex(columns=all_cols)
     new = new.reindex(columns=all_cols)
-    key = [k for k in key if k in all_cols]
-    if not key:
-        raise ValueError("merge key has no columns in common with the data")
+    key = requested
 
-    def _key_of(row):
-        return tuple("<NA>" if pd.isna(row[k]) else str(row[k]) for k in key)
-
-    merged = {}
-    order = []
-    for _, row in existing.iterrows():
-        k = _key_of(row)
-        merged[k] = row
-        order.append(k)
-    for _, row in new.iterrows():
-        k = _key_of(row)
-        if k in merged:
-            if not _rows_equal(merged[k], row):
-                raise MergeConflictError(
-                    f"conflicting rows for key {dict(zip(key, k))}: "
-                    f"existing and new values differ")
-            # identical duplicate: keep the existing row
-        else:
-            merged[k] = row
-            order.append(k)
-    out = pd.DataFrame([merged[k] for k in order], columns=all_cols)
-    return out.reset_index(drop=True)
+    combined = pd.concat([existing, new], ignore_index=True)
+    try:
+        return _deduplicate_identical_keys(combined, key, context="during merge")
+    except MergeConflictError as exc:
+        raise MergeConflictError(
+            f"conflicting rows for natural key {key}: {exc}") from exc
 
 
 def write_dataframe_atomic(df: pd.DataFrame, path, mode: str = "fail_if_exists",
@@ -166,6 +213,8 @@ def write_dataframe_atomic(df: pd.DataFrame, path, mode: str = "fail_if_exists",
     path = Path(path)
 
     if key is not None:
+        df = _deduplicate_identical_keys(
+            df, key, context=f"in new rows for {path.name}")
         validate_unique_keys(df, key, context=f"in new rows for {path.name}")
 
     if path.exists():
@@ -185,6 +234,86 @@ def write_dataframe_atomic(df: pd.DataFrame, path, mode: str = "fail_if_exists",
 
     _atomic_write_text(df.to_csv(index=False), path)
     return path
+
+
+def write_npz_atomic(path, mode: str = "fail_if_exists", **arrays):
+    """Atomically write a compressed NumPy archive.
+
+    NPZ archives are indivisible per-query artifacts, so merge mode is not
+    meaningful and is rejected explicitly.
+    """
+    mode = resolve_write_mode(mode)
+    path = Path(path)
+    if path.exists() and mode == "merge":
+        with np.load(path, allow_pickle=True) as existing:
+            if set(existing.files) != set(arrays):
+                raise MergeConflictError(
+                    f"NPZ merge conflict in {path}: archive keys differ")
+            for key, value in arrays.items():
+                old = np.asarray(existing[key])
+                new = np.asarray(value)
+                if old.shape != new.shape or old.dtype != new.dtype:
+                    raise MergeConflictError(
+                        f"NPZ merge conflict in {path} for {key}: "
+                        f"shape or dtype differs")
+                try:
+                    equal = np.array_equal(old, new, equal_nan=True)
+                except TypeError:
+                    equal = np.array_equal(old, new)
+                if not equal:
+                    raise MergeConflictError(
+                        f"NPZ merge conflict in {path} for {key}: values differ")
+        return path
+    if path.exists() and mode == "fail_if_exists":
+        raise ResultExistsError(f"refusing to overwrite existing evidence: {path}")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=str(path.parent), prefix=f".{path.name}.",
+                               suffix=".npz")
+    os.close(fd)
+    try:
+        np.savez_compressed(tmp, **arrays)
+        with open(tmp, "rb") as f:
+            os.fsync(f.fileno())
+        os.replace(tmp, path)
+    except BaseException:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
+    return path
+
+
+@contextmanager
+def atomic_output_path(path, mode: str = "replace"):
+    """Yield a same-directory temporary path and atomically publish it.
+
+    This is used for binary renderers such as Matplotlib that need to write
+    directly to a filesystem path. The destination is untouched if the
+    renderer raises.
+    """
+    mode = resolve_write_mode(mode)
+    path = Path(path)
+    if mode == "merge":
+        raise ValueError(f"merge mode is not supported for binary output: {path}")
+    if path.exists() and mode == "fail_if_exists":
+        raise ResultExistsError(f"refusing to overwrite existing artifact: {path}")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=str(path.parent), prefix=f".{path.stem}.",
+                               suffix=path.suffix)
+    os.close(fd)
+    tmp_path = Path(tmp)
+    try:
+        yield tmp_path
+        with open(tmp_path, "rb") as f:
+            os.fsync(f.fileno())
+        os.replace(tmp_path, path)
+    except BaseException:
+        try:
+            tmp_path.unlink()
+        except OSError:
+            pass
+        raise
 
 
 def preflight_output(path, mode: str):

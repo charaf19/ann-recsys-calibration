@@ -3,7 +3,7 @@
 # only for quickly exercising the pipeline plumbing on a laptop.
 # The canonical paper run is configs/main_cpu.yml.
 
-inherits: defaults.yml
+inherits: ../../configs/defaults.yml
 
 datasets:
   - ml-1m

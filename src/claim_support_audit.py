@@ -22,9 +22,8 @@ from pathlib import Path
 import pandas as pd
 
 from utils.paths import RESULTS
-from utils.provenance import write_sources_sidecar
 from utils.reporting import write_table
-from utils.result_io import preflight_output, ResultExistsError
+from utils.result_io import ResultExistsError
 
 SCRIPT = "claim_support_audit"
 
@@ -128,27 +127,22 @@ def main():
                     default=str(Path(RESULTS["paper_tables"])
                                 / "claim_support_audit"))
     ap.add_argument("--write_mode", default="replace",
-                    choices=["fail_if_exists", "replace", "merge"],
+                    choices=["fail_if_exists", "replace"],
                     help="regenerated paper table; default replace")
     args = ap.parse_args()
 
     out_base = Path(args.out_base)
-    try:
-        preflight_output(out_base.with_suffix(".csv"), args.write_mode)
-    except (ResultExistsError, ValueError) as e:
-        print(f"[{SCRIPT}] ERROR: {e}")
-        sys.exit(1)
-
     print(f"[{SCRIPT}] starting...")
     print(f"[{SCRIPT}] input path: {args.validation_report}")
     print(f"[{SCRIPT}] output path: {out_base}.csv")
 
     report = load_validation_report(args.validation_report)
     if report is None:
-        print(f"[{SCRIPT}] WARN: validation report not found at "
+        print(f"[{SCRIPT}] ERROR: critical input missing: "
               f"{args.validation_report}; run validate_paper_evidence.py "
-              f"first. All claims are recorded as UNSUPPORTED.")
-    sections = (report or {}).get("sections", {})
+              f"first.")
+        sys.exit(1)
+    sections = report.get("sections", {})
 
     def section_status(name):
         return sections.get(name, {}).get("status", "missing")
@@ -160,7 +154,7 @@ def main():
     rows = []
     for (area, strength, required_sections, safe, unsafe) in CLAIMS:
         statuses = {s: section_status(s) for s in required_sections}
-        supported = bool(report) and all(v == "pass" for v in statuses.values())
+        supported = all(v == "pass" for v in statuses.values())
         fails = []
         for s in required_sections:
             fails.extend(f"{s}:{c}" for c in failing_checks(s))
@@ -169,16 +163,19 @@ def main():
             "claim_strength_allowed": strength,
             "required_validation_sections": "; ".join(required_sections),
             "evidence_supported": supported,
-            "failing_checks": "; ".join(fails) if fails else (
-                "" if report else "validation report missing"),
+            "failing_checks": "; ".join(fails),
             "safe_interpretation": safe,
             "unsafe_interpretation_to_avoid": unsafe,
         })
 
     df = pd.DataFrame(rows)
-    written = write_table(df, out_base)
-    write_sources_sidecar(out_base.with_suffix(".csv"),
-                          [args.validation_report], SCRIPT)
+    try:
+        written = write_table(
+            df, out_base, mode=args.write_mode,
+            source_files=[args.validation_report], script=SCRIPT)
+    except ResultExistsError as e:
+        print(f"[{SCRIPT}] ERROR: {e}")
+        sys.exit(1)
     for p in written:
         print(f"[{SCRIPT}] output path: {p}")
     n_unsupported = int((~df["evidence_supported"]).sum())
