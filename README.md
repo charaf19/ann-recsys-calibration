@@ -3,15 +3,15 @@
 **IndexWise-Recsys** is a reproducible recommender-retrieval framework for
 calibrated approximate-nearest-neighbor (ANN) evaluation: modality-separated
 U2I / I2I retrieval, effect-size-aware statistics, long-tail exposure
-analysis, PQ diagnostics, synthetic scaling, deployment guidance, and
-optional GPU-aware experimentation.
+analysis, PQ diagnostics, synthetic scaling, and deployment guidance.
 
-Everything runs **locally**. The **canonical, reproducible benchmark is
-CPU-only** (deterministic seeds everywhere, single-threaded FAISS index
-construction by default). GPU support exists as an **optional, exploratory
-extension** (`--use_gpu`, outputs isolated under `results/gpu_experiments/`)
-and is not part of the main results — GPU kernels may introduce
-nondeterminism (see [docs/hardware_protocol.md](docs/hardware_protocol.md)).
+IndexWise-Recsys is evaluated as a CPU-only framework. GPU-specific
+acceleration is outside the present scope. Everything runs **locally** with
+deterministic seeds everywhere and single-threaded FAISS index construction
+by default (see [docs/hardware_protocol.md](docs/hardware_protocol.md)).
+`capture_hardware.py` records whether a GPU is *present* on the machine
+purely as an environment-capture detail — this is passive reporting only,
+never a dependency of any canonical workflow.
 
 ## Quick Start (CPU baseline)
 
@@ -35,7 +35,7 @@ Then validate what was produced:
 python src/validate_results.py --allow_missing_optional
 ```
 
-Optional extras (torch backbone, extra ANN backends, GPU/NVML tooling) are in
+Optional extras (torch backbone, extra ANN backends) are in
 `requirements-optional.txt` — none are needed for the main results. The full
 pipeline recipe is in [reproduction.md](reproduction.md).
 

@@ -44,9 +44,13 @@ scientific limitations discussed in the paper).
     prepare on some connections); it is listed under `datasets.optional` in
     `configs/main_cpu.yml` and runs only when passed explicitly via
     `--datasets amazon-books`.
-12. **GPU paths are exploratory and may be nondeterministic.** `--use_gpu`
-    (default false, requires faiss-gpu) does not guarantee deterministic
-    reductions, does not support HNSW/Flat-PQ search, and freezes the
-    calibration parameter at its pre-clone CPU value. GPU outputs are
-    isolated under `results/gpu_experiments/` and are never part of the
-    canonical CPU results.
+12. **GPU acceleration is out of scope.** IndexWise-Recsys is evaluated as a
+    CPU-only framework; GPU latency and transfer (host↔device copy,
+    cross-device search) behavior are not evaluated anywhere in the active
+    pipeline. `capture_hardware.py` records GPU *presence* on the machine
+    passively (`cuda_available`, `faiss_gpu_available`), strictly for
+    environment-capture honesty — this is never GPU *usage* and no
+    canonical workflow depends on a GPU, `faiss-gpu`, CUDA, or PyNVML. An
+    earlier exploratory GPU-experimentation layer (GPU-cloned FAISS
+    indexes, agreement/speedup checks vs CPU search) has been archived
+    under `legacy/experimental_gpu/` and is unmaintained.

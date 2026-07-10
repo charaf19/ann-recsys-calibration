@@ -224,3 +224,4 @@ def fig_scale_stress_memory(df, fig_dir):
 def fig_scale_stress_index_size(df, fig_dir):
     return _scale_stress_lines(df, "index_size_mb", "Index size on disk (MB)",
                                "scale_stress_index_size", fig_dir)
+

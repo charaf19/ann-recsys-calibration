@@ -1,28 +1,33 @@
-  dataset weighting  method  target_recall  target_reached param_name  calibrated_param_value  achieved_recall_vs_exact  latency_p50_ms  latency_p95_ms
-goodbooks      bm25    hnsw           0.90            True         ef                      64                   0.97126         0.04360        0.054325
-goodbooks      bm25    hnsw           0.95            True         ef                      64                   0.97126         0.04620        0.060210
-goodbooks      bm25    hnsw           0.98            True         ef                     128                   0.99952         0.06735        0.086115
-goodbooks      bm25 ivfflat           0.90            True     nprobe                       8                   0.95113         0.02220        0.029000
-goodbooks      bm25 ivfflat           0.95            True     nprobe                       8                   0.95113         0.02205        0.028500
-goodbooks      bm25 ivfflat           0.98            True     nprobe                      32                   0.99167         0.05690        0.065205
-goodbooks      bm25   ivfpq           0.90            True     nprobe                       8                   0.91501         0.04340        0.048105
-goodbooks      bm25   ivfpq           0.95           False     nprobe                     128                   0.93968         0.20400        0.221750
-goodbooks      bm25   ivfpq           0.98           False     nprobe                     128                   0.93968         0.20410        0.217010
-    ml-1m      bm25    hnsw           0.90            True         ef                      32                   0.91429         0.03690        0.048205
-    ml-1m      bm25    hnsw           0.95            True         ef                      64                   0.98594         0.04820        0.058520
-    ml-1m      bm25    hnsw           0.98            True         ef                      64                   0.98594         0.05080        0.067530
-    ml-1m      bm25 ivfflat           0.90            True     nprobe                      16                   0.94222         0.02490        0.031505
-    ml-1m      bm25 ivfflat           0.95            True     nprobe                      32                   0.98543         0.03540        0.041100
-    ml-1m      bm25 ivfflat           0.98            True     nprobe                      32                   0.98543         0.03610        0.043105
-    ml-1m      bm25   ivfpq           0.90           False     nprobe                      64                   0.88145         0.10630        0.125515
-    ml-1m      bm25   ivfpq           0.95           False     nprobe                      64                   0.88145         0.10945        0.144410
-    ml-1m      bm25   ivfpq           0.98           False     nprobe                      64                   0.88145         0.10720        0.158060
-   ml-20m      bm25    hnsw           0.90            True         ef                      64                   0.95772         0.07390        0.101505
-   ml-20m      bm25    hnsw           0.95            True         ef                      64                   0.95772         0.07170        0.109195
-   ml-20m      bm25    hnsw           0.98            True         ef                     256                   0.98283         0.18970        0.251810
-   ml-20m      bm25 ivfflat           0.90            True     nprobe                       8                   0.90553         0.03825        0.050000
-   ml-20m      bm25 ivfflat           0.95            True     nprobe                      16                   0.96572         0.05915        0.075220
-   ml-20m      bm25 ivfflat           0.98            True     nprobe                      32                   0.99039         0.09665        0.112805
-   ml-20m      bm25   ivfpq           0.90           False     nprobe                     256                   0.88429         0.33785        0.355515
-   ml-20m      bm25   ivfpq           0.95           False     nprobe                     256                   0.88429         0.34590        0.383000
-   ml-20m      bm25   ivfpq           0.98           False     nprobe                     256                   0.88429         0.34070        0.354805
+\begin{tabular}{lllrrlrrrr}
+\toprule
+dataset & weighting & method & target_recall & target_reached & param_name & calibrated_param_value & achieved_recall_vs_exact & latency_p50_ms & latency_p95_ms \\
+\midrule
+goodbooks & bm25 & hnsw & 0.9000 & True & ef & 64 & 0.9717 & 0.0447 & 0.0578 \\
+goodbooks & bm25 & hnsw & 0.9500 & True & ef & 64 & 0.9717 & 0.0463 & 0.0606 \\
+goodbooks & bm25 & hnsw & 0.9800 & True & ef & 128 & 0.9993 & 0.0687 & 0.0878 \\
+goodbooks & bm25 & ivfflat & 0.9000 & True & nprobe & 8 & 0.9538 & 0.0234 & 0.0343 \\
+goodbooks & bm25 & ivfflat & 0.9500 & True & nprobe & 8 & 0.9538 & 0.0233 & 0.0334 \\
+goodbooks & bm25 & ivfflat & 0.9800 & True & nprobe & 16 & 0.9802 & 0.0342 & 0.0445 \\
+goodbooks & bm25 & ivfpq & 0.9000 & True & nprobe & 8 & 0.9140 & 0.0637 & 0.0745 \\
+goodbooks & bm25 & ivfpq & 0.9500 & False & nprobe & 128 & 0.9395 & 0.2026 & 0.2224 \\
+goodbooks & bm25 & ivfpq & 0.9800 & False & nprobe & 128 & 0.9395 & 0.2139 & 0.2516 \\
+ml-1m & bm25 & hnsw & 0.9000 & True & ef & 32 & 0.9127 & 0.0382 & 0.0517 \\
+ml-1m & bm25 & hnsw & 0.9500 & True & ef & 64 & 0.9849 & 0.0530 & 0.0670 \\
+ml-1m & bm25 & hnsw & 0.9800 & True & ef & 64 & 0.9849 & 0.0482 & 0.0623 \\
+ml-1m & bm25 & ivfflat & 0.9000 & True & nprobe & 16 & 0.9405 & 0.0243 & 0.0288 \\
+ml-1m & bm25 & ivfflat & 0.9500 & True & nprobe & 32 & 0.9868 & 0.0361 & 0.0457 \\
+ml-1m & bm25 & ivfflat & 0.9800 & True & nprobe & 32 & 0.9868 & 0.0370 & 0.0459 \\
+ml-1m & bm25 & ivfpq & 0.9000 & False & nprobe & 64 & 0.8830 & 0.1079 & 0.1427 \\
+ml-1m & bm25 & ivfpq & 0.9500 & False & nprobe & 64 & 0.8830 & 0.1074 & 0.1209 \\
+ml-1m & bm25 & ivfpq & 0.9800 & False & nprobe & 64 & 0.8830 & 0.1096 & 0.1364 \\
+ml-20m & bm25 & hnsw & 0.9000 & True & ef & 64 & 0.9603 & 0.0734 & 0.0964 \\
+ml-20m & bm25 & hnsw & 0.9500 & True & ef & 64 & 0.9603 & 0.0770 & 0.1048 \\
+ml-20m & bm25 & hnsw & 0.9800 & True & ef & 128 & 0.9819 & 0.0986 & 0.1266 \\
+ml-20m & bm25 & ivfflat & 0.9000 & True & nprobe & 16 & 0.9637 & 0.0601 & 0.0830 \\
+ml-20m & bm25 & ivfflat & 0.9500 & True & nprobe & 16 & 0.9637 & 0.0517 & 0.0655 \\
+ml-20m & bm25 & ivfflat & 0.9800 & True & nprobe & 32 & 0.9901 & 0.0948 & 0.1325 \\
+ml-20m & bm25 & ivfpq & 0.9000 & False & nprobe & 256 & 0.8838 & 0.3428 & 0.3665 \\
+ml-20m & bm25 & ivfpq & 0.9500 & False & nprobe & 256 & 0.8838 & 0.3442 & 0.3696 \\
+ml-20m & bm25 & ivfpq & 0.9800 & False & nprobe & 256 & 0.8838 & 0.3859 & 0.4131 \\
+\bottomrule
+\end{tabular}

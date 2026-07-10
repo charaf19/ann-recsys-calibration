@@ -71,7 +71,6 @@ class AnnIndex:
         self.method = method
         self._search = search_fn
         self._set_param = set_param_fn
-        self.gpu_used = False  # set True only by the optional GPU clone path
 
     def search(self, Q, topk):
         Q = np.ascontiguousarray(Q, dtype=np.float32)
@@ -88,30 +87,7 @@ class AnnIndex:
             self._set_param(int(value))
 
 
-def try_gpu_clone(index, script="ann_io"):
-    """Best-effort clone of a CPU FAISS index to all available GPUs.
-
-    Returns (index, gpu_used). GPU search is an OPTIONAL, exploratory
-    extension: it requires a faiss-gpu build, does not support HNSW or
-    IndexPQ, and may introduce nondeterminism. On any failure the CPU index
-    is returned unchanged with a warning.
-    """
-    try:
-        import faiss
-        if faiss.get_num_gpus() <= 0:
-            print(f"[{script}] WARN: --use_gpu requested but no FAISS GPU "
-                  f"available; staying on CPU.")
-            return index, False
-        gpu_index = faiss.index_cpu_to_all_gpus(index)
-        print(f"[{script}] index cloned to GPU (exploratory path; runtime "
-              f"parameters were applied on CPU before cloning).")
-        return gpu_index, True
-    except Exception as e:
-        print(f"[{script}] WARN: GPU clone failed ({e}); staying on CPU.")
-        return index, False
-
-
-def _load_faiss(fpath: Path, nprobe=None, ef=None, use_gpu=False):
+def _load_faiss(fpath: Path, nprobe=None, ef=None):
     import faiss
     index = faiss.read_index(str(fpath))
     index_dc = faiss.downcast_index(index)
@@ -141,40 +117,22 @@ def _load_faiss(fpath: Path, nprobe=None, ef=None, use_gpu=False):
         else:
             method = "flatpq" if isinstance(index_dc, faiss.IndexPQ) else "flat"
 
-    gpu_used = False
-    if use_gpu:
-        # runtime params (ef/nprobe) are applied on the CPU index above and
-        # carried into the clone; post-clone recalibration is unsupported.
-        index, gpu_used = try_gpu_clone(index)
-        if gpu_used:
-            set_param_fn = None
-
     def search_fn(Q, topk):
         _, I = index.search(Q, topk)
         return I
 
-    ann = AnnIndex(method, search_fn, set_param_fn=set_param_fn)
-    ann.gpu_used = gpu_used
-    return ann
+    return AnnIndex(method, search_fn, set_param_fn=set_param_fn)
 
 
-def load_ann_index(path: str, dim: int, N: int, ef=None, nprobe=None,
-                   use_gpu=False) -> AnnIndex:
-    """Load any supported index (file or directory) as an AnnIndex.
-
-    use_gpu=True (optional, default False) clones the loaded index to GPU
-    when a faiss-gpu build with devices is present; the returned AnnIndex
-    then has gpu_used=True and its calibration parameter is frozen (set on
-    CPU before cloning). GPU search is exploratory and NOT part of the
-    canonical CPU benchmark.
-    """
+def load_ann_index(path: str, dim: int, N: int, ef=None, nprobe=None) -> AnnIndex:
+    """Load any supported index (file or directory) as an AnnIndex."""
     fpath = resolve_index_path(path)
     if fpath.suffix.lower() == ".bin" or fpath.name in {"hnsw_index.bin", "hnsw.bin"}:
         raise ValueError(
             "Legacy hnswlib index files are no longer supported. "
             "Rebuild HNSW with src/build_index.py to create faiss_hnsw.index."
         )
-    return _load_faiss(fpath, nprobe=nprobe, ef=ef, use_gpu=use_gpu)
+    return _load_faiss(fpath, nprobe=nprobe, ef=ef)
 
 
 def build_exact_index(item_vecs: np.ndarray) -> AnnIndex:

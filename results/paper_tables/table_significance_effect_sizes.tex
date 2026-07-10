@@ -1,73 +1,102 @@
-  dataset weighting modality  method metric  mean_diff    ci_low   ci_high  p_value  significant_at_0.05  cohens_d cohens_d_magnitude  cliffs_delta cliffs_delta_magnitude
-goodbooks      bm25      i2i  flatpq     hr  -0.002100 -0.004200  0.000000    0.062                False -0.018785         negligible     -0.002453             negligible
-goodbooks      bm25      i2i  flatpq   ndcg  -0.003738 -0.005170 -0.002352    0.000                 True -0.051750         negligible     -0.003103             negligible
-goodbooks      bm25      i2i  flatpq recall  -0.002100 -0.004200  0.000000    0.062                False -0.018785         negligible     -0.002453             negligible
-goodbooks      bm25      i2i    hnsw     hr   0.000000  0.000000  0.000000    1.000                False  0.000000         negligible     -0.000303             negligible
-goodbooks      bm25      i2i    hnsw   ndcg   0.000000  0.000000  0.000000    1.000                False  0.000000         negligible     -0.000225             negligible
-goodbooks      bm25      i2i    hnsw recall   0.000000  0.000000  0.000000    1.000                False  0.000000         negligible     -0.000303             negligible
-goodbooks      bm25      i2i ivfflat     hr  -0.001000 -0.001702 -0.000400    0.001                 True -0.028878         negligible     -0.001319             negligible
-goodbooks      bm25      i2i ivfflat   ndcg  -0.000420 -0.000772 -0.000137    0.002                 True -0.025995         negligible     -0.001146             negligible
-goodbooks      bm25      i2i ivfflat recall  -0.001000 -0.001702 -0.000400    0.001                 True -0.028878         negligible     -0.001319             negligible
-goodbooks      bm25      i2i   ivfpq     hr  -0.002100 -0.004000 -0.000298    0.032                 True -0.022018         negligible     -0.002444             negligible
-goodbooks      bm25      i2i   ivfpq   ndcg  -0.003365 -0.004636 -0.002092    0.000                 True -0.051269         negligible     -0.003004             negligible
-goodbooks      bm25      i2i   ivfpq recall  -0.002100 -0.004000 -0.000298    0.032                 True -0.022018         negligible     -0.002444             negligible
-goodbooks      bm25      u2i  flatpq     hr  -0.002800 -0.005502  0.000000    0.057                False -0.019607         negligible     -0.002873             negligible
-goodbooks      bm25      u2i  flatpq   ndcg  -0.001209 -0.002623  0.000165    0.080                False -0.017365         negligible     -0.002827             negligible
-goodbooks      bm25      u2i  flatpq recall  -0.002800 -0.005502  0.000000    0.057                False -0.019607         negligible     -0.002873             negligible
-goodbooks      bm25      u2i    hnsw     hr  -0.000200 -0.000500  0.000000    0.276                False -0.014143         negligible     -0.000285             negligible
-goodbooks      bm25      u2i    hnsw   ndcg  -0.000083 -0.000233  0.000000    0.276                False -0.013868         negligible     -0.000263             negligible
-goodbooks      bm25      u2i    hnsw recall  -0.000200 -0.000500  0.000000    0.276                False -0.014143         negligible     -0.000285             negligible
-goodbooks      bm25      u2i ivfflat     hr  -0.001200 -0.003000  0.000500    0.185                False -0.013417         negligible     -0.001348             negligible
-goodbooks      bm25      u2i ivfflat   ndcg  -0.000651 -0.001459  0.000092    0.096                False -0.016256         negligible     -0.001326             negligible
-goodbooks      bm25      u2i ivfflat recall  -0.001200 -0.003000  0.000500    0.185                False -0.013417         negligible     -0.001348             negligible
-goodbooks      bm25      u2i   ivfpq     hr  -0.002400 -0.004700  0.000000    0.054                False -0.019469         negligible     -0.002597             negligible
-goodbooks      bm25      u2i   ivfpq   ndcg  -0.000703 -0.001838  0.000452    0.215                False -0.012053         negligible     -0.002552             negligible
-goodbooks      bm25      u2i   ivfpq recall  -0.002400 -0.004700  0.000000    0.054                False -0.019469         negligible     -0.002597             negligible
-    ml-1m      bm25      i2i  flatpq     hr  -0.004307 -0.007785 -0.000663    0.026                 True -0.029822         negligible     -0.004327             negligible
-    ml-1m      bm25      i2i  flatpq   ndcg  -0.001399 -0.003026  0.000152    0.088                False -0.022203         negligible     -0.003971             negligible
-    ml-1m      bm25      i2i  flatpq recall  -0.004307 -0.007785 -0.000663    0.026                 True -0.029822         negligible     -0.004327             negligible
-    ml-1m      bm25      i2i    hnsw     hr   0.000000  0.000000  0.000000    1.000                False  0.000000         negligible      0.000020             negligible
-    ml-1m      bm25      i2i    hnsw   ndcg   0.000000  0.000000  0.000000    1.000                False  0.000000         negligible      0.000066             negligible
-    ml-1m      bm25      i2i    hnsw recall   0.000000  0.000000  0.000000    1.000                False  0.000000         negligible      0.000020             negligible
-    ml-1m      bm25      i2i ivfflat     hr   0.000000  0.000000  0.000000    1.000                False  0.000000         negligible      0.000020             negligible
-    ml-1m      bm25      i2i ivfflat   ndcg   0.000007  0.000000  0.000020    0.270                False  0.017129         negligible      0.000069             negligible
-    ml-1m      bm25      i2i ivfflat recall   0.000000  0.000000  0.000000    1.000                False  0.000000         negligible      0.000020             negligible
-    ml-1m      bm25      i2i   ivfpq     hr  -0.001491 -0.004638  0.001656    0.387                False -0.011526         negligible     -0.001354             negligible
-    ml-1m      bm25      i2i   ivfpq   ndcg  -0.000546 -0.001795  0.000713    0.404                False -0.010626         negligible     -0.001128             negligible
-    ml-1m      bm25      i2i   ivfpq recall  -0.001491 -0.004638  0.001656    0.387                False -0.011526         negligible     -0.001354             negligible
-    ml-1m      bm25      u2i  flatpq     hr  -0.003644 -0.008614  0.001160    0.152                False -0.018433         negligible     -0.003811             negligible
-    ml-1m      bm25      u2i  flatpq   ndcg  -0.002595 -0.005097 -0.000263    0.027                 True -0.026972         negligible     -0.004026             negligible
-    ml-1m      bm25      u2i  flatpq recall  -0.003644 -0.008614  0.001160    0.152                False -0.018433         negligible     -0.003811             negligible
-    ml-1m      bm25      u2i    hnsw     hr   0.000000  0.000000  0.000000    1.000                False  0.000000         negligible     -0.000017             negligible
-    ml-1m      bm25      u2i    hnsw   ndcg   0.000000  0.000000  0.000000    1.000                False  0.000000         negligible      0.000024             negligible
-    ml-1m      bm25      u2i    hnsw recall   0.000000  0.000000  0.000000    1.000                False  0.000000         negligible     -0.000017             negligible
-    ml-1m      bm25      u2i ivfflat     hr   0.000000  0.000000  0.000000    1.000                False  0.000000         negligible     -0.000017             negligible
-    ml-1m      bm25      u2i ivfflat   ndcg   0.000009  0.000000  0.000023    0.279                False  0.018014         negligible      0.000030             negligible
-    ml-1m      bm25      u2i ivfflat recall   0.000000  0.000000  0.000000    1.000                False  0.000000         negligible     -0.000017             negligible
-    ml-1m      bm25      u2i   ivfpq     hr  -0.001988 -0.006626  0.002485    0.386                False -0.011088         negligible     -0.001911             negligible
-    ml-1m      bm25      u2i   ivfpq   ndcg  -0.000133 -0.002424  0.002298    0.888                False -0.001485         negligible     -0.001698             negligible
-    ml-1m      bm25      u2i   ivfpq recall  -0.001988 -0.006626  0.002485    0.386                False -0.011088         negligible     -0.001911             negligible
-   ml-20m      bm25      i2i  flatpq     hr  -0.002100 -0.004700  0.000500    0.112                False -0.016060         negligible     -0.001969             negligible
-   ml-20m      bm25      i2i  flatpq   ndcg  -0.001179 -0.002284 -0.000068    0.040                 True -0.020191         negligible     -0.001944             negligible
-   ml-20m      bm25      i2i  flatpq recall  -0.002100 -0.004700  0.000500    0.112                False -0.016060         negligible     -0.001969             negligible
-   ml-20m      bm25      i2i    hnsw     hr   0.000100  0.000000  0.000300    0.741                False  0.010000         negligible      0.000129             negligible
-   ml-20m      bm25      i2i    hnsw   ndcg   0.000029  0.000000  0.000087    0.741                False  0.010000         negligible      0.000135             negligible
-   ml-20m      bm25      i2i    hnsw recall   0.000100  0.000000  0.000300    0.741                False  0.010000         negligible      0.000129             negligible
-   ml-20m      bm25      i2i ivfflat     hr  -0.000100 -0.000500  0.000300    0.833                False -0.004472         negligible     -0.000063             negligible
-   ml-20m      bm25      i2i ivfflat   ndcg   0.000020 -0.000110  0.000142    0.738                False  0.003039         negligible     -0.000012             negligible
-   ml-20m      bm25      i2i ivfflat recall  -0.000100 -0.000500  0.000300    0.833                False -0.004472         negligible     -0.000063             negligible
-   ml-20m      bm25      i2i   ivfpq     hr  -0.000300 -0.002500  0.001900    0.829                False -0.002641         negligible     -0.000314             negligible
-   ml-20m      bm25      i2i   ivfpq   ndcg  -0.000655 -0.001579  0.000230    0.153                False -0.014002         negligible     -0.000312             negligible
-   ml-20m      bm25      i2i   ivfpq recall  -0.000300 -0.002500  0.001900    0.829                False -0.002641         negligible     -0.000314             negligible
-   ml-20m      bm25      u2i  flatpq     hr  -0.004500 -0.008700 -0.000100    0.045                 True -0.020738         negligible     -0.004307             negligible
-   ml-20m      bm25      u2i  flatpq   ndcg  -0.003380 -0.005596 -0.001052    0.003                 True -0.029554         negligible     -0.004510             negligible
-   ml-20m      bm25      u2i  flatpq recall  -0.004500 -0.008700 -0.000100    0.045                 True -0.020738         negligible     -0.004307             negligible
-   ml-20m      bm25      u2i    hnsw     hr   0.000000  0.000000  0.000000    1.000                False  0.000000         negligible      0.000045             negligible
-   ml-20m      bm25      u2i    hnsw   ndcg  -0.000002 -0.000007  0.000000    0.711                False -0.010000         negligible      0.000038             negligible
-   ml-20m      bm25      u2i    hnsw recall   0.000000  0.000000  0.000000    1.000                False  0.000000         negligible      0.000045             negligible
-   ml-20m      bm25      u2i ivfflat     hr  -0.000100 -0.001100  0.000900    0.945                False -0.001924         negligible     -0.000045             negligible
-   ml-20m      bm25      u2i ivfflat   ndcg  -0.000084 -0.000462  0.000262    0.679                False -0.004609         negligible     -0.000077             negligible
-   ml-20m      bm25      u2i ivfflat recall  -0.000100 -0.001100  0.000900    0.945                False -0.001924         negligible     -0.000045             negligible
-   ml-20m      bm25      u2i   ivfpq     hr  -0.000200 -0.003800  0.003200    0.942                False -0.001054         negligible     -0.000147             negligible
-   ml-20m      bm25      u2i   ivfpq   ndcg  -0.000118 -0.001862  0.001601    0.902                False -0.001285         negligible     -0.000288             negligible
-   ml-20m      bm25      u2i   ivfpq recall  -0.000200 -0.003800  0.003200    0.942                False -0.001054         negligible     -0.000147             negligible
+\begin{tabular}{lllllrrrrrrlrl}
+\toprule
+dataset & weighting & modality & method & metric & mean_diff & ci_low & ci_high & p_value & significant_at_0.05 & cohens_d & cohens_d_magnitude & cliffs_delta & cliffs_delta_magnitude \\
+\midrule
+amazon-books & bm25 & i2i & flatpq & hr & -0.0027 & -0.0044 & -0.0010 & 0.0020 & True & -0.0304 & negligible & -0.0027 & negligible \\
+amazon-books & bm25 & i2i & flatpq & ndcg & -0.0017 & -0.0028 & -0.0008 & 0.0000 & True & -0.0328 & negligible & -0.0027 & negligible \\
+amazon-books & bm25 & i2i & flatpq & recall & -0.0027 & -0.0044 & -0.0010 & 0.0020 & True & -0.0304 & negligible & -0.0027 & negligible \\
+amazon-books & bm25 & i2i & hnsw & hr & 0.0001 & 0.0000 & 0.0003 & 0.7520 & False & 0.0100 & negligible & 0.0002 & negligible \\
+amazon-books & bm25 & i2i & hnsw & ndcg & 0.0001 & 0.0000 & 0.0001 & 0.1140 & False & 0.0143 & negligible & 0.0002 & negligible \\
+amazon-books & bm25 & i2i & hnsw & recall & 0.0001 & 0.0000 & 0.0003 & 0.7520 & False & 0.0100 & negligible & 0.0002 & negligible \\
+amazon-books & bm25 & i2i & ivfflat & hr & -0.0007 & -0.0013 & -0.0002 & 0.0040 & True & -0.0265 & negligible & -0.0006 & negligible \\
+amazon-books & bm25 & i2i & ivfflat & ndcg & -0.0003 & -0.0005 & -0.0001 & 0.0080 & True & -0.0231 & negligible & -0.0006 & negligible \\
+amazon-books & bm25 & i2i & ivfflat & recall & -0.0007 & -0.0013 & -0.0002 & 0.0040 & True & -0.0265 & negligible & -0.0006 & negligible \\
+amazon-books & bm25 & i2i & ivfpq & hr & -0.0014 & -0.0028 & -0.0001 & 0.0440 & True & -0.0191 & negligible & -0.0013 & negligible \\
+amazon-books & bm25 & i2i & ivfpq & ndcg & -0.0015 & -0.0023 & -0.0008 & 0.0000 & True & -0.0390 & negligible & -0.0014 & negligible \\
+amazon-books & bm25 & i2i & ivfpq & recall & -0.0014 & -0.0028 & -0.0001 & 0.0440 & True & -0.0191 & negligible & -0.0013 & negligible \\
+amazon-books & bm25 & u2i & flatpq & hr & -0.0055 & -0.0082 & -0.0029 & 0.0000 & True & -0.0405 & negligible & -0.0055 & negligible \\
+amazon-books & bm25 & u2i & flatpq & ndcg & -0.0048 & -0.0064 & -0.0033 & 0.0000 & True & -0.0598 & negligible & -0.0056 & negligible \\
+amazon-books & bm25 & u2i & flatpq & recall & -0.0055 & -0.0082 & -0.0029 & 0.0000 & True & -0.0405 & negligible & -0.0055 & negligible \\
+amazon-books & bm25 & u2i & hnsw & hr & -0.0008 & -0.0014 & -0.0003 & 0.0000 & True & -0.0283 & negligible & -0.0010 & negligible \\
+amazon-books & bm25 & u2i & hnsw & ndcg & -0.0003 & -0.0006 & -0.0000 & 0.0420 & True & -0.0192 & negligible & -0.0009 & negligible \\
+amazon-books & bm25 & u2i & hnsw & recall & -0.0008 & -0.0014 & -0.0003 & 0.0000 & True & -0.0283 & negligible & -0.0010 & negligible \\
+amazon-books & bm25 & u2i & ivfflat & hr & -0.0015 & -0.0025 & -0.0005 & 0.0040 & True & -0.0289 & negligible & -0.0017 & negligible \\
+amazon-books & bm25 & u2i & ivfflat & ndcg & -0.0011 & -0.0017 & -0.0005 & 0.0000 & True & -0.0321 & negligible & -0.0017 & negligible \\
+amazon-books & bm25 & u2i & ivfflat & recall & -0.0015 & -0.0025 & -0.0005 & 0.0040 & True & -0.0289 & negligible & -0.0017 & negligible \\
+amazon-books & bm25 & u2i & ivfpq & hr & -0.0017 & -0.0036 & 0.0003 & 0.1020 & False & -0.0160 & negligible & -0.0019 & negligible \\
+amazon-books & bm25 & u2i & ivfpq & ndcg & -0.0019 & -0.0032 & -0.0008 & 0.0020 & True & -0.0320 & negligible & -0.0019 & negligible \\
+amazon-books & bm25 & u2i & ivfpq & recall & -0.0017 & -0.0036 & 0.0003 & 0.1020 & False & -0.0160 & negligible & -0.0019 & negligible \\
+goodbooks & bm25 & i2i & flatpq & hr & -0.0016 & -0.0036 & 0.0005 & 0.1520 & False & -0.0154 & negligible & -0.0019 & negligible \\
+goodbooks & bm25 & i2i & flatpq & ndcg & -0.0049 & -0.0064 & -0.0035 & 0.0000 & True & -0.0644 & negligible & -0.0029 & negligible \\
+goodbooks & bm25 & i2i & flatpq & recall & -0.0016 & -0.0036 & 0.0005 & 0.1520 & False & -0.0154 & negligible & -0.0019 & negligible \\
+goodbooks & bm25 & i2i & hnsw & hr & 0.0000 & 0.0000 & 0.0000 & 1.0000 & False & 0.0000 & negligible & -0.0003 & negligible \\
+goodbooks & bm25 & i2i & hnsw & ndcg & 0.0000 & 0.0000 & 0.0000 & 1.0000 & False & 0.0000 & negligible & -0.0002 & negligible \\
+goodbooks & bm25 & i2i & hnsw & recall & 0.0000 & 0.0000 & 0.0000 & 1.0000 & False & 0.0000 & negligible & -0.0003 & negligible \\
+goodbooks & bm25 & i2i & ivfflat & hr & -0.0008 & -0.0016 & -0.0001 & 0.0480 & True & -0.0200 & negligible & -0.0011 & negligible \\
+goodbooks & bm25 & i2i & ivfflat & ndcg & -0.0004 & -0.0008 & -0.0000 & 0.0420 & True & -0.0185 & negligible & -0.0010 & negligible \\
+goodbooks & bm25 & i2i & ivfflat & recall & -0.0008 & -0.0016 & -0.0001 & 0.0480 & True & -0.0200 & negligible & -0.0011 & negligible \\
+goodbooks & bm25 & i2i & ivfpq & hr & -0.0004 & -0.0022 & 0.0015 & 0.6960 & False & -0.0042 & negligible & -0.0006 & negligible \\
+goodbooks & bm25 & i2i & ivfpq & ndcg & -0.0037 & -0.0050 & -0.0024 & 0.0000 & True & -0.0531 & negligible & -0.0016 & negligible \\
+goodbooks & bm25 & i2i & ivfpq & recall & -0.0004 & -0.0022 & 0.0015 & 0.6960 & False & -0.0042 & negligible & -0.0006 & negligible \\
+goodbooks & bm25 & u2i & flatpq & hr & -0.0035 & -0.0061 & -0.0010 & 0.0040 & True & -0.0265 & negligible & -0.0034 & negligible \\
+goodbooks & bm25 & u2i & flatpq & ndcg & -0.0015 & -0.0027 & -0.0003 & 0.0240 & True & -0.0243 & negligible & -0.0034 & negligible \\
+goodbooks & bm25 & u2i & flatpq & recall & -0.0035 & -0.0061 & -0.0010 & 0.0040 & True & -0.0265 & negligible & -0.0034 & negligible \\
+goodbooks & bm25 & u2i & hnsw & hr & -0.0001 & -0.0004 & 0.0002 & 0.8040 & False & -0.0058 & negligible & -0.0002 & negligible \\
+goodbooks & bm25 & u2i & hnsw & ndcg & -0.0001 & -0.0002 & 0.0001 & 0.4900 & False & -0.0082 & negligible & -0.0002 & negligible \\
+goodbooks & bm25 & u2i & hnsw & recall & -0.0001 & -0.0004 & 0.0002 & 0.8040 & False & -0.0058 & negligible & -0.0002 & negligible \\
+goodbooks & bm25 & u2i & ivfflat & hr & -0.0011 & -0.0029 & 0.0006 & 0.2500 & False & -0.0129 & negligible & -0.0012 & negligible \\
+goodbooks & bm25 & u2i & ivfflat & ndcg & -0.0006 & -0.0013 & 0.0002 & 0.1420 & False & -0.0150 & negligible & -0.0012 & negligible \\
+goodbooks & bm25 & u2i & ivfflat & recall & -0.0011 & -0.0029 & 0.0006 & 0.2500 & False & -0.0129 & negligible & -0.0012 & negligible \\
+goodbooks & bm25 & u2i & ivfpq & hr & -0.0034 & -0.0060 & -0.0009 & 0.0120 & True & -0.0266 & negligible & -0.0036 & negligible \\
+goodbooks & bm25 & u2i & ivfpq & ndcg & -0.0015 & -0.0027 & -0.0004 & 0.0060 & True & -0.0260 & negligible & -0.0035 & negligible \\
+goodbooks & bm25 & u2i & ivfpq & recall & -0.0034 & -0.0060 & -0.0009 & 0.0120 & True & -0.0266 & negligible & -0.0036 & negligible \\
+ml-1m & bm25 & i2i & flatpq & hr & -0.0045 & -0.0080 & -0.0010 & 0.0100 & True & -0.0321 & negligible & -0.0044 & negligible \\
+ml-1m & bm25 & i2i & flatpq & ndcg & -0.0013 & -0.0027 & 0.0001 & 0.0640 & False & -0.0230 & negligible & -0.0040 & negligible \\
+ml-1m & bm25 & i2i & flatpq & recall & -0.0045 & -0.0080 & -0.0010 & 0.0100 & True & -0.0321 & negligible & -0.0044 & negligible \\
+ml-1m & bm25 & i2i & hnsw & hr & 0.0000 & 0.0000 & 0.0000 & 1.0000 & False & 0.0000 & negligible & 0.0000 & negligible \\
+ml-1m & bm25 & i2i & hnsw & ndcg & 0.0000 & 0.0000 & 0.0000 & 1.0000 & False & 0.0000 & negligible & 0.0001 & negligible \\
+ml-1m & bm25 & i2i & hnsw & recall & 0.0000 & 0.0000 & 0.0000 & 1.0000 & False & 0.0000 & negligible & 0.0000 & negligible \\
+ml-1m & bm25 & i2i & ivfflat & hr & 0.0000 & 0.0000 & 0.0000 & 1.0000 & False & 0.0000 & negligible & 0.0000 & negligible \\
+ml-1m & bm25 & i2i & ivfflat & ndcg & 0.0000 & 0.0000 & 0.0000 & 1.0000 & False & 0.0000 & negligible & 0.0001 & negligible \\
+ml-1m & bm25 & i2i & ivfflat & recall & 0.0000 & 0.0000 & 0.0000 & 1.0000 & False & 0.0000 & negligible & 0.0000 & negligible \\
+ml-1m & bm25 & i2i & ivfpq & hr & 0.0028 & -0.0005 & 0.0063 & 0.1180 & False & 0.0212 & negligible & 0.0029 & negligible \\
+ml-1m & bm25 & i2i & ivfpq & ndcg & 0.0003 & -0.0011 & 0.0016 & 0.6860 & False & 0.0048 & negligible & 0.0025 & negligible \\
+ml-1m & bm25 & i2i & ivfpq & recall & 0.0028 & -0.0005 & 0.0063 & 0.1180 & False & 0.0212 & negligible & 0.0029 & negligible \\
+ml-1m & bm25 & u2i & flatpq & hr & -0.0051 & -0.0103 & -0.0002 & 0.0460 & True & -0.0246 & negligible & -0.0050 & negligible \\
+ml-1m & bm25 & u2i & flatpq & ndcg & -0.0047 & -0.0074 & -0.0020 & 0.0000 & True & -0.0448 & negligible & -0.0056 & negligible \\
+ml-1m & bm25 & u2i & flatpq & recall & -0.0051 & -0.0103 & -0.0002 & 0.0460 & True & -0.0246 & negligible & -0.0050 & negligible \\
+ml-1m & bm25 & u2i & hnsw & hr & 0.0000 & 0.0000 & 0.0000 & 1.0000 & False & 0.0000 & negligible & -0.0000 & negligible \\
+ml-1m & bm25 & u2i & hnsw & ndcg & 0.0000 & 0.0000 & 0.0000 & 1.0000 & False & 0.0000 & negligible & 0.0000 & negligible \\
+ml-1m & bm25 & u2i & hnsw & recall & 0.0000 & 0.0000 & 0.0000 & 1.0000 & False & 0.0000 & negligible & -0.0000 & negligible \\
+ml-1m & bm25 & u2i & ivfflat & hr & 0.0000 & 0.0000 & 0.0000 & 1.0000 & False & 0.0000 & negligible & -0.0000 & negligible \\
+ml-1m & bm25 & u2i & ivfflat & ndcg & 0.0000 & 0.0000 & 0.0000 & 0.7500 & False & 0.0129 & negligible & 0.0000 & negligible \\
+ml-1m & bm25 & u2i & ivfflat & recall & 0.0000 & 0.0000 & 0.0000 & 1.0000 & False & 0.0000 & negligible & -0.0000 & negligible \\
+ml-1m & bm25 & u2i & ivfpq & hr & -0.0041 & -0.0083 & 0.0003 & 0.0800 & False & -0.0228 & negligible & -0.0039 & negligible \\
+ml-1m & bm25 & u2i & ivfpq & ndcg & -0.0029 & -0.0049 & -0.0009 & 0.0120 & True & -0.0332 & negligible & -0.0041 & negligible \\
+ml-1m & bm25 & u2i & ivfpq & recall & -0.0041 & -0.0083 & 0.0003 & 0.0800 & False & -0.0228 & negligible & -0.0039 & negligible \\
+ml-20m & bm25 & i2i & flatpq & hr & -0.0010 & -0.0037 & 0.0016 & 0.4600 & False & -0.0075 & negligible & -0.0011 & negligible \\
+ml-20m & bm25 & i2i & flatpq & ndcg & -0.0004 & -0.0016 & 0.0007 & 0.4300 & False & -0.0073 & negligible & -0.0010 & negligible \\
+ml-20m & bm25 & i2i & flatpq & recall & -0.0010 & -0.0037 & 0.0016 & 0.4600 & False & -0.0075 & negligible & -0.0011 & negligible \\
+ml-20m & bm25 & i2i & hnsw & hr & 0.0000 & 0.0000 & 0.0000 & 1.0000 & False & 0.0000 & negligible & 0.0000 & negligible \\
+ml-20m & bm25 & i2i & hnsw & ndcg & 0.0000 & 0.0000 & 0.0000 & 1.0000 & False & 0.0000 & negligible & 0.0001 & negligible \\
+ml-20m & bm25 & i2i & hnsw & recall & 0.0000 & 0.0000 & 0.0000 & 1.0000 & False & 0.0000 & negligible & 0.0000 & negligible \\
+ml-20m & bm25 & i2i & ivfflat & hr & -0.0004 & -0.0009 & 0.0001 & 0.2240 & False & -0.0141 & negligible & -0.0003 & negligible \\
+ml-20m & bm25 & i2i & ivfflat & ndcg & -0.0002 & -0.0004 & 0.0001 & 0.2000 & False & -0.0129 & negligible & -0.0003 & negligible \\
+ml-20m & bm25 & i2i & ivfflat & recall & -0.0004 & -0.0009 & 0.0001 & 0.2240 & False & -0.0141 & negligible & -0.0003 & negligible \\
+ml-20m & bm25 & i2i & ivfpq & hr & -0.0006 & -0.0028 & 0.0016 & 0.6000 & False & -0.0053 & negligible & -0.0007 & negligible \\
+ml-20m & bm25 & i2i & ivfpq & ndcg & -0.0005 & -0.0014 & 0.0005 & 0.2540 & False & -0.0105 & negligible & -0.0006 & negligible \\
+ml-20m & bm25 & i2i & ivfpq & recall & -0.0006 & -0.0028 & 0.0016 & 0.6000 & False & -0.0053 & negligible & -0.0007 & negligible \\
+ml-20m & bm25 & u2i & flatpq & hr & -0.0027 & -0.0067 & 0.0014 & 0.1900 & False & -0.0131 & negligible & -0.0025 & negligible \\
+ml-20m & bm25 & u2i & flatpq & ndcg & -0.0018 & -0.0038 & 0.0001 & 0.0620 & False & -0.0170 & negligible & -0.0026 & negligible \\
+ml-20m & bm25 & u2i & flatpq & recall & -0.0027 & -0.0067 & 0.0014 & 0.1900 & False & -0.0131 & negligible & -0.0025 & negligible \\
+ml-20m & bm25 & u2i & hnsw & hr & 0.0000 & 0.0000 & 0.0000 & 1.0000 & False & 0.0000 & negligible & 0.0000 & negligible \\
+ml-20m & bm25 & u2i & hnsw & ndcg & -0.0000 & -0.0000 & 0.0000 & 0.6920 & False & -0.0100 & negligible & 0.0000 & negligible \\
+ml-20m & bm25 & u2i & hnsw & recall & 0.0000 & 0.0000 & 0.0000 & 1.0000 & False & 0.0000 & negligible & 0.0000 & negligible \\
+ml-20m & bm25 & u2i & ivfflat & hr & -0.0003 & -0.0011 & 0.0005 & 0.5820 & False & -0.0069 & negligible & -0.0002 & negligible \\
+ml-20m & bm25 & u2i & ivfflat & ndcg & -0.0000 & -0.0003 & 0.0003 & 0.9820 & False & -0.0008 & negligible & -0.0002 & negligible \\
+ml-20m & bm25 & u2i & ivfflat & recall & -0.0003 & -0.0011 & 0.0005 & 0.5820 & False & -0.0069 & negligible & -0.0002 & negligible \\
+ml-20m & bm25 & u2i & ivfpq & hr & -0.0017 & -0.0053 & 0.0017 & 0.3840 & False & -0.0091 & negligible & -0.0016 & negligible \\
+ml-20m & bm25 & u2i & ivfpq & ndcg & -0.0017 & -0.0034 & -0.0001 & 0.0420 & True & -0.0187 & negligible & -0.0018 & negligible \\
+ml-20m & bm25 & u2i & ivfpq & recall & -0.0017 & -0.0053 & 0.0017 & 0.3840 & False & -0.0091 & negligible & -0.0016 & negligible \\
+\bottomrule
+\end{tabular}

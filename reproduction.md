@@ -19,11 +19,10 @@ pip install -r requirements-cpu.txt
 
 `requirements-cpu.txt` is the canonical CPU-only dependency set
 (`requirements.txt` is kept as a backward-compatible copy). Optional extras
-— torch backbone, extra ANN backends, GPU/NVML tooling — live in
-`requirements-optional.txt` and are never needed for the main results.
-GPU experiments (`--use_gpu` flags on build_index/run_device/calibrate) are
-exploratory, may be nondeterministic, and write to
-`results/gpu_experiments/` — they are not part of this reproduction.
+— torch backbone, extra ANN backends — live in `requirements-optional.txt`
+and are never needed for the main results. IndexWise-Recsys is evaluated as
+a CPU-only framework; GPU-specific acceleration is outside the present
+scope (see `docs/hardware_protocol.md`).
 
 ## 1. Capture hardware / software environment
 
@@ -203,7 +202,13 @@ python src/validate_results.py --allow_missing_optional
 
 Optional dependencies (not in requirements.txt, install only if wanted):
 `torch` (two_tower_mlp backbone), `hnswlib` / `scann` (Linux) / `ngt`
-(backend comparison), `pynvml` (supplementary GPU energy).
+(backend comparison), `pynvml` (supplementary NVML energy in
+`run_energy_measurement.py`, and GPU-presence detection in
+`capture_hardware.py`).
+
+IndexWise-Recsys is evaluated as a CPU-only framework. GPU-specific
+acceleration is outside the present scope; it is not part of this
+reproduction and no canonical step requires `faiss-gpu`, CUDA, or PyNVML.
 
 ## Determinism notes
 

@@ -35,8 +35,10 @@ Generator); sampling uses explicit `default_rng(seed)` Generators.
    and k-means reductions vary slightly run-to-run. Default is 1 thread.
 2. **Latency / energy values**: deterministic *protocol*, machine-dependent
    *numbers* — only relative comparisons transfer (docs/hardware_protocol.md).
-3. **Optional GPU paths** (`--use_gpu true`): GPU kernels do not guarantee
-   deterministic reductions; GPU results live under `results/gpu_experiments/`
-   and are excluded from the canonical benchmark.
-4. **Optional third-party backends / torch**: seeded, but bit-stability
+3. **Optional third-party backends / torch**: seeded, but bit-stability
    across library versions is not guaranteed; both are optional modules.
+
+GPU-specific acceleration is outside the present scope: no canonical script
+contains a GPU execution path, so GPU reduction-order nondeterminism is not
+a residual of this benchmark. An earlier exploratory GPU layer has been
+archived under `legacy/experimental_gpu/`.

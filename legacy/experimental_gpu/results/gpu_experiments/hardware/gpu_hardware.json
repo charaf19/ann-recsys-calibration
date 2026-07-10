@@ -1,0 +1,16 @@
+{
+  "captured_at_utc": "2026-07-10T11:44:04.838197+00:00",
+  "gpu_present": true,
+  "gpu_count": 1,
+  "gpu_names": [
+    "NVIDIA GeForce RTX 5060 Laptop GPU"
+  ],
+  "cuda_available": true,
+  "faiss_gpu_available": false,
+  "torch_cuda_available": false,
+  "driver_version": "591.91",
+  "cuda_runtime_version": "13.1",
+  "main_cpu_experiments_gpu_used": false,
+  "gpu_experiments_are_exploratory": true,
+  "notes": "All fields are probed live; false/null means the probe found nothing (missing driver, missing pynvml, or a faiss-cpu-only build) \u2014 no GPU details are ever fabricated. GPU experiments are exploratory extensions; the canonical reproducible benchmark is CPU-only."
+}

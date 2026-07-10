@@ -13,14 +13,11 @@ Conventions:
   With `omp_threads=1` builds are bit-reproducible; with more threads exact
   numeric agreement may vary slightly across runs (see
   docs/limitations_code_level.md).
-- GPU runs never write into the CPU result files; they live under
-  `results/gpu_experiments/` and carry `gpu_used: true`.
 
 ## data/index_*/index_meta.json (written by build_index.py)
 
 - method, N, D, budget_mb, method hyperparameters (M/efConstruction or
-  nlist/m/bits/opq + train_sample_size), `omp_threads`, `seed`,
-  `use_gpu_requested`, `gpu_used_for_training`, index_file.
+  nlist/m/bits/opq + train_sample_size), `omp_threads`, `seed`, index_file.
 
 ## results/hardware/
 
@@ -171,10 +168,6 @@ Conventions:
   artifact, stage, required, status (ok | missing_required |
   missing_optional | schema_mismatch | empty | unreadable), rows,
   missing_fields, detail.
-- `results/gpu_experiments/` — OPTIONAL exploratory GPU runs
-  (latency/calibration JSONs with `gpu_used: true`); never mixed with the
-  canonical CPU outputs above.
-
 ## Schema addenda (reviewer-hardening pass)
 
 - `embedding_backbone_sensitivity_all.csv` additionally carries

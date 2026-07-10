@@ -1,14 +1,17 @@
 # IndexWise-Recsys — OPTIONAL dependencies. None of these are needed for the
 # canonical CPU benchmark; install selectively for the optional extensions.
 # Every consumer degrades gracefully when a package here is absent.
+# IndexWise-Recsys is evaluated as a CPU-only framework; GPU-specific
+# acceleration is outside the present scope — faiss-gpu is intentionally
+# NOT listed here.
 
-# --- GPU-related (exploratory GPU experiments; may be nondeterministic) ---
-# faiss-gpu replaces faiss-cpu; do NOT install both in one environment.
-# faiss-gpu==1.7.4        # enables --use_gpu in build_index/run_device/calibrate
 torch                      # two_tower_mlp embedding backbone (CPU build is fine)
-pynvml                     # GPU presence capture + supplementary NVML energy
+pynvml                     # passive GPU-presence capture (capture_hardware.py)
+                           # + supplementary NVML energy (run_energy_measurement.py)
 
 # --- Optional ANN backend comparison (Linux-centric wheels) ---
-hnswlib==0.8.0             # hnswlib backend row
+# Install these selectively. On Windows, hnswlib usually requires Microsoft
+# C++ Build Tools because pip builds it from source.
+# hnswlib==0.8.0           # hnswlib backend row
 # scann                    # ScaNN backend row (Linux x86_64 only)
 # ngt                      # NGT backend row (module ngtpy; Linux-centric)

@@ -1,15 +1,17 @@
-# Hardware and measurement protocol (CPU canonical, GPU optional)
+# Hardware and measurement protocol (CPU-only)
 
 ## Scope
 
-**The canonical, reproducible benchmark is CPU-only.** `faiss-cpu` is pinned
-in `requirements-cpu.txt`; `run_revision_experiments.py --cpu_only`
-additionally clears `CUDA_VISIBLE_DEVICES` for every subprocess. The
+IndexWise-Recsys is evaluated as a CPU-only framework. GPU-specific
+acceleration is outside the present scope. `faiss-cpu` is pinned in
+`requirements-cpu.txt`; `run_revision_experiments.py --cpu_only` additionally
+clears `CUDA_VISIBLE_DEVICES` for every subprocess. The
 `--main_experiments_gpu_used false` flag passed to `capture_hardware.py`
 records this in `results/hardware/hardware.json`, which also distinguishes
 GPU *presence* on the machine (`cuda_available`, `faiss_gpu_available`,
 probed) from GPU *usage* in experiments (`main_experiments_gpu_used`,
-declared).
+declared) — this is passive environment-capture reporting only; no
+canonical workflow requires a GPU, `faiss-gpu`, CUDA, or PyNVML.
 
 ## Index-construction determinism
 
@@ -22,17 +24,20 @@ are faster but exact numeric agreement across runs may vary slightly
 the script prints an explicit warning in that case. Choose one setting per
 results set and keep it fixed.
 
-## GPU experiments (optional, exploratory)
+## GPU scope
 
-`build_index.py`, `run_device.py`, and `calibrate.py` accept
-`--use_gpu true` (default **false**). This requires a `faiss-gpu`
-installation, is not supported for HNSW/Flat-PQ search, and may introduce
-nondeterminism (GPU reduction order). GPU runs:
-
-- never overwrite CPU results — their outputs go to `results/gpu_experiments/`;
-- record `gpu_used: true` in every JSON they write;
-- are exploratory extensions, NOT part of the canonical reproducible
-  CPU benchmark, and must not be mixed with CPU numbers in one table.
+GPU-specific acceleration is outside the present scope: `build_index.py`,
+`run_device.py`, `calibrate.py`, and `utils/ann_io.py` contain no GPU
+execution branches, and no config, validator, or result-generation script
+requires a GPU, `faiss-gpu`, CUDA, or PyNVML. GPU latency and transfer
+behavior are not evaluated (see `docs/limitations_code_level.md`).
+`capture_hardware.py` still *passively* records whether a GPU is present on
+the machine (`cuda_available`, `faiss_gpu_available`) purely as an
+environment-capture detail, distinct from and never implying GPU *usage*
+(`main_experiments_gpu_used`, always declared `false` for the canonical
+pipeline). An earlier exploratory GPU experimentation layer has been
+archived under `legacy/experimental_gpu/` and is not part of the active
+pipeline.
 
 ## Environment capture (mandatory first step)
 

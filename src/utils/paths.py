@@ -53,7 +53,6 @@ RESULTS = {
     "energy": "results/energy",
     "status": "results/status",
     "validation": "results/validation",
-    "gpu_experiments": "results/gpu_experiments",
 }
 
 

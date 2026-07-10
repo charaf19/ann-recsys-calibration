@@ -9,12 +9,10 @@ Reproducibility contract:
   - `--seed` (default 42) drives every training-sample draw and the FAISS
     clustering seed.
   - Every build writes `index_meta.json` next to the index recording the
-    method, hyperparameters, omp_threads, seed, and whether a GPU was used.
+    method, hyperparameters, omp_threads, and seed.
 
-GPU note: `--use_gpu` (default false) is an OPTIONAL, exploratory
-acceleration of IVF/PQ *training* only; the serialized index is always a CPU
-index. GPU builds are not part of the canonical reproducible CPU benchmark
-(see docs/hardware_protocol.md).
+IndexWise-Recsys is evaluated as a CPU-only framework. GPU-specific
+acceleration is outside the present scope.
 """
 import argparse
 import json
@@ -38,30 +36,6 @@ def est_pq_bytes(N, m, bits):
 
 def auto_nlist(N):
     return max(8, int(math.sqrt(N)))
-
-
-def _train_maybe_gpu(index, train_sample, use_gpu):
-    """Train `index` on GPU when requested and supported; always returns a
-    CPU index. Falls back to CPU training with a warning on any failure."""
-    if not use_gpu:
-        index.train(train_sample)
-        return index, False
-    try:
-        if faiss.get_num_gpus() <= 0:
-            print(f"[{SCRIPT}] WARN: --use_gpu requested but no FAISS GPU "
-                  f"available; training on CPU.")
-            index.train(train_sample)
-            return index, False
-        gpu_index = faiss.index_cpu_to_all_gpus(index)
-        gpu_index.train(train_sample)
-        cpu_index = faiss.index_gpu_to_cpu(gpu_index)
-        print(f"[{SCRIPT}] trained on GPU (exploratory path; serialized index "
-              f"is CPU). GPU results are outside the canonical CPU benchmark.")
-        return cpu_index, True
-    except Exception as e:
-        print(f"[{SCRIPT}] WARN: GPU training failed ({e}); falling back to CPU.")
-        index.train(train_sample)
-        return index, False
 
 
 def _write_meta(out_dir, meta):
@@ -94,11 +68,7 @@ def main():
                     help="FAISS OpenMP threads (1 = bit-reproducible builds)")
     ap.add_argument("--seed", type=int, default=42,
                     help="seed for training-sample draws and FAISS clustering")
-    ap.add_argument("--use_gpu", default="false",
-                    help="OPTIONAL exploratory GPU training (true/false; "
-                         "default false; not part of the CPU benchmark)")
     args = ap.parse_args()
-    use_gpu = str(args.use_gpu).strip().lower() in ("1", "true", "yes", "y")
 
     print(f"[{SCRIPT}] starting...")
     print(f"[{SCRIPT}] input path: {args.item_vecs}")
@@ -111,9 +81,6 @@ def main():
     else:
         print(f"[{SCRIPT}] WARN: OMP threads > 1 may introduce small "
               f"run-to-run variation for HNSW construction.")
-    if use_gpu:
-        print(f"[{SCRIPT}] WARN: --use_gpu is an exploratory extension; the "
-              f"canonical reproducible benchmark is CPU-only.")
 
     rng = np.random.default_rng(args.seed)
 
@@ -132,8 +99,6 @@ def main():
         "budget_mb": int(args.budget_mb),
         "omp_threads": int(args.omp_threads),
         "seed": int(args.seed),
-        "use_gpu_requested": use_gpu,
-        "gpu_used_for_training": False,
         "item_vecs": str(args.item_vecs),
     }
 
@@ -185,10 +150,9 @@ def main():
             opq = faiss.OPQMatrix(D, m)
             opq.niter = 12
             index = faiss.IndexPreTransform(opq, base)
-            index, gpu_used = _train_maybe_gpu(index, train_sample, use_gpu)
         else:
-            index, gpu_used = _train_maybe_gpu(base, train_sample, use_gpu)
-        meta["gpu_used_for_training"] = gpu_used
+            index = base
+        index.train(train_sample)
 
         print(f"[{SCRIPT}] adding vectors...")
         index.add(item_vecs)
@@ -218,8 +182,7 @@ def main():
         train_idx = rng.choice(N, size=sample_size, replace=False)
         train_sample = item_vecs[train_idx]
         print(f"[{SCRIPT}] training IVF-Flat with nlist={nlist} (sample={sample_size})")
-        index, gpu_used = _train_maybe_gpu(index, train_sample, use_gpu)
-        meta["gpu_used_for_training"] = gpu_used
+        index.train(train_sample)
         print(f"[{SCRIPT}] adding vectors...")
         index.add(item_vecs)
         faiss.write_index(index, str(out / "faiss_ivfflat.index"))

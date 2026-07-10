@@ -31,6 +31,9 @@ are `False` until the corresponding pipeline stage has produced its output).
 10. FAISS-specific scope
 11. Flat-PQ deployment role
 
+IndexWise-Recsys is evaluated as a CPU-only framework. GPU-specific
+acceleration is outside the present scope and has no claim area here.
+
 ## Usage rules
 
 - Regenerate the audit after every pipeline stage:
