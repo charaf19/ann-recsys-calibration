@@ -1,8 +1,9 @@
-"""Canonical on-disk layout shared by the revision pipeline scripts.
+"""Canonical on-disk layout shared by every pipeline script.
 
-Keeping the conventions in one place lets run_revision_experiments.py,
-run_calibration_sensitivity.py and the reporting scripts agree on where
-embeddings, indexes, and results live.
+RESULTS is the single mapping from logical output names to directories.
+Canonical scripts must build result paths through it — never from string
+literals — and must fail clearly when a canonical input is missing instead
+of falling back to legacy filenames.
 """
 from pathlib import Path
 
@@ -12,7 +13,6 @@ DATASET_CSV = {
     "ml-20m": "data/ml20m.csv",
     "goodbooks": "data/goodbooks.csv",
     "amazon-books": "data/amazon_books.csv",
-    "synth": "data/synth.csv",
 }
 
 
@@ -35,35 +35,55 @@ def index_dir(dataset: str, weighting: str, dim: int, method: str) -> str:
 
 RESULTS = {
     "meta": "results/_meta",
-    "hardware": "results/_meta/hardware",
-    "status": "results/_meta/status",
-    "validation": "results/_meta/validation",
+
     "main": "results/main",
+    "aggregates": "results/main/aggregates",
     "perquery": "results/main/perquery",
     "calibration": "results/main/calibration",
-    "analyses": "results/analyses",
-    "calibration_sensitivity": "results/analyses/calibration_sensitivity",
-    "bootstrap": "results/analyses/bootstrap",
-    "effect_sizes": "results/analyses/effect_sizes",
-    "deployment_guidance": "results/analyses/ann_decision_framework",
-    "embedding_sensitivity": "results/analyses/embedding_sensitivity",
-    "pq_diagnostics": "results/analyses/pq_diagnostics",
-    "exposure_analysis": "results/analyses/exposure_analysis",
-    "scale_stress": "results/analyses/scale_stress",
-    "optional_backends": "results/analyses/optional_backends",
-    "energy": "results/analyses/energy",
-    "paper": "results/paper",
-    "paper_tables": "results/paper/tables",
-    "figures_paper": "results/paper/figures",
-    "archive": "results/archive",
+    "status": "results/main/status",
+
+    "calibration_sensitivity":
+        "results/analyses/calibration_sensitivity",
+    "bootstrap":
+        "results/analyses/bootstrap",
+    "effect_sizes":
+        "results/analyses/effect_sizes",
+    "embedding_sensitivity":
+        "results/analyses/embedding_sensitivity",
+    "exposure_analysis":
+        "results/analyses/exposure",
+    "pq_diagnostics":
+        "results/analyses/pq_diagnostics",
+    "scale_stress":
+        "results/analyses/scale_stress",
+    "decision_framework":
+        "results/analyses/decision_framework",
+    "optional_backends":
+        "results/analyses/optional_backends",
+    "energy":
+        "results/analyses/energy",
+
+    "paper_tables":
+        "results/paper/tables",
+    "paper_figures":
+        "results/paper/figures",
+    "paper_supplementary":
+        "results/paper/supplementary",
 }
 
 
-def first_existing(*candidates):
-    """Return the first existing path among candidates (or the first candidate
-    if none exist). Lets consumers accept alternate result filenames, e.g.
-    summary_main.csv vs main_results_all.csv."""
-    for c in candidates:
-        if Path(c).is_file():
-            return str(c)
-    return str(candidates[0])
+def results_path(key: str, *parts) -> Path:
+    """Canonical result path: results_path("bootstrap", "bootstrap_cis.csv")."""
+    if key not in RESULTS:
+        raise KeyError(f"unknown RESULTS key '{key}' "
+                       f"(known: {sorted(RESULTS)})")
+    return Path(RESULTS[key]).joinpath(*parts)
+
+
+def require_input(path, hint: str) -> Path:
+    """Fail clearly when a canonical input is missing (no legacy fallback)."""
+    p = Path(path)
+    if not p.is_file():
+        raise FileNotFoundError(
+            f"canonical input missing: {p}\n  produce it first with: {hint}")
+    return p

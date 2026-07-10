@@ -1,37 +1,21 @@
-# Main CPU-only experiment configuration.
-# Consumed by src/run_revision_experiments.py; any CLI flag overrides these.
+# IndexWise-Recsys — canonical revised-paper experiment configuration.
+# This is the COMPLETE paper run (all four datasets), not a quick test;
+# for a fast structural check use configs/test_tiny.yml instead.
+# Consumed by src/run_revision_experiments.py and the downstream analysis
+# scripts; explicit CLI flags override these values.
 
-# `main` datasets run by default; `optional` ones (large/slow to prepare)
-# run only when named explicitly: --datasets amazon-books
-# (a flat list is still accepted for backward compatibility)
+inherits: defaults.yml
+
 datasets:
-  main:
-    - ml-1m
-    - ml-20m
-    - goodbooks
-  optional:
-    - amazon-books
-modalities: [u2i, i2i]
-methods: [flat, hnsw, ivfflat, ivfpq, flatpq]
+  - ml-1m
+  - ml-20m
+  - goodbooks
+  - amazon-books
 
-weighting: bm25          # none | tfidf | bm25
-bm25_k1: 1.2
-bm25_b: 0.75
-dim: 128
-normalize: l2
+evaluation:
+  queries_large: 10000    # eval queries for ml-20m / goodbooks / amazon-books
+  queries_ml1m: full      # evaluate every eligible ml-1m user
+  latency_queries: 2000
 
-budget_mb: 100
-topk: 100
-metric_topk: 10
-
-# calibration against exact Flat (ANN agreement recall @ topk)
-calibration_targets: [0.90, 0.95, 0.98]
-primary_target: 0.95     # operating point used for latency + quality runs
-
-# evaluation query counts (temporal LOO test users)
-queries_large: 10000     # ml-20m, goodbooks
-queries_ml1m: full       # evaluate every eligible ml-1m user
-latency_queries: 2000
-
-omp_threads: 1           # FAISS build threads; 1 = bit-reproducible HNSW/IVF
-seed: 42
+hardware:
+  cpu_only: true

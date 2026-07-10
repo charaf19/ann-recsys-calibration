@@ -1,0 +1,180 @@
+# IndexWise-Recsys — strict paper-evidence contract.
+# Consumed by src/validate_paper_evidence.py. This file IS the evidence
+# contract: what must exist, how many rows, which columns, which values.
+# The validator only interprets it; it does not hardcode the contract.
+#
+# Path keys refer to src/utils/paths.py RESULTS entries.
+
+contract_version: 2
+
+scope:
+  cpu_only: true
+  hardware_file: results/_meta/hardware.json
+  require_fields:
+    main_experiments_accelerator_used: false
+  forbidden_result_paths:          # canonical GPU result paths must not exist
+    - results/gpu_experiments
+    - results/analyses/gpu_experiments
+
+main:
+  file: results/main/summary_main.csv
+  datasets: [ml-1m, ml-20m, goodbooks, amazon-books]
+  modalities: [u2i, i2i]
+  methods: [flat, hnsw, ivfflat, ivfpq, flatpq]
+  weighting: bm25
+  dim: 128
+  seed: 42
+  expected_rows: 40
+  key: [dataset, weighting, dim, modality, method, seed]
+  required_columns:
+    - dataset
+    - weighting
+    - dim
+    - modality
+    - method
+    - seed
+    - queries
+    - recall_at_k_mean
+    - ndcg_at_k_mean
+    - ann_recall_vs_exact_at_k_mean
+    - long_tail_exposure
+    - long_tail_uplift
+    - latency_p50_ms
+    - latency_p95_ms
+  metric_columns_not_all_null:     # an all-null metric column is a failure
+    - recall_at_k_mean
+    - ndcg_at_k_mean
+    - ann_recall_vs_exact_at_k_mean
+    - latency_p95_ms
+  forbidden_columns:               # GPU fields must never appear
+    - gpu_used
+    - gpu_device
+    - gpu_energy_joules
+  run_config_file: results/main/run_config.json
+  run_config_must_match:           # run configuration vs summary consistency
+    weighting: bm25
+    dim: 128
+    seed: 42
+
+calibration_sensitivity:
+  file: results/analyses/calibration_sensitivity/calibration_sensitivity.csv
+  datasets: [ml-1m, ml-20m, goodbooks, amazon-books]
+  methods: [hnsw, ivfflat, ivfpq]      # tunable ANN methods only
+  targets: [0.90, 0.95, 0.98]
+  expected_rows: 36
+  key: [dataset, weighting, dim, method, target_recall, seed]
+  required_columns:
+    - dataset
+    - weighting
+    - dim
+    - method
+    - target_recall
+    - target_reached
+    - calibrated_param_value
+    - achieved_recall_vs_exact
+    - latency_p95_ms
+    - seed
+
+embedding_sensitivity:
+  file: results/analyses/embedding_sensitivity/embedding_backbone_sensitivity_all.csv
+  datasets: [ml-1m]
+  modalities: [u2i]
+  backbones:                            # required backbones
+    - svd_bm25
+    - svd_tfidf
+    - svd_none
+    - bpr_matrix_factorization
+  optional_backbones:                   # may be absent or unavailable
+    - two_tower_mlp
+  methods: [flat, hnsw, ivfflat, ivfpq, flatpq]
+  expected_rows: 20                     # required backbones x methods
+  key: [dataset, backbone, modality, method, dim, seed]
+  required_columns:
+    - dataset
+    - backbone
+    - modality
+    - method
+    - dim
+    - seed
+    - backend_available
+    - status
+    - error_message
+    - ann_ranking_stability
+  # ranking stability must be REPORTED honestly, never required to be stable
+
+scale_stress:
+  file: results/analyses/scale_stress/scale_stress_all.csv
+  catalog_sizes: [10000, 50000, 100000, 500000, 1000000]
+  dimensions: [64, 128, 256]
+  methods: [flat, hnsw, ivfflat, ivfpq, flatpq]
+  expected_rows: 75
+  key: [n_items, dim, method, seed]
+  required_columns:
+    - n_items
+    - dim
+    - method
+    - seed
+    - build_wall_time_sec
+    - index_size_mb
+    - latency_p95_ms
+    - quality_measured
+  require_values:
+    quality_measured: false             # every row; cost-only by design
+  forbidden_quality_columns:            # synthetic quality must not appear
+    - ndcg_at_k_mean
+    - recall_at_k_mean
+
+bootstrap:
+  cis_file: results/analyses/bootstrap/bootstrap_cis.csv
+  tests_file: results/analyses/bootstrap/paired_tests.csv
+  n_boot: 2000                          # required on every row
+  datasets: [ml-1m, ml-20m, goodbooks, amazon-books]
+  modalities: [u2i, i2i]
+  methods: [flat, hnsw, ivfflat, ivfpq, flatpq]
+  comparison_methods: [hnsw, ivfflat, ivfpq, flatpq]   # vs the flat baseline
+  metrics: [recall, ndcg]               # must be reported at minimum
+  required_columns_cis: [dataset, modality, method, metric, mean, ci_low, ci_high, n_boot]
+  required_columns_tests: [dataset, modality, method, baseline, metric, mean_diff, p_value, n_boot]
+
+effect_sizes:
+  file: results/analyses/effect_sizes/effect_sizes.csv
+  baseline: flat
+  required_columns:
+    - dataset
+    - modality
+    - method
+    - baseline
+    - metric
+    - cohens_d
+    - cliffs_delta
+
+exposure:
+  file: results/analyses/exposure/exposure_analysis_all.csv
+  datasets: [ml-1m, ml-20m, goodbooks, amazon-books]
+  modalities: [u2i, i2i]
+  methods: [flat, hnsw, ivfflat, ivfpq, flatpq]
+  scope_column: fairness_scope          # restricts interpretation to proxies
+  required_columns:
+    - dataset
+    - weighting
+    - modality
+    - method
+    - metric
+    - value
+    - fairness_scope
+
+pq_diagnostics:
+  file: results/analyses/pq_diagnostics/pq_diagnostics_all.csv
+  methods: [flatpq, ivfpq]
+  required_metrics:
+    - reconstruction_error_rel_mean
+    - neighbor_overlap_at_10
+    - neighbor_overlap_at_100
+  required_columns:
+    - dataset
+    - weighting
+    - dim
+    - method
+    - metric
+    - value
+    - seed

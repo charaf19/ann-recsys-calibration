@@ -3,111 +3,168 @@
 Consumes the per-query metric arrays written by eval_modalities.py
 (results/main/perquery/*.npz). Because query construction is deterministic
 and method-independent (same split, same seed), per-query arrays are aligned
-across methods within a (dataset, weighting, modality) group, which enables
-*paired* bootstrap comparisons of each ANN method against the exact Flat
-baseline.
+across methods within a (dataset, weighting, dim, modality) group, which
+enables *paired* bootstrap comparisons of each ANN method against the exact
+Flat baseline.
 
-Outputs (results/bootstrap/):
+The bootstrap iteration count comes from the resolved configuration
+(statistics.bootstrap_iterations, paper value 2000); --n_boot is an explicit
+override. Non-positive counts are rejected.
+
+Outputs (results/analyses/bootstrap/):
   bootstrap_cis.csv    percentile-bootstrap CI of the mean for every metric
   paired_tests.csv     mean difference vs baseline, 95% CI, bootstrap p-value
 """
 import argparse
 import json
+import sys
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
+from utils.config import load_config, cfg_get, ConfigError
 from utils.metrics import bootstrap_ci, paired_bootstrap_test
 from utils.paths import RESULTS
+from utils.result_io import (preflight_output, write_dataframe_atomic,
+                             ResultExistsError)
 
 SCRIPT = "bootstrap_significance"
-METRICS = ["recall", "precision", "hr", "ndcg", "map", "mrr", "ann_recall_vs_exact"]
+DEFAULT_CONFIG = "configs/main_cpu.yml"
+FALLBACK_N_BOOT = 2000  # emergency code fallback = the paper value
+METRICS = ["recall", "precision", "hr", "ndcg", "map", "mrr",
+           "ann_recall_vs_exact"]
+CI_KEY = ["dataset", "weighting", "dim", "modality", "method", "metric", "seed"]
+TEST_KEY = ["dataset", "weighting", "dim", "modality", "method", "baseline",
+            "metric", "seed"]
 
 
 def load_perquery(perquery_dir):
-    """Return {(dataset, weighting, modality, method): {metric: array}}."""
+    """Return {(dataset, weighting, dim, modality, method):
+               {"arrays": {metric: array}, "seed": int}}."""
     runs = {}
     for f in sorted(Path(perquery_dir).glob("*.npz")):
         with np.load(f, allow_pickle=True) as z:
             meta = json.loads(str(z["meta"]))
-            key = (meta["dataset"], meta["weighting"], meta["modality"], meta["method"])
-            runs[key] = {m: np.asarray(z[m]) for m in METRICS if m in z.files}
+            key = (meta["dataset"], meta["weighting"], meta.get("dim"),
+                   meta["modality"], meta["method"])
+            runs[key] = {
+                "arrays": {m: np.asarray(z[m]) for m in METRICS if m in z.files},
+                "seed": meta.get("seed"),
+            }
     return runs
 
 
 def main():
-    ap = argparse.ArgumentParser()
+    ap = argparse.ArgumentParser(
+        description="Percentile-bootstrap CIs and paired significance tests "
+                    "of every ANN method vs the exact Flat baseline, over "
+                    "the aligned per-query arrays.")
+    ap.add_argument("--config", default=DEFAULT_CONFIG,
+                    help="experiment YAML providing "
+                         "statistics.bootstrap_iterations")
     ap.add_argument("--perquery_dir", default=RESULTS["perquery"])
     ap.add_argument("--out_dir", default=RESULTS["bootstrap"])
     ap.add_argument("--baseline_method", default="flat")
-    ap.add_argument("--n_boot", type=int, default=1000)
-    ap.add_argument("--seed", type=int, default=42)
+    ap.add_argument("--n_boot", type=int, default=None,
+                    help="explicit override of the configured bootstrap "
+                         "iteration count (paper value: 2000)")
+    ap.add_argument("--seed", type=int, default=None)
+    ap.add_argument("--write_mode", default="fail_if_exists",
+                    choices=["fail_if_exists", "replace", "merge"])
     args = ap.parse_args()
+
+    try:
+        cfg = load_config(args.config)
+    except ConfigError as e:
+        print(f"[{SCRIPT}] ERROR: {e}")
+        sys.exit(1)
+    n_boot = (args.n_boot if args.n_boot is not None
+              else cfg_get(cfg, "statistics.bootstrap_iterations", type=int,
+                           default=FALLBACK_N_BOOT))
+    seed = (args.seed if args.seed is not None
+            else cfg_get(cfg, "reproducibility.seed", type=int, default=42))
+    if n_boot <= 0:
+        print(f"[{SCRIPT}] ERROR: bootstrap iteration count must be positive, "
+              f"got {n_boot}.")
+        sys.exit(1)
+
+    out_dir = Path(args.out_dir)
+    ci_path = out_dir / "bootstrap_cis.csv"
+    test_path = out_dir / "paired_tests.csv"
+    try:
+        preflight_output(ci_path, args.write_mode)
+        preflight_output(test_path, args.write_mode)
+    except (ResultExistsError, ValueError) as e:
+        print(f"[{SCRIPT}] ERROR: {e}")
+        sys.exit(1)
 
     print(f"[{SCRIPT}] starting...")
     print(f"[{SCRIPT}] input path: {args.perquery_dir}")
-    print(f"[{SCRIPT}] output path: {args.out_dir}")
+    print(f"[{SCRIPT}] output path: {out_dir}")
+    print(f"[{SCRIPT}] n_boot={n_boot} seed={seed} "
+          f"baseline={args.baseline_method}")
 
     runs = load_perquery(args.perquery_dir)
     if not runs:
-        print(f"[{SCRIPT}] WARN: no per-query files found in {args.perquery_dir}. "
-              f"Run eval_modalities.py (or run_revision_experiments.py) first.")
-        print(f"[{SCRIPT}] completed.")
-        return
+        print(f"[{SCRIPT}] ERROR: no per-query files found in "
+              f"{args.perquery_dir}. Run run_revision_experiments.py first.")
+        sys.exit(1)
 
-    out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
     # 1) per-run bootstrap CIs
     ci_rows = []
-    for (dataset, weighting, modality, method), arrays in sorted(runs.items()):
-        for metric, values in arrays.items():
-            ci = bootstrap_ci(values, n_boot=args.n_boot, seed=args.seed)
+    for (dataset, weighting, dim, modality, method), rec in sorted(
+            runs.items(), key=lambda kv: tuple(map(str, kv[0]))):
+        for metric, values in rec["arrays"].items():
+            ci = bootstrap_ci(values, n_boot=n_boot, seed=seed)
             ci_rows.append({
-                "dataset": dataset, "weighting": weighting, "modality": modality,
-                "method": method, "metric": metric, **ci,
+                "dataset": dataset, "weighting": weighting, "dim": dim,
+                "modality": modality, "method": method, "metric": metric,
+                **ci, "seed": rec["seed"] if rec["seed"] is not None else seed,
             })
     ci_df = pd.DataFrame(ci_rows)
-    ci_path = out_dir / "bootstrap_cis.csv"
-    if ci_path.exists():
-        raise FileExistsError(f"Refusing to overwrite existing evidence: {ci_path}")
-    ci_df.to_csv(ci_path, index=False)
+    write_dataframe_atomic(ci_df, ci_path, mode=args.write_mode,
+                           key=CI_KEY, sort_by=CI_KEY)
     print(f"[{SCRIPT}] output path: {ci_path} ({len(ci_df)} rows)")
 
-    # 2) paired tests vs baseline within each (dataset, weighting, modality)
+    # 2) paired tests vs baseline within each (dataset, weighting, dim,
+    #    modality)
     test_rows = []
-    for (dataset, weighting, modality, method), arrays in sorted(runs.items()):
+    for (dataset, weighting, dim, modality, method), rec in sorted(
+            runs.items(), key=lambda kv: tuple(map(str, kv[0]))):
         if method == args.baseline_method:
             continue
-        base_key = (dataset, weighting, modality, args.baseline_method)
-        base = runs.get(base_key)
+        base = runs.get((dataset, weighting, dim, modality,
+                         args.baseline_method))
         if base is None:
             print(f"[{SCRIPT}] WARN: no {args.baseline_method} baseline for "
-                  f"{dataset}/{weighting}/{modality}; skipping {method}.")
+                  f"{dataset}/{weighting}/d{dim}/{modality}; skipping {method}.")
             continue
         for metric in METRICS:
             if metric == "ann_recall_vs_exact":
-                continue  # trivially 1.0 for the flat baseline; not a paired quantity
-            if metric not in arrays or metric not in base:
+                continue  # trivially 1.0 for the flat baseline; not paired
+            arrays, base_arrays = rec["arrays"], base["arrays"]
+            if metric not in arrays or metric not in base_arrays:
                 continue
-            a, b = arrays[metric], base[metric]
+            a, b = arrays[metric], base_arrays[metric]
             if a.shape != b.shape:
                 print(f"[{SCRIPT}] WARN: unaligned queries for "
-                      f"{dataset}/{weighting}/{modality}/{method} metric={metric}; skipping.")
+                      f"{dataset}/{weighting}/d{dim}/{modality}/{method} "
+                      f"metric={metric}; skipping.")
                 continue
-            t = paired_bootstrap_test(a, b, n_boot=args.n_boot, seed=args.seed)
+            t = paired_bootstrap_test(a, b, n_boot=n_boot, seed=seed)
             test_rows.append({
-                "dataset": dataset, "weighting": weighting, "modality": modality,
-                "method": method, "baseline": args.baseline_method,
-                "metric": metric, **t,
+                "dataset": dataset, "weighting": weighting, "dim": dim,
+                "modality": modality, "method": method,
+                "baseline": args.baseline_method, "metric": metric, **t,
                 "significant_at_0.05": bool(t["p_value"] < 0.05),
+                "seed": rec["seed"] if rec["seed"] is not None else seed,
             })
     test_df = pd.DataFrame(test_rows)
-    test_path = out_dir / "paired_tests.csv"
-    if test_path.exists():
-        raise FileExistsError(f"Refusing to overwrite existing evidence: {test_path}")
-    test_df.to_csv(test_path, index=False)
+    write_dataframe_atomic(test_df, test_path, mode=args.write_mode,
+                           key=TEST_KEY, sort_by=TEST_KEY)
     print(f"[{SCRIPT}] output path: {test_path} ({len(test_df)} rows)")
     print(f"[{SCRIPT}] completed.")
 

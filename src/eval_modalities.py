@@ -8,9 +8,9 @@ Protocol (deterministic, temporal leave-one-out; see utils/splits.py):
   - I2I: the query vector is the user's chronologically last *training* item;
     the anchor item itself is excluded from the ranked list.
 
-Outputs:
-  - Aggregate JSON:      {out_dir}/{dataset}__{weighting}__{modality}__{method}.json
-  - Per-query metrics:   {out_dir}/perquery/{dataset}__{weighting}__{modality}__{method}.npz
+Outputs (dim is read from the item-vector matrix, so filenames are truthful):
+  - Aggregate JSON:      {out_dir}/aggregates/{dataset}__{weighting}__d{dim}__{modality}__{method}.json
+  - Per-query metrics:   {out_dir}/perquery/{dataset}__{weighting}__d{dim}__{modality}__{method}.npz
     (consumed by bootstrap_significance.py and effect_size_tables.py; per-query
     arrays align across methods because query construction is method-independent.)
 
@@ -37,6 +37,7 @@ import pandas as pd
 
 from utils import metrics as M
 from utils.ann_io import load_ann_index, build_exact_index
+from utils.paths import RESULTS
 from utils.splits import temporal_leave_one_out, build_eval_cases
 from utils.common import set_global_seed, normalize_modality_label
 
@@ -187,11 +188,12 @@ def main():
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--dataset", default=None, help="dataset tag; defaults to interactions stem")
     ap.add_argument("--weighting", default="none", help="embedding weighting tag (metadata only)")
-    ap.add_argument("--out_dir", default="results/main")
+    ap.add_argument("--out_dir", default=RESULTS["main"])
     args = ap.parse_args()
 
     dataset = args.dataset or Path(args.interactions).stem
     out_dir = Path(args.out_dir)
+    agg_dir = out_dir / "aggregates"
     perquery_dir = out_dir / "perquery"
 
     print(f"[{SCRIPT}] starting...")
@@ -221,7 +223,7 @@ def main():
 
     modalities = (["u2i", "i2i"] if args.modality == "both"
                   else [normalize_modality_label(args.modality)])
-    out_dir.mkdir(parents=True, exist_ok=True)
+    agg_dir.mkdir(parents=True, exist_ok=True)
     perquery_dir.mkdir(parents=True, exist_ok=True)
 
     for mod in modalities:
@@ -238,8 +240,8 @@ def main():
             "seed": int(args.seed),
         })
 
-        stem = f"{dataset}__{args.weighting}__{mod}__{args.ann_method}"
-        agg_path = out_dir / f"{stem}.json"
+        stem = f"{dataset}__{args.weighting}__d{D}__{mod}__{args.ann_method}"
+        agg_path = agg_dir / f"{stem}.json"
         with open(agg_path, "w", encoding="utf-8") as f:
             json.dump(aggregate, f, indent=2)
 
@@ -247,6 +249,7 @@ def main():
         np.savez_compressed(
             npz_path,
             meta=json.dumps({"dataset": dataset, "weighting": args.weighting,
+                             "dim": int(D),
                              "modality": mod, "method": args.ann_method,
                              "metric_topk": int(args.metric_topk),
                              "seed": int(args.seed)}),

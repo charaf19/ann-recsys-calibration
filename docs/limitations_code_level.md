@@ -40,17 +40,17 @@ scientific limitations discussed in the paper).
    seed but depend on that heuristic sample size.
 10. **Memory accounting is coarse.** RSS deltas include allocator noise;
     on-disk index size is exact, resident working set is approximate.
-11. **Amazon-Books is optional, not part of the default grid** (very slow to
-    prepare on some connections); it is listed under `datasets.optional` in
-    `configs/main_cpu.yml` and runs only when passed explicitly via
-    `--datasets amazon-books`.
+11. **Amazon-Books is slow to prepare** but is a required part of the
+    canonical paper grid (`configs/main_cpu.yml` lists all four datasets).
+    A run that cannot see `data/amazon_books.csv` fails before any
+    experiment starts unless `--allow_missing_datasets` is passed
+    explicitly — and the evidence validator will then fail on the gap.
 12. **GPU acceleration is out of scope.** IndexWise-Recsys is evaluated as a
     CPU-only framework; GPU latency and transfer (host↔device copy,
-    cross-device search) behavior are not evaluated anywhere in the active
-    pipeline. `capture_hardware.py` records GPU *presence* on the machine
-    passively (`cuda_available`, `faiss_gpu_available`), strictly for
-    environment-capture honesty — this is never GPU *usage* and no
-    canonical workflow depends on a GPU, `faiss-gpu`, CUDA, or PyNVML. An
-    earlier exploratory GPU-experimentation layer (GPU-cloned FAISS
-    indexes, agreement/speedup checks vs CPU search) has been archived
-    under `legacy/experimental_gpu/` and is unmaintained.
+    cross-device search) behavior are not evaluated anywhere in the
+    pipeline. `capture_hardware.py` records accelerator *presence* on the
+    machine passively (`accelerator_present`, detected as `nvidia-smi` on
+    PATH — no GPU Python package is imported), strictly for
+    environment-capture honesty; `main_experiments_accelerator_used` is
+    always `false`. No workflow depends on a GPU, `faiss-gpu`, CUDA, or
+    PyNVML.

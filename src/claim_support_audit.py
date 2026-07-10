@@ -1,63 +1,80 @@
-"""Claim-support audit: link every claim area to the evidence that bounds it.
+"""Claim-support audit: link every paper claim area to validated evidence.
 
-Prevents overclaiming: for each claim area the audit states the *maximum*
-claim strength the artifact can support, which result file is required as
-evidence, whether that evidence currently exists on disk, and the safe vs
-unsafe phrasings. `evidence_available` reflects the actual filesystem at
-audit time — running this before results exist yields honest `False` rows.
+Prevents overclaiming. A claim is marked supported ONLY when the strict
+validator (validate_paper_evidence.py) reports its required sections as
+passing — never merely because a file exists on disk. Run the validator
+first; before results exist every claim is honestly unsupported.
 
-Schema: docs/claim_support_schema.md
-Outputs: results/paper_tables/claim_support_audit.csv/.tex (+ .md)
+For each claim area the audit states the *maximum* claim strength the
+artifact can support, the validation sections required as evidence, whether
+those sections currently pass, and the safe vs unsafe phrasings.
+
+Outputs:
+    results/paper/tables/claim_support_audit.csv
+    results/paper/tables/claim_support_audit.md
+    results/paper/tables/claim_support_audit.tex
 """
 import argparse
+import json
+import sys
 from pathlib import Path
 
 import pandas as pd
 
-from utils.paths import RESULTS, first_existing
+from utils.paths import RESULTS
+from utils.provenance import write_sources_sidecar
 from utils.reporting import write_table
+from utils.result_io import preflight_output, ResultExistsError
 
 SCRIPT = "claim_support_audit"
 
-# claim_area, claim_strength_allowed, required_evidence_file(s),
+# claim_area, claim_strength_allowed, required validation sections,
 # safe_interpretation, unsafe_interpretation_to_avoid
 CLAIMS = [
     ("ANN method selection",
      "strong (measured, calibrated, effect-size-tested)",
-     [f"{RESULTS['main']}/summary_main.csv",
-      f"{RESULTS['deployment_guidance']}/ann_decision_framework_scores.csv"],
+     ["main", "calibration_sensitivity", "effect_sizes"],
      "At calibrated agreement-recall targets, the measured latency/quality/"
      "memory trade-offs support the per-scenario method recommendations.",
      "Claiming one index method is universally best regardless of catalog "
      "size, embedding, or serving constraints."),
 
+    ("larger-catalog generalization (Amazon Books)",
+     "strong within the four evaluated catalogs",
+     ["main"],
+     "Findings hold across ML-1M, ML-20M, GoodBooks and Amazon Books under "
+     "one protocol; Amazon Books rows are complete in the main evidence.",
+     "Citing Amazon Books scale without complete amazon-books main rows, or "
+     "extrapolating beyond the evaluated catalog sizes."),
+
     ("U2I vs I2I modality effect",
      "strong (both modalities measured under one protocol)",
-     [f"{RESULTS['main']}/summary_main.csv"],
+     ["main"],
      "ANN effects are reported separately for U2I and I2I; differences "
      "between modalities are measured on the same split and seed.",
      "Generalizing a modality-specific finding to 'recommendation quality' "
      "in general."),
 
-    ("SVD-based embedding scope",
-     "strong within scope (primary results are SVD-embedding-specific)",
-     [f"{RESULTS['main']}/summary_main.csv"],
-     "Conclusions describe index behavior over TruncatedSVD embeddings "
-     "(optionally BM25/TF-IDF weighted).",
-     "Presenting the results as embedding-agnostic or state-of-the-art "
-     "recommendation quality."),
+    ("statistical significance",
+     "strong (paired bootstrap, n_boot=2000, seeded)",
+     ["bootstrap", "effect_sizes"],
+     "Paired bootstrap CIs/p-values (2000 iterations) plus paired Cohen's d "
+     "and Cliff's delta against the exact Flat baseline.",
+     "Reporting significance from fewer than the contracted 2000 bootstrap "
+     "iterations, or unpaired comparisons."),
 
-    ("neural embedding generalization",
+    ("embedding-sensitivity generalization",
      "weak (sensitivity check only)",
-     [f"{RESULTS['embedding_sensitivity']}/embedding_backbone_sensitivity_all.csv"],
-     "The ANN method *ranking* stability across backbones (ann_ranking_"
-     "stability) indicates whether conclusions survive an embedding swap.",
-     "Claiming the benchmark evaluates neural recommenders or that quality "
-     "numbers transfer to production two-tower models."),
+     ["embedding_sensitivity"],
+     "The ANN method *ranking* stability across backbones (including BPR "
+     "and all five methods) indicates whether conclusions survive an "
+     "embedding swap; stability values are reported honestly.",
+     "Claiming the benchmark evaluates neural recommenders, or citing the "
+     "check without BPR rows and all five methods."),
 
     ("PQ compression behavior",
      "moderate (diagnostics, not mechanism)",
-     [f"{RESULTS['pq_diagnostics']}/pq_diagnostics_all.csv"],
+     ["pq_diagnostics"],
      "PQ reconstruction error, neighbor overlap, and popularity-decile "
      "effects are measured; quality deltas carry diagnostic labels.",
      "Asserting that PQ acts as implicit regularization; only "
@@ -65,87 +82,110 @@ CLAIMS = [
 
     ("long-tail exposure",
      "strong for the proxy (top-k slot exposure)",
-     [f"{RESULTS['exposure_analysis']}/exposure_analysis_all.csv"],
+     ["exposure", "main"],
      "long_tail_exposure / long_tail_uplift quantify how index choice "
-     "shifts top-k slot exposure toward or away from tail items.",
-     "Equating slot-exposure proxies with realized user impressions or "
-     "position-weighted attention."),
-
-    ("fairness",
-     "weak (exposure proxies only; see fairness_scope column)",
-     [f"{RESULTS['exposure_analysis']}/exposure_analysis_all.csv"],
-     "Item-side exposure and popularity-calibration proxies are reported "
-     "with explicit fairness_scope values.",
-     "Any claim of a full fairness evaluation (no user-group, provider-"
-     "group, or outcome-level fairness analysis is performed)."),
+     "shifts top-k slot exposure toward or away from tail items, on the "
+     "complete exposure analysis with an explicit fairness_scope field.",
+     "Equating slot-exposure proxies with realized user impressions, "
+     "position-weighted attention, or a full fairness evaluation."),
 
     ("production-scale catalogs",
      "moderate for cost, none for quality",
-     [f"{RESULTS['scale_stress']}/scale_stress_all.csv"],
+     ["scale_stress"],
      "Build time, index size, RSS, and calibrated latency are measured on "
-     "synthetic catalogs up to 1M items (quality_measured=false).",
+     "the complete 75-cell synthetic grid up to 1M items "
+     "(quality_measured=false on every row).",
      "Claiming recommendation quality at production scale; real datasets "
-     "top out at ML-20M."),
+     "top out at ML-20M/Amazon Books."),
 
-    ("energy consumption",
-     "conditional on platform (direct_energy_available)",
-     [f"{RESULTS['energy']}/energy_measurement_all.csv"],
-     "Where Intel RAPL is readable, CPU package energy per query is a "
-     "direct measurement; elsewhere only timing/utilization are reported.",
-     "Reporting energy numbers from rows with direct_energy_available="
-     "false, or extrapolating package energy to wall power."),
-
-    ("FAISS-specific scope",
-     "strong for FAISS; weak beyond it",
-     [f"{RESULTS['optional_backends']}/optional_ann_backend_comparison.csv"],
-     "Primary conclusions are FAISS(+hnswlib-adapter) specific; the "
-     "optional backend comparison documents which other libraries were "
-     "actually measured (backend_available column).",
-     "Extending conclusions to ScaNN/NGT when their rows show "
-     "backend_available=false."),
-
-    ("Flat-PQ deployment role",
-     "strong (policy + measurements)",
-     [f"{RESULTS['deployment_guidance']}/ann_decision_framework_scores.csv"],
-     "Flat-PQ is labeled offline_batch_only by policy (full compressed scan; "
-     "no sublinear structure) unless explicitly overridden in "
-     "configs/decision_framework.yml.",
-     "Recommending Flat-PQ for latency-sensitive online serving."),
+    ("CPU-only scope",
+     "strong (hardware/provenance declaration)",
+     ["cpu_scope"],
+     "All canonical experiments ran on CPU; accelerator presence is "
+     "disclosed passively and main_experiments_accelerator_used=false.",
+     "Citing any GPU behavior, or omitting the CPU-only boundary when "
+     "discussing latency."),
 ]
 
 
+def load_validation_report(path):
+    p = Path(path)
+    if not p.is_file():
+        return None
+    with open(p, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
 def main():
-    ap = argparse.ArgumentParser()
+    ap = argparse.ArgumentParser(
+        description="Audit which paper claims the VALIDATED evidence "
+                    "supports (consumes the strict validation report; run "
+                    "validate_paper_evidence.py first).")
+    ap.add_argument("--validation_report",
+                    default=str(Path(RESULTS["meta"])
+                                / "validation_report.json"))
     ap.add_argument("--out_base",
-                    default=f"{RESULTS['paper_tables']}/claim_support_audit")
+                    default=str(Path(RESULTS["paper_tables"])
+                                / "claim_support_audit"))
+    ap.add_argument("--write_mode", default="replace",
+                    choices=["fail_if_exists", "replace", "merge"],
+                    help="regenerated paper table; default replace")
     args = ap.parse_args()
 
+    out_base = Path(args.out_base)
+    try:
+        preflight_output(out_base.with_suffix(".csv"), args.write_mode)
+    except (ResultExistsError, ValueError) as e:
+        print(f"[{SCRIPT}] ERROR: {e}")
+        sys.exit(1)
+
     print(f"[{SCRIPT}] starting...")
-    print(f"[{SCRIPT}] input path: results/ (evidence existence check)")
-    print(f"[{SCRIPT}] output path: {args.out_base}.csv")
+    print(f"[{SCRIPT}] input path: {args.validation_report}")
+    print(f"[{SCRIPT}] output path: {out_base}.csv")
+
+    report = load_validation_report(args.validation_report)
+    if report is None:
+        print(f"[{SCRIPT}] WARN: validation report not found at "
+              f"{args.validation_report}; run validate_paper_evidence.py "
+              f"first. All claims are recorded as UNSUPPORTED.")
+    sections = (report or {}).get("sections", {})
+
+    def section_status(name):
+        return sections.get(name, {}).get("status", "missing")
+
+    def failing_checks(name):
+        checks = sections.get(name, {}).get("checks", [])
+        return [c["check"] for c in checks if c.get("status") == "fail"]
 
     rows = []
-    for (area, strength, evidence_files, safe, unsafe) in CLAIMS:
-        primary = first_existing(*evidence_files)
-        available = all(Path(f).is_file() for f in evidence_files) or \
-            Path(primary).is_file()
+    for (area, strength, required_sections, safe, unsafe) in CLAIMS:
+        statuses = {s: section_status(s) for s in required_sections}
+        supported = bool(report) and all(v == "pass" for v in statuses.values())
+        fails = []
+        for s in required_sections:
+            fails.extend(f"{s}:{c}" for c in failing_checks(s))
         rows.append({
             "claim_area": area,
             "claim_strength_allowed": strength,
-            "required_evidence_file": "; ".join(evidence_files),
-            "evidence_available": bool(available),
+            "required_validation_sections": "; ".join(required_sections),
+            "evidence_supported": supported,
+            "failing_checks": "; ".join(fails) if fails else (
+                "" if report else "validation report missing"),
             "safe_interpretation": safe,
             "unsafe_interpretation_to_avoid": unsafe,
         })
 
     df = pd.DataFrame(rows)
-    written = write_table(df, args.out_base)
+    written = write_table(df, out_base)
+    write_sources_sidecar(out_base.with_suffix(".csv"),
+                          [args.validation_report], SCRIPT)
     for p in written:
         print(f"[{SCRIPT}] output path: {p}")
-    n_missing = int((~df["evidence_available"]).sum())
-    if n_missing:
-        print(f"[{SCRIPT}] NOTE: {n_missing}/{len(df)} claim areas currently lack "
-              f"evidence files — run the corresponding pipeline stages first.")
+    n_unsupported = int((~df["evidence_supported"]).sum())
+    if n_unsupported:
+        print(f"[{SCRIPT}] NOTE: {n_unsupported}/{len(df)} claim areas are "
+              f"currently UNSUPPORTED — run the pipeline and the validator "
+              f"before citing them.")
     print(f"[{SCRIPT}] completed.")
 
 
