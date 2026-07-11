@@ -1,0 +1,36 @@
+{
+  "dataset": "ml-1m",
+  "dim": 128,
+  "finished_at_utc": "2026-07-11T01:57:07.074537+00:00",
+  "method": "ivfpq",
+  "overall": "failed",
+  "started_at_utc": "2026-07-11T01:56:42.247161+00:00",
+  "steps": {
+    "build": {
+      "error": null,
+      "finished_at_utc": "2026-07-11T01:56:52.140793+00:00",
+      "status": "ok"
+    },
+    "calibration": {
+      "error": null,
+      "finished_at_utc": "2026-07-11T01:56:56.298256+00:00",
+      "status": "ok"
+    },
+    "eval_i2i": {
+      "error": "command failed (exit 1): C:\\Users\\pc\\Desktop\\PROJECTS\\ann-recsys-calibration\\.venv\\Scripts\\python.exe src/eval_modalities.py --interactions data/ml1m.csv --item_vecs data/emb_ml1m_bm25_d128/item_vecs.npy --index data/index_ml1m_bm25_d128_ivfpq --ann_method ivfpq --modality i2i --queries full --topk 100 --metric_topk 10 --ef 128 --nprobe 64 --seed 42 --dataset ml-1m --weighting bm25 --config configs\\main_cpu.yml --aggregate_dir results\\main\\aggregates --perquery_dir results/main/perquery --write_mode fail_if_exists",
+      "finished_at_utc": "2026-07-11T01:57:07.070532+00:00",
+      "status": "failed"
+    },
+    "eval_u2i": {
+      "error": "command failed (exit 1): C:\\Users\\pc\\Desktop\\PROJECTS\\ann-recsys-calibration\\.venv\\Scripts\\python.exe src/eval_modalities.py --interactions data/ml1m.csv --item_vecs data/emb_ml1m_bm25_d128/item_vecs.npy --index data/index_ml1m_bm25_d128_ivfpq --ann_method ivfpq --modality u2i --queries full --topk 100 --metric_topk 10 --ef 128 --nprobe 64 --seed 42 --dataset ml-1m --weighting bm25 --config configs\\main_cpu.yml --aggregate_dir results\\main\\aggregates --perquery_dir results/main/perquery --write_mode fail_if_exists",
+      "finished_at_utc": "2026-07-11T01:57:04.409399+00:00",
+      "status": "failed"
+    },
+    "latency": {
+      "error": null,
+      "finished_at_utc": "2026-07-11T01:56:56.833121+00:00",
+      "status": "ok"
+    }
+  },
+  "weighting": "bm25"
+}

@@ -1,0 +1,36 @@
+{
+  "dataset": "goodbooks",
+  "dim": 128,
+  "finished_at_utc": "2026-07-11T02:08:07.821181+00:00",
+  "method": "flatpq",
+  "overall": "failed",
+  "started_at_utc": "2026-07-11T02:07:41.418789+00:00",
+  "steps": {
+    "build": {
+      "error": null,
+      "finished_at_utc": "2026-07-11T02:07:45.381234+00:00",
+      "status": "ok"
+    },
+    "calibration": {
+      "error": null,
+      "finished_at_utc": "2026-07-11T02:07:45.384574+00:00",
+      "status": "skipped"
+    },
+    "eval_i2i": {
+      "error": "command failed (exit 1): C:\\Users\\pc\\Desktop\\PROJECTS\\ann-recsys-calibration\\.venv\\Scripts\\python.exe src/eval_modalities.py --interactions data/goodbooks.csv --item_vecs data/emb_goodbooks_bm25_d128/item_vecs.npy --index data/index_goodbooks_bm25_d128_flatpq --ann_method flatpq --modality i2i --queries 10000 --topk 100 --metric_topk 10 --ef 128 --nprobe 16 --seed 42 --dataset goodbooks --weighting bm25 --config configs\\main_cpu.yml --aggregate_dir results\\main\\aggregates --perquery_dir results/main/perquery --write_mode fail_if_exists",
+      "finished_at_utc": "2026-07-11T02:08:07.813171+00:00",
+      "status": "failed"
+    },
+    "eval_u2i": {
+      "error": "command failed (exit 1): C:\\Users\\pc\\Desktop\\PROJECTS\\ann-recsys-calibration\\.venv\\Scripts\\python.exe src/eval_modalities.py --interactions data/goodbooks.csv --item_vecs data/emb_goodbooks_bm25_d128/item_vecs.npy --index data/index_goodbooks_bm25_d128_flatpq --ann_method flatpq --modality u2i --queries 10000 --topk 100 --metric_topk 10 --ef 128 --nprobe 16 --seed 42 --dataset goodbooks --weighting bm25 --config configs\\main_cpu.yml --aggregate_dir results\\main\\aggregates --perquery_dir results/main/perquery --write_mode fail_if_exists",
+      "finished_at_utc": "2026-07-11T02:07:57.710400+00:00",
+      "status": "failed"
+    },
+    "latency": {
+      "error": null,
+      "finished_at_utc": "2026-07-11T02:07:45.840642+00:00",
+      "status": "ok"
+    }
+  },
+  "weighting": "bm25"
+}

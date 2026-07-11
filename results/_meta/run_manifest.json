@@ -1,0 +1,355 @@
+{
+  "configuration_hash": "c1e6c45561d6",
+  "datasets": [
+    "ml-1m",
+    "ml-20m",
+    "goodbooks",
+    "amazon-books"
+  ],
+  "dependency_versions": {
+    "PyYAML": "6.0.2",
+    "faiss-cpu": "1.7.4",
+    "matplotlib": "3.8.4",
+    "numpy": "1.26.4",
+    "pandas": "2.1.4",
+    "psutil": "5.9.8",
+    "scikit-learn": "1.3.2",
+    "scipy": "1.11.4",
+    "torch": "2.13.0"
+  },
+  "failed_combinations": [
+    {
+      "dataset": "ml-1m",
+      "error": "command failed (exit 1): C:\\Users\\pc\\Desktop\\PROJECTS\\ann-recsys-calibration\\.venv\\Scripts\\python.exe src/eval_modalities.py --interactions data/ml1m.csv --item_vecs data/emb_ml1m_bm25_d128/item_vecs.npy --index data/index_ml1m_bm25_d128_flat --ann_method flat --modality u2i --queries full --topk 100 --metric_topk 10 --ef 128 --nprobe 16 --seed 42 --dataset ml-1m --weighting bm25 --config configs\\main_cpu.yml --aggregate_dir results\\main\\aggregates --perquery_dir results/main/perquery --write_mode fail_if_exists",
+      "method": "flat",
+      "step": "eval_u2i"
+    },
+    {
+      "dataset": "ml-1m",
+      "error": "command failed (exit 1): C:\\Users\\pc\\Desktop\\PROJECTS\\ann-recsys-calibration\\.venv\\Scripts\\python.exe src/eval_modalities.py --interactions data/ml1m.csv --item_vecs data/emb_ml1m_bm25_d128/item_vecs.npy --index data/index_ml1m_bm25_d128_flat --ann_method flat --modality i2i --queries full --topk 100 --metric_topk 10 --ef 128 --nprobe 16 --seed 42 --dataset ml-1m --weighting bm25 --config configs\\main_cpu.yml --aggregate_dir results\\main\\aggregates --perquery_dir results/main/perquery --write_mode fail_if_exists",
+      "method": "flat",
+      "step": "eval_i2i"
+    },
+    {
+      "dataset": "ml-1m",
+      "error": "command failed (exit 1): C:\\Users\\pc\\Desktop\\PROJECTS\\ann-recsys-calibration\\.venv\\Scripts\\python.exe src/eval_modalities.py --interactions data/ml1m.csv --item_vecs data/emb_ml1m_bm25_d128/item_vecs.npy --index data/index_ml1m_bm25_d128_hnsw --ann_method hnsw --modality u2i --queries full --topk 100 --metric_topk 10 --ef 64 --nprobe 16 --seed 42 --dataset ml-1m --weighting bm25 --config configs\\main_cpu.yml --aggregate_dir results\\main\\aggregates --perquery_dir results/main/perquery --write_mode fail_if_exists",
+      "method": "hnsw",
+      "step": "eval_u2i"
+    },
+    {
+      "dataset": "ml-1m",
+      "error": "command failed (exit 1): C:\\Users\\pc\\Desktop\\PROJECTS\\ann-recsys-calibration\\.venv\\Scripts\\python.exe src/eval_modalities.py --interactions data/ml1m.csv --item_vecs data/emb_ml1m_bm25_d128/item_vecs.npy --index data/index_ml1m_bm25_d128_hnsw --ann_method hnsw --modality i2i --queries full --topk 100 --metric_topk 10 --ef 64 --nprobe 16 --seed 42 --dataset ml-1m --weighting bm25 --config configs\\main_cpu.yml --aggregate_dir results\\main\\aggregates --perquery_dir results/main/perquery --write_mode fail_if_exists",
+      "method": "hnsw",
+      "step": "eval_i2i"
+    },
+    {
+      "dataset": "ml-1m",
+      "error": "command failed (exit 1): C:\\Users\\pc\\Desktop\\PROJECTS\\ann-recsys-calibration\\.venv\\Scripts\\python.exe src/eval_modalities.py --interactions data/ml1m.csv --item_vecs data/emb_ml1m_bm25_d128/item_vecs.npy --index data/index_ml1m_bm25_d128_ivfflat --ann_method ivfflat --modality u2i --queries full --topk 100 --metric_topk 10 --ef 128 --nprobe 32 --seed 42 --dataset ml-1m --weighting bm25 --config configs\\main_cpu.yml --aggregate_dir results\\main\\aggregates --perquery_dir results/main/perquery --write_mode fail_if_exists",
+      "method": "ivfflat",
+      "step": "eval_u2i"
+    },
+    {
+      "dataset": "ml-1m",
+      "error": "command failed (exit 1): C:\\Users\\pc\\Desktop\\PROJECTS\\ann-recsys-calibration\\.venv\\Scripts\\python.exe src/eval_modalities.py --interactions data/ml1m.csv --item_vecs data/emb_ml1m_bm25_d128/item_vecs.npy --index data/index_ml1m_bm25_d128_ivfflat --ann_method ivfflat --modality i2i --queries full --topk 100 --metric_topk 10 --ef 128 --nprobe 32 --seed 42 --dataset ml-1m --weighting bm25 --config configs\\main_cpu.yml --aggregate_dir results\\main\\aggregates --perquery_dir results/main/perquery --write_mode fail_if_exists",
+      "method": "ivfflat",
+      "step": "eval_i2i"
+    },
+    {
+      "dataset": "ml-1m",
+      "error": "command failed (exit 1): C:\\Users\\pc\\Desktop\\PROJECTS\\ann-recsys-calibration\\.venv\\Scripts\\python.exe src/eval_modalities.py --interactions data/ml1m.csv --item_vecs data/emb_ml1m_bm25_d128/item_vecs.npy --index data/index_ml1m_bm25_d128_ivfpq --ann_method ivfpq --modality u2i --queries full --topk 100 --metric_topk 10 --ef 128 --nprobe 64 --seed 42 --dataset ml-1m --weighting bm25 --config configs\\main_cpu.yml --aggregate_dir results\\main\\aggregates --perquery_dir results/main/perquery --write_mode fail_if_exists",
+      "method": "ivfpq",
+      "step": "eval_u2i"
+    },
+    {
+      "dataset": "ml-1m",
+      "error": "command failed (exit 1): C:\\Users\\pc\\Desktop\\PROJECTS\\ann-recsys-calibration\\.venv\\Scripts\\python.exe src/eval_modalities.py --interactions data/ml1m.csv --item_vecs data/emb_ml1m_bm25_d128/item_vecs.npy --index data/index_ml1m_bm25_d128_ivfpq --ann_method ivfpq --modality i2i --queries full --topk 100 --metric_topk 10 --ef 128 --nprobe 64 --seed 42 --dataset ml-1m --weighting bm25 --config configs\\main_cpu.yml --aggregate_dir results\\main\\aggregates --perquery_dir results/main/perquery --write_mode fail_if_exists",
+      "method": "ivfpq",
+      "step": "eval_i2i"
+    },
+    {
+      "dataset": "ml-1m",
+      "error": "command failed (exit 1): C:\\Users\\pc\\Desktop\\PROJECTS\\ann-recsys-calibration\\.venv\\Scripts\\python.exe src/eval_modalities.py --interactions data/ml1m.csv --item_vecs data/emb_ml1m_bm25_d128/item_vecs.npy --index data/index_ml1m_bm25_d128_flatpq --ann_method flatpq --modality u2i --queries full --topk 100 --metric_topk 10 --ef 128 --nprobe 16 --seed 42 --dataset ml-1m --weighting bm25 --config configs\\main_cpu.yml --aggregate_dir results\\main\\aggregates --perquery_dir results/main/perquery --write_mode fail_if_exists",
+      "method": "flatpq",
+      "step": "eval_u2i"
+    },
+    {
+      "dataset": "ml-1m",
+      "error": "command failed (exit 1): C:\\Users\\pc\\Desktop\\PROJECTS\\ann-recsys-calibration\\.venv\\Scripts\\python.exe src/eval_modalities.py --interactions data/ml1m.csv --item_vecs data/emb_ml1m_bm25_d128/item_vecs.npy --index data/index_ml1m_bm25_d128_flatpq --ann_method flatpq --modality i2i --queries full --topk 100 --metric_topk 10 --ef 128 --nprobe 16 --seed 42 --dataset ml-1m --weighting bm25 --config configs\\main_cpu.yml --aggregate_dir results\\main\\aggregates --perquery_dir results/main/perquery --write_mode fail_if_exists",
+      "method": "flatpq",
+      "step": "eval_i2i"
+    },
+    {
+      "dataset": "ml-20m",
+      "error": "command failed (exit 1): C:\\Users\\pc\\Desktop\\PROJECTS\\ann-recsys-calibration\\.venv\\Scripts\\python.exe src/eval_modalities.py --interactions data/ml20m.csv --item_vecs data/emb_ml20m_bm25_d128/item_vecs.npy --index data/index_ml20m_bm25_d128_flat --ann_method flat --modality u2i --queries 10000 --topk 100 --metric_topk 10 --ef 128 --nprobe 16 --seed 42 --dataset ml-20m --weighting bm25 --config configs\\main_cpu.yml --aggregate_dir results\\main\\aggregates --perquery_dir results/main/perquery --write_mode fail_if_exists",
+      "method": "flat",
+      "step": "eval_u2i"
+    },
+    {
+      "dataset": "ml-20m",
+      "error": "command failed (exit 1): C:\\Users\\pc\\Desktop\\PROJECTS\\ann-recsys-calibration\\.venv\\Scripts\\python.exe src/eval_modalities.py --interactions data/ml20m.csv --item_vecs data/emb_ml20m_bm25_d128/item_vecs.npy --index data/index_ml20m_bm25_d128_flat --ann_method flat --modality i2i --queries 10000 --topk 100 --metric_topk 10 --ef 128 --nprobe 16 --seed 42 --dataset ml-20m --weighting bm25 --config configs\\main_cpu.yml --aggregate_dir results\\main\\aggregates --perquery_dir results/main/perquery --write_mode fail_if_exists",
+      "method": "flat",
+      "step": "eval_i2i"
+    },
+    {
+      "dataset": "ml-20m",
+      "error": "command failed (exit 1): C:\\Users\\pc\\Desktop\\PROJECTS\\ann-recsys-calibration\\.venv\\Scripts\\python.exe src/eval_modalities.py --interactions data/ml20m.csv --item_vecs data/emb_ml20m_bm25_d128/item_vecs.npy --index data/index_ml20m_bm25_d128_hnsw --ann_method hnsw --modality u2i --queries 10000 --topk 100 --metric_topk 10 --ef 64 --nprobe 16 --seed 42 --dataset ml-20m --weighting bm25 --config configs\\main_cpu.yml --aggregate_dir results\\main\\aggregates --perquery_dir results/main/perquery --write_mode fail_if_exists",
+      "method": "hnsw",
+      "step": "eval_u2i"
+    },
+    {
+      "dataset": "ml-20m",
+      "error": "command failed (exit 1): C:\\Users\\pc\\Desktop\\PROJECTS\\ann-recsys-calibration\\.venv\\Scripts\\python.exe src/eval_modalities.py --interactions data/ml20m.csv --item_vecs data/emb_ml20m_bm25_d128/item_vecs.npy --index data/index_ml20m_bm25_d128_hnsw --ann_method hnsw --modality i2i --queries 10000 --topk 100 --metric_topk 10 --ef 64 --nprobe 16 --seed 42 --dataset ml-20m --weighting bm25 --config configs\\main_cpu.yml --aggregate_dir results\\main\\aggregates --perquery_dir results/main/perquery --write_mode fail_if_exists",
+      "method": "hnsw",
+      "step": "eval_i2i"
+    },
+    {
+      "dataset": "ml-20m",
+      "error": "command failed (exit 1): C:\\Users\\pc\\Desktop\\PROJECTS\\ann-recsys-calibration\\.venv\\Scripts\\python.exe src/eval_modalities.py --interactions data/ml20m.csv --item_vecs data/emb_ml20m_bm25_d128/item_vecs.npy --index data/index_ml20m_bm25_d128_ivfflat --ann_method ivfflat --modality u2i --queries 10000 --topk 100 --metric_topk 10 --ef 128 --nprobe 16 --seed 42 --dataset ml-20m --weighting bm25 --config configs\\main_cpu.yml --aggregate_dir results\\main\\aggregates --perquery_dir results/main/perquery --write_mode fail_if_exists",
+      "method": "ivfflat",
+      "step": "eval_u2i"
+    },
+    {
+      "dataset": "ml-20m",
+      "error": "command failed (exit 1): C:\\Users\\pc\\Desktop\\PROJECTS\\ann-recsys-calibration\\.venv\\Scripts\\python.exe src/eval_modalities.py --interactions data/ml20m.csv --item_vecs data/emb_ml20m_bm25_d128/item_vecs.npy --index data/index_ml20m_bm25_d128_ivfflat --ann_method ivfflat --modality i2i --queries 10000 --topk 100 --metric_topk 10 --ef 128 --nprobe 16 --seed 42 --dataset ml-20m --weighting bm25 --config configs\\main_cpu.yml --aggregate_dir results\\main\\aggregates --perquery_dir results/main/perquery --write_mode fail_if_exists",
+      "method": "ivfflat",
+      "step": "eval_i2i"
+    },
+    {
+      "dataset": "ml-20m",
+      "error": "command failed (exit 1): C:\\Users\\pc\\Desktop\\PROJECTS\\ann-recsys-calibration\\.venv\\Scripts\\python.exe src/eval_modalities.py --interactions data/ml20m.csv --item_vecs data/emb_ml20m_bm25_d128/item_vecs.npy --index data/index_ml20m_bm25_d128_ivfpq --ann_method ivfpq --modality u2i --queries 10000 --topk 100 --metric_topk 10 --ef 128 --nprobe 256 --seed 42 --dataset ml-20m --weighting bm25 --config configs\\main_cpu.yml --aggregate_dir results\\main\\aggregates --perquery_dir results/main/perquery --write_mode fail_if_exists",
+      "method": "ivfpq",
+      "step": "eval_u2i"
+    },
+    {
+      "dataset": "ml-20m",
+      "error": "command failed (exit 1): C:\\Users\\pc\\Desktop\\PROJECTS\\ann-recsys-calibration\\.venv\\Scripts\\python.exe src/eval_modalities.py --interactions data/ml20m.csv --item_vecs data/emb_ml20m_bm25_d128/item_vecs.npy --index data/index_ml20m_bm25_d128_ivfpq --ann_method ivfpq --modality i2i --queries 10000 --topk 100 --metric_topk 10 --ef 128 --nprobe 256 --seed 42 --dataset ml-20m --weighting bm25 --config configs\\main_cpu.yml --aggregate_dir results\\main\\aggregates --perquery_dir results/main/perquery --write_mode fail_if_exists",
+      "method": "ivfpq",
+      "step": "eval_i2i"
+    },
+    {
+      "dataset": "ml-20m",
+      "error": "command failed (exit 1): C:\\Users\\pc\\Desktop\\PROJECTS\\ann-recsys-calibration\\.venv\\Scripts\\python.exe src/eval_modalities.py --interactions data/ml20m.csv --item_vecs data/emb_ml20m_bm25_d128/item_vecs.npy --index data/index_ml20m_bm25_d128_flatpq --ann_method flatpq --modality u2i --queries 10000 --topk 100 --metric_topk 10 --ef 128 --nprobe 16 --seed 42 --dataset ml-20m --weighting bm25 --config configs\\main_cpu.yml --aggregate_dir results\\main\\aggregates --perquery_dir results/main/perquery --write_mode fail_if_exists",
+      "method": "flatpq",
+      "step": "eval_u2i"
+    },
+    {
+      "dataset": "ml-20m",
+      "error": "command failed (exit 1): C:\\Users\\pc\\Desktop\\PROJECTS\\ann-recsys-calibration\\.venv\\Scripts\\python.exe src/eval_modalities.py --interactions data/ml20m.csv --item_vecs data/emb_ml20m_bm25_d128/item_vecs.npy --index data/index_ml20m_bm25_d128_flatpq --ann_method flatpq --modality i2i --queries 10000 --topk 100 --metric_topk 10 --ef 128 --nprobe 16 --seed 42 --dataset ml-20m --weighting bm25 --config configs\\main_cpu.yml --aggregate_dir results\\main\\aggregates --perquery_dir results/main/perquery --write_mode fail_if_exists",
+      "method": "flatpq",
+      "step": "eval_i2i"
+    },
+    {
+      "dataset": "goodbooks",
+      "error": "command failed (exit 1): C:\\Users\\pc\\Desktop\\PROJECTS\\ann-recsys-calibration\\.venv\\Scripts\\python.exe src/eval_modalities.py --interactions data/goodbooks.csv --item_vecs data/emb_goodbooks_bm25_d128/item_vecs.npy --index data/index_goodbooks_bm25_d128_flat --ann_method flat --modality u2i --queries 10000 --topk 100 --metric_topk 10 --ef 128 --nprobe 16 --seed 42 --dataset goodbooks --weighting bm25 --config configs\\main_cpu.yml --aggregate_dir results\\main\\aggregates --perquery_dir results/main/perquery --write_mode fail_if_exists",
+      "method": "flat",
+      "step": "eval_u2i"
+    },
+    {
+      "dataset": "goodbooks",
+      "error": "command failed (exit 1): C:\\Users\\pc\\Desktop\\PROJECTS\\ann-recsys-calibration\\.venv\\Scripts\\python.exe src/eval_modalities.py --interactions data/goodbooks.csv --item_vecs data/emb_goodbooks_bm25_d128/item_vecs.npy --index data/index_goodbooks_bm25_d128_flat --ann_method flat --modality i2i --queries 10000 --topk 100 --metric_topk 10 --ef 128 --nprobe 16 --seed 42 --dataset goodbooks --weighting bm25 --config configs\\main_cpu.yml --aggregate_dir results\\main\\aggregates --perquery_dir results/main/perquery --write_mode fail_if_exists",
+      "method": "flat",
+      "step": "eval_i2i"
+    },
+    {
+      "dataset": "goodbooks",
+      "error": "command failed (exit 1): C:\\Users\\pc\\Desktop\\PROJECTS\\ann-recsys-calibration\\.venv\\Scripts\\python.exe src/eval_modalities.py --interactions data/goodbooks.csv --item_vecs data/emb_goodbooks_bm25_d128/item_vecs.npy --index data/index_goodbooks_bm25_d128_hnsw --ann_method hnsw --modality u2i --queries 10000 --topk 100 --metric_topk 10 --ef 64 --nprobe 16 --seed 42 --dataset goodbooks --weighting bm25 --config configs\\main_cpu.yml --aggregate_dir results\\main\\aggregates --perquery_dir results/main/perquery --write_mode fail_if_exists",
+      "method": "hnsw",
+      "step": "eval_u2i"
+    },
+    {
+      "dataset": "goodbooks",
+      "error": "command failed (exit 1): C:\\Users\\pc\\Desktop\\PROJECTS\\ann-recsys-calibration\\.venv\\Scripts\\python.exe src/eval_modalities.py --interactions data/goodbooks.csv --item_vecs data/emb_goodbooks_bm25_d128/item_vecs.npy --index data/index_goodbooks_bm25_d128_hnsw --ann_method hnsw --modality i2i --queries 10000 --topk 100 --metric_topk 10 --ef 64 --nprobe 16 --seed 42 --dataset goodbooks --weighting bm25 --config configs\\main_cpu.yml --aggregate_dir results\\main\\aggregates --perquery_dir results/main/perquery --write_mode fail_if_exists",
+      "method": "hnsw",
+      "step": "eval_i2i"
+    },
+    {
+      "dataset": "goodbooks",
+      "error": "command failed (exit 1): C:\\Users\\pc\\Desktop\\PROJECTS\\ann-recsys-calibration\\.venv\\Scripts\\python.exe src/eval_modalities.py --interactions data/goodbooks.csv --item_vecs data/emb_goodbooks_bm25_d128/item_vecs.npy --index data/index_goodbooks_bm25_d128_ivfflat --ann_method ivfflat --modality u2i --queries 10000 --topk 100 --metric_topk 10 --ef 128 --nprobe 8 --seed 42 --dataset goodbooks --weighting bm25 --config configs\\main_cpu.yml --aggregate_dir results\\main\\aggregates --perquery_dir results/main/perquery --write_mode fail_if_exists",
+      "method": "ivfflat",
+      "step": "eval_u2i"
+    },
+    {
+      "dataset": "goodbooks",
+      "error": "command failed (exit 1): C:\\Users\\pc\\Desktop\\PROJECTS\\ann-recsys-calibration\\.venv\\Scripts\\python.exe src/eval_modalities.py --interactions data/goodbooks.csv --item_vecs data/emb_goodbooks_bm25_d128/item_vecs.npy --index data/index_goodbooks_bm25_d128_ivfflat --ann_method ivfflat --modality i2i --queries 10000 --topk 100 --metric_topk 10 --ef 128 --nprobe 8 --seed 42 --dataset goodbooks --weighting bm25 --config configs\\main_cpu.yml --aggregate_dir results\\main\\aggregates --perquery_dir results/main/perquery --write_mode fail_if_exists",
+      "method": "ivfflat",
+      "step": "eval_i2i"
+    },
+    {
+      "dataset": "goodbooks",
+      "error": "command failed (exit 1): C:\\Users\\pc\\Desktop\\PROJECTS\\ann-recsys-calibration\\.venv\\Scripts\\python.exe src/eval_modalities.py --interactions data/goodbooks.csv --item_vecs data/emb_goodbooks_bm25_d128/item_vecs.npy --index data/index_goodbooks_bm25_d128_ivfpq --ann_method ivfpq --modality u2i --queries 10000 --topk 100 --metric_topk 10 --ef 128 --nprobe 128 --seed 42 --dataset goodbooks --weighting bm25 --config configs\\main_cpu.yml --aggregate_dir results\\main\\aggregates --perquery_dir results/main/perquery --write_mode fail_if_exists",
+      "method": "ivfpq",
+      "step": "eval_u2i"
+    },
+    {
+      "dataset": "goodbooks",
+      "error": "command failed (exit 1): C:\\Users\\pc\\Desktop\\PROJECTS\\ann-recsys-calibration\\.venv\\Scripts\\python.exe src/eval_modalities.py --interactions data/goodbooks.csv --item_vecs data/emb_goodbooks_bm25_d128/item_vecs.npy --index data/index_goodbooks_bm25_d128_ivfpq --ann_method ivfpq --modality i2i --queries 10000 --topk 100 --metric_topk 10 --ef 128 --nprobe 128 --seed 42 --dataset goodbooks --weighting bm25 --config configs\\main_cpu.yml --aggregate_dir results\\main\\aggregates --perquery_dir results/main/perquery --write_mode fail_if_exists",
+      "method": "ivfpq",
+      "step": "eval_i2i"
+    },
+    {
+      "dataset": "goodbooks",
+      "error": "command failed (exit 1): C:\\Users\\pc\\Desktop\\PROJECTS\\ann-recsys-calibration\\.venv\\Scripts\\python.exe src/eval_modalities.py --interactions data/goodbooks.csv --item_vecs data/emb_goodbooks_bm25_d128/item_vecs.npy --index data/index_goodbooks_bm25_d128_flatpq --ann_method flatpq --modality u2i --queries 10000 --topk 100 --metric_topk 10 --ef 128 --nprobe 16 --seed 42 --dataset goodbooks --weighting bm25 --config configs\\main_cpu.yml --aggregate_dir results\\main\\aggregates --perquery_dir results/main/perquery --write_mode fail_if_exists",
+      "method": "flatpq",
+      "step": "eval_u2i"
+    },
+    {
+      "dataset": "goodbooks",
+      "error": "command failed (exit 1): C:\\Users\\pc\\Desktop\\PROJECTS\\ann-recsys-calibration\\.venv\\Scripts\\python.exe src/eval_modalities.py --interactions data/goodbooks.csv --item_vecs data/emb_goodbooks_bm25_d128/item_vecs.npy --index data/index_goodbooks_bm25_d128_flatpq --ann_method flatpq --modality i2i --queries 10000 --topk 100 --metric_topk 10 --ef 128 --nprobe 16 --seed 42 --dataset goodbooks --weighting bm25 --config configs\\main_cpu.yml --aggregate_dir results\\main\\aggregates --perquery_dir results/main/perquery --write_mode fail_if_exists",
+      "method": "flatpq",
+      "step": "eval_i2i"
+    }
+  ],
+  "finished_at_utc": null,
+  "git_commit": "9826157292ca9fb8a8381579ca3bfd086907d95d",
+  "git_dirty_state": true,
+  "hardware": {
+    "accelerator_note": "The presence of an accelerator is environment metadata only. No GPU was used by the canonical experiments.",
+    "accelerator_present": true,
+    "captured_at_utc": "2026-07-11T01:56:10.534721+00:00",
+    "cpu": {
+      "freq": {
+        "current_mhz": 2000.0,
+        "max_mhz": 2000.0,
+        "min_mhz": 0.0
+      },
+      "logical_cores": 16,
+      "physical_cores": 16
+    },
+    "main_experiments_accelerator_used": false,
+    "memory": {
+      "total_gb": 31.4
+    },
+    "packages": {
+      "PyYAML": "6.0.2",
+      "faiss-cpu": "1.7.4",
+      "matplotlib": "3.8.4",
+      "numpy": "1.26.4",
+      "pandas": "2.1.4",
+      "psutil": "5.9.8",
+      "scikit-learn": "1.3.2",
+      "scipy": "1.11.4",
+      "torch": "2.13.0"
+    },
+    "platform": {
+      "machine": "AMD64",
+      "processor": "Intel64 Family 6 Model 197 Stepping 2, GenuineIntel",
+      "release": "10",
+      "system": "Windows",
+      "version": "10.0.26200"
+    },
+    "python": {
+      "executable": "C:\\Users\\pc\\Desktop\\PROJECTS\\ann-recsys-calibration\\.venv\\Scripts\\python.exe",
+      "version": "3.11.0 (main, Oct 24 2022, 18:26:48) [MSC v.1933 64 bit (AMD64)]"
+    },
+    "threads": {
+      "env": {
+        "MKL_NUM_THREADS": "1",
+        "NUMEXPR_NUM_THREADS": "1",
+        "OMP_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1",
+        "VECLIB_MAXIMUM_THREADS": null
+      },
+      "faiss_omp_max_threads": 1
+    }
+  },
+  "methods": [
+    "flat",
+    "hnsw",
+    "ivfflat",
+    "ivfpq",
+    "flatpq"
+  ],
+  "modalities": [
+    "u2i",
+    "i2i"
+  ],
+  "outputs": [
+    "results\\main\\run_config.json"
+  ],
+  "project": "IndexWise-Recsys",
+  "python_version": "3.11.0 (main, Oct 24 2022, 18:26:48) [MSC v.1933 64 bit (AMD64)]",
+  "resolved_configuration": {
+    "calibration": {
+      "primary_target": 0.95,
+      "queries": 1000,
+      "targets": [
+        0.9,
+        0.95,
+        0.98
+      ]
+    },
+    "datasets": [
+      "ml-1m",
+      "ml-20m",
+      "goodbooks",
+      "amazon-books"
+    ],
+    "embedding": {
+      "bm25_b": 0.75,
+      "bm25_k1": 1.2,
+      "dim": 128,
+      "method": "truncated_svd",
+      "normalize": "l2",
+      "weighting": "bm25"
+    },
+    "evaluation": {
+      "latency_queries": 2000,
+      "queries_large": 10000,
+      "queries_ml1m": "full",
+      "tail_fraction": 0.2
+    },
+    "hardware": {
+      "cpu_only": true
+    },
+    "index": {
+      "hnsw": {
+        "M": 24,
+        "ef_construction": 200
+      },
+      "ivf": {
+        "nlist": "auto"
+      },
+      "ivfpq": {
+        "use_opq": true
+      },
+      "pq": {
+        "bits": 8,
+        "m": 32
+      }
+    },
+    "project": {
+      "name": "IndexWise-Recsys"
+    },
+    "reproducibility": {
+      "omp_threads": 1,
+      "seed": 42
+    },
+    "retrieval": {
+      "budget_mb": 100,
+      "methods": [
+        "flat",
+        "hnsw",
+        "ivfflat",
+        "ivfpq",
+        "flatpq"
+      ],
+      "metric_topk": 10,
+      "modalities": [
+        "u2i",
+        "i2i"
+      ],
+      "runtime_defaults": {
+        "ef": 128,
+        "nprobe": 16
+      },
+      "topk": 100
+    },
+    "statistics": {
+      "bootstrap_iterations": 2000
+    }
+  },
+  "run_id": "20260711T015610Z__c1e6c45561d6",
+  "script": "run_revision_experiments",
+  "started_at_utc": "2026-07-11T01:56:10.542721+00:00",
+  "status": "running"
+}
