@@ -1,7 +1,7 @@
 {
   "accelerator_note": "The presence of an accelerator is environment metadata only. No GPU was used by the canonical experiments.",
   "accelerator_present": true,
-  "captured_at_utc": "2026-07-11T01:56:10.534721+00:00",
+  "captured_at_utc": "2026-07-11T15:20:30.014450+00:00",
   "cpu": {
     "freq": {
       "current_mhz": 2000.0,

@@ -156,6 +156,63 @@ deliberately expensive — do not launch them casually. For a quick
 structural check use `tests\fixtures\test_tiny.yml` (never for paper
 reproduction).
 
+### 8.1 One-command runner: fresh, resume, and logging
+
+`run_full_experiments.ps1` drives the whole workflow end-to-end (PowerShell
+5.1 compatible; native exit codes are preserved — no `Tee-Object` in the
+command path — and all output streams live while also being captured).
+
+```powershell
+# Full fresh run (rebuilds embeddings/indexes/results; preserves data\raw and
+# normalized CSVs unless -ReprepareDatasets is also passed):
+.\run_full_experiments.ps1 -Fresh
+
+# Resume an interrupted or failed run WITHOUT deleting anything. The main grid
+# runs with --write_mode replace --reuse_existing (compatible artifacts are
+# reused after metadata verification; incompatible ones are rebuilt), then the
+# downstream analyses continue. Dependency install and dataset re-preparation
+# are skipped. -Fresh and -Resume are mutually exclusive:
+.\run_full_experiments.ps1 -Resume
+
+# Capture the complete console log to a chosen path (still shown live):
+.\run_full_experiments.ps1 -Resume -LogPath logs\my_run.log
+
+# Developer/debug only — skips synthetic scale stress. NOT validator-complete:
+.\run_full_experiments.ps1 -Resume -SkipScaleStress
+```
+
+On failure the runner prints the failing stage, exit code, log path, the run
+manifest and per-step status locations, and the last log lines.
+
+### 8.2 Canonical population policy (k-core filter)
+
+The benchmark evaluates a **k-core population**: only users with at least
+`data.min_user_interactions` (default **5**) interactions are kept. This single
+filter (`utils/preprocessing.filter_min_user_interactions`) is applied — from
+one place — **before** embedding training, temporal leave-one-out splitting,
+evaluation-case construction, popularity, and dataset-statistics generation, so
+the reported `dataset_stats` table describes exactly the population the
+experiments train and evaluate on. The value is resolved from configuration
+(never a scattered constant), is recorded in `run_config.json`,
+`run_manifest.json`, `embedding_meta.json`, and each aggregate evaluation JSON,
+and is part of the config hash. Amazon Books is already a 5-core dataset.
+
+### 8.3 Windows-safe atomic publication and artifact reuse
+
+All results (JSON, CSV, NPZ, and binary figures) are published atomically via a
+same-directory temporary file, `flush`+`fsync`, then `os.replace()`. The fsync
+helper reopens the temporary file **`"r+b"` (writable)**; a read-only `"rb"`
+descriptor makes `os.fsync()` fail on Windows with
+`OSError: [Errno 9] Bad file descriptor` (regression-tested in
+`tests/test_result_io.py`). A failed write never damages the previous file and
+leaves no temporary residue.
+
+Existing embeddings and indexes are **not** trusted by path existence: with
+`--reuse_existing` they are reused only after their `*_meta.json` matches the
+resolved configuration (including `config_hash` and `min_user_interactions`).
+Artifacts built under a different population or protocol are rejected as stale
+and rebuilt honestly.
+
 ## 9. Critical experiments and expected evidence counts
 
 | evidence | count |

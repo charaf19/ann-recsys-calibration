@@ -32,6 +32,7 @@ import json
 import os
 import subprocess
 import sys
+from collections import deque
 from pathlib import Path
 
 import numpy as np
@@ -65,14 +66,48 @@ class StepError(Exception):
     """A pipeline step failed; downstream steps for this method are skipped."""
 
 
-def run(cmd, env=None):
+# How many trailing child-output lines to keep for the failure message. The
+# deque is bounded so a multi-hour child log never accumulates in RAM.
+_TAIL_LINES = 200
+
+
+def run(cmd, env=None, tail_lines=_TAIL_LINES):
+    """Run a child command, streaming its output live to this console.
+
+    stdout and stderr are merged in execution order (stderr -> stdout) and
+    forwarded line by line as they arrive, so long-running children still show
+    progress. Only the last ``tail_lines`` lines are retained (bounded memory);
+    on a nonzero exit that tail — the real child traceback — is embedded in the
+    raised StepError so it lands in the run manifest, not just the command.
+    """
     full = [sys.executable] + cmd[1:] if cmd[0] == "python" else cmd
-    print(">>", " ".join(str(c) for c in full))
+    printable = " ".join(str(c) for c in full)
+    print(">>", printable, flush=True)
+
+    # Force unbuffered child output so we see progress immediately and the
+    # traceback tail is complete even if the child dies mid-write.
+    child_env = dict(os.environ if env is None else env)
+    child_env["PYTHONUNBUFFERED"] = "1"
+
+    tail = deque(maxlen=max(1, int(tail_lines)))
+    proc = subprocess.Popen(
+        full, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        text=True, bufsize=1, env=child_env)
     try:
-        subprocess.run(full, check=True, env=env)
-    except subprocess.CalledProcessError as e:
-        raise StepError(f"command failed (exit {e.returncode}): "
-                        + " ".join(str(c) for c in full)) from e
+        for line in proc.stdout:
+            sys.stdout.write(line)
+            sys.stdout.flush()
+            tail.append(line.rstrip("\n"))
+    finally:
+        proc.stdout.close()
+        returncode = proc.wait()
+
+    if returncode != 0:
+        tail_text = "\n".join(tail).strip()
+        raise StepError(
+            f"command failed (exit {returncode}): {printable}\n"
+            f"--- last {len(tail)} line(s) of child output ---\n"
+            f"{tail_text}")
 
 
 def _require_matching_metadata(path, expected, artifact):
@@ -203,6 +238,8 @@ def main():
                   for m in cfg_get(cfg, "retrieval.modalities", required=True)]
     methods = list(cfg_get(cfg, "retrieval.methods", required=True))
     weighting = cfg_get(cfg, "embedding.weighting", required=True)
+    min_user_interactions = cfg_get(cfg, "data.min_user_interactions",
+                                    type=int, required=True)
     dim = cfg_get(cfg, "embedding.dim", type=int, required=True)
     normalize = cfg_get(cfg, "embedding.normalize", required=True)
     bm25_k1 = cfg_get(cfg, "embedding.bm25_k1", type=float, required=True)
@@ -306,7 +343,8 @@ def main():
     run_meta = {
         "run_id": manifest.run_id, "config_hash": cfg_hash,
         "datasets": datasets, "modalities": modalities, "methods": methods,
-        "weighting": weighting, "dim": dim, "normalize": normalize,
+        "weighting": weighting, "min_user_interactions": min_user_interactions,
+        "dim": dim, "normalize": normalize,
         "bm25_k1": bm25_k1, "bm25_b": bm25_b, "budget_mb": budget_mb,
         "calibration_targets": targets, "primary_target": primary_target,
         "calibration_queries": cal_queries,
@@ -342,6 +380,7 @@ def main():
                     {"dim_requested": dim, "weighting": weighting,
                      "bm25_k1": bm25_k1, "bm25_b": bm25_b,
                      "normalize": normalize, "seed": seed,
+                     "min_user_interactions": min_user_interactions,
                      "config_hash": cfg_hash},
                     f"{dataset} embeddings")
                 print(f"[{SCRIPT}] reusing embeddings {emb}")
@@ -350,6 +389,7 @@ def main():
                      "--dim", str(dim), "--weighting", weighting,
                      "--bm25_k1", str(bm25_k1), "--bm25_b", str(bm25_b),
                      "--normalize", normalize, "--seed", str(seed),
+                     "--min_user_interactions", str(min_user_interactions),
                      "--config_hash", cfg_hash,
                      "--out_dir", emb], env=env)
             item_vecs = np.load(f"{emb}/item_vecs.npy").astype("float32")

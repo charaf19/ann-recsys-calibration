@@ -43,6 +43,25 @@ def resolve_write_mode(mode: str) -> str:
     return m
 
 
+def _fsync_written_file(path) -> None:
+    """Flush an already-written regular file to disk before atomic publish.
+
+    The file must already exist and hold its final contents. It is reopened
+    for update (``"r+b"``) so the descriptor passed to ``os.fsync`` is
+    writable: on Windows ``os.fsync`` on a read-only (``"rb"``) descriptor
+    raises ``OSError: [Errno 9] Bad file descriptor``. Opening ``"r+b"``
+    (rather than ``"wb"``/``"ab"``) never truncates or appends, so the bytes
+    just written by the caller are preserved untouched.
+    """
+    path = Path(path)
+    if not path.exists():
+        raise FileNotFoundError(
+            f"cannot fsync a temporary artifact that was never created: {path}")
+    with open(path, "r+b") as handle:
+        handle.flush()
+        os.fsync(handle.fileno())
+
+
 def _atomic_write_text(text: str, path: Path):
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp = tempfile.mkstemp(dir=str(path.parent),
@@ -272,8 +291,7 @@ def write_npz_atomic(path, mode: str = "fail_if_exists", **arrays):
     os.close(fd)
     try:
         np.savez_compressed(tmp, **arrays)
-        with open(tmp, "rb") as f:
-            os.fsync(f.fileno())
+        _fsync_written_file(tmp)
         os.replace(tmp, path)
     except BaseException:
         try:
@@ -305,8 +323,11 @@ def atomic_output_path(path, mode: str = "replace"):
     tmp_path = Path(tmp)
     try:
         yield tmp_path
-        with open(tmp_path, "rb") as f:
-            os.fsync(f.fileno())
+        if not tmp_path.exists():
+            raise FileNotFoundError(
+                f"renderer for {path} returned without creating its temporary "
+                f"artifact {tmp_path}")
+        _fsync_written_file(tmp_path)
         os.replace(tmp_path, path)
     except BaseException:
         try:

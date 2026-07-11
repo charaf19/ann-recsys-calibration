@@ -21,6 +21,8 @@ from sklearn.decomposition import TruncatedSVD
 
 from utils.weighting import apply_weighting, WEIGHTING_CHOICES
 from utils.common import set_global_seed
+from utils.preprocessing import (filter_min_user_interactions,
+                                 DEFAULT_MIN_USER_INTERACTIONS)
 
 SCRIPT = "train_embeddings"
 
@@ -37,6 +39,10 @@ def main():
     ap.add_argument("--normalize", choices=["none", "l2"], default="none",
                     help="L2-normalize item vectors after SVD (default: none)")
     ap.add_argument("--seed", type=int, default=42)
+    ap.add_argument("--min_user_interactions", type=int,
+                    default=DEFAULT_MIN_USER_INTERACTIONS,
+                    help="k-core filter: drop users with fewer interactions "
+                         "(canonical value comes from data.min_user_interactions)")
     ap.add_argument("--config_hash", default="unknown",
                     help="resolved experiment configuration hash")
     args = ap.parse_args()
@@ -48,6 +54,10 @@ def main():
     set_global_seed(args.seed)
 
     df = pd.read_csv(args.interactions)
+    n_before = len(df)
+    df = filter_min_user_interactions(df, args.min_user_interactions)
+    print(f"[{SCRIPT}] k-core filter min_user_interactions="
+          f"{args.min_user_interactions}: interactions {n_before} -> {len(df)}")
     users = df["user_id"].astype("category")
     items = df["item_id"].astype("category")
     user_codes = users.cat.codes.values
@@ -92,6 +102,7 @@ def main():
         "bm25_b": float(args.bm25_b),
         "normalize": args.normalize,
         "seed": int(args.seed),
+        "min_user_interactions": int(args.min_user_interactions),
         "config_hash": str(args.config_hash),
         "explained_variance_ratio_sum": float(np.sum(svd.explained_variance_ratio_)),
     }

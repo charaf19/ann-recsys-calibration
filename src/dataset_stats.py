@@ -17,6 +17,8 @@ import pandas as pd
 
 from utils.metrics import gini_exposure
 from utils.paths import RESULTS
+from utils.preprocessing import (filter_min_user_interactions,
+                                 DEFAULT_MIN_USER_INTERACTIONS)
 from utils.provenance import write_sources_sidecar
 from utils.splits import temporal_leave_one_out
 from utils.reporting import write_table
@@ -29,11 +31,10 @@ def stats_for(name, csv_path, min_user_interactions):
     df["user_id"] = df["user_id"].astype(str)
     df["item_id"] = df["item_id"].astype(str)
 
+    # Same canonical k-core filter used before embeddings/splitting/eval, so
+    # this table describes exactly the evaluated population (Phase 5 audit).
+    df = filter_min_user_interactions(df, min_user_interactions)
     per_user = df.groupby("user_id").size()
-    if min_user_interactions > 1:
-        keep = per_user[per_user >= min_user_interactions].index
-        df = df[df["user_id"].isin(keep)]
-        per_user = df.groupby("user_id").size()
 
     n_users = df["user_id"].nunique()
     n_items = df["item_id"].nunique()
@@ -62,7 +63,10 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--datasets", nargs="+", required=True,
                     help="name:path pairs, e.g. ml-1m:data/ml1m.csv")
-    ap.add_argument("--min_user_interactions", type=int, default=1)
+    ap.add_argument("--min_user_interactions", type=int,
+                    default=DEFAULT_MIN_USER_INTERACTIONS,
+                    help="k-core filter; must match data.min_user_interactions "
+                         "so the stats table describes the evaluated population")
     ap.add_argument("--out_dir", default=RESULTS["paper_tables"])
     args = ap.parse_args()
 

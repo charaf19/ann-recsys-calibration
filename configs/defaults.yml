@@ -5,6 +5,15 @@
 project:
   name: IndexWise-Recsys
 
+data:
+  # k-core population filter: keep only users with at least this many
+  # interactions. Applied (from utils/preprocessing.filter_min_user_interactions)
+  # BEFORE embedding training, temporal splitting, evaluation, popularity, and
+  # dataset statistics, so the reported stats table describes exactly the
+  # evaluated population. Changing this changes the config hash and invalidates
+  # embeddings/indexes built under a different population.
+  min_user_interactions: 5
+
 reproducibility:
   seed: 42
   omp_threads: 1          # FAISS build threads; 1 = bit-reproducible HNSW/IVF

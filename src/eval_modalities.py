@@ -39,6 +39,7 @@ from utils import metrics as M
 from utils.ann_io import load_ann_index, build_exact_index
 from utils.paths import RESULTS
 from utils.splits import temporal_leave_one_out, build_eval_cases
+from utils.preprocessing import filter_min_user_interactions
 from utils.common import set_global_seed, normalize_modality_label
 from utils.config import ConfigError, cfg_get, load_config
 from utils.result_io import (ResultExistsError, preflight_output,
@@ -97,14 +98,21 @@ def _build_queries(modality: str, item_vecs: np.ndarray, train_idx_list, test_id
 
 
 def _ranked_lists(index, Q, exclusions, topk, N, batch=1024):
-    """Search in batches with extra depth, then strip excluded items."""
-    max_excl = max((len(e) for e in exclusions), default=0)
-    # Searching topk + |excluded| is sufficient to return topk unseen items
-    # whenever the catalog contains that many. Capping this allowance biases
-    # long-history users by returning short recommendation lists.
-    depth = min(N, topk + max_excl)
+    """Search in batches with extra depth, then strip excluded items.
+
+    Retrieval depth is computed per batch from that batch's longest exclusion
+    set, not from a single global maximum: searching topk + |excluded| is
+    sufficient to return topk unseen items whenever the catalog contains that
+    many, and using the per-batch maximum avoids one long-history user forcing
+    unnecessarily deep retrieval for every query. This yields byte-for-byte
+    identical ranked lists (each row still requests >= topk + its own
+    exclusions, capped at N) while retrieving less on average.
+    """
     ranked = []
     for s in range(0, Q.shape[0], batch):
+        batch_exclusions = exclusions[s:s + batch]
+        batch_max_excl = max((len(e) for e in batch_exclusions), default=0)
+        depth = min(N, topk + batch_max_excl)
         I = index.search(Q[s:s + batch], depth)
         for r, row in enumerate(I):
             ex = exclusions[s + r]
@@ -194,6 +202,9 @@ def parse_args(argv=None):
     ap.add_argument("--ef", type=int, default=None)
     ap.add_argument("--nprobe", type=int, default=None)
     ap.add_argument("--tail_frac", type=float, default=None)
+    ap.add_argument("--min_user_interactions", type=int, default=None,
+                    help="k-core filter override; defaults to "
+                         "data.min_user_interactions from the resolved config")
     ap.add_argument("--seed", type=int, default=None)
     ap.add_argument("--dataset", default=None, help="dataset tag; defaults to interactions stem")
     ap.add_argument("--weighting", default=None,
@@ -216,6 +227,7 @@ def main(argv=None):
             "retrieval.runtime_defaults.nprobe": args.nprobe,
             "evaluation.tail_fraction": args.tail_frac,
             "embedding.weighting": args.weighting,
+            "data.min_user_interactions": args.min_user_interactions,
             "reproducibility.seed": args.seed,
         })
     except ConfigError as exc:
@@ -235,6 +247,8 @@ def main(argv=None):
                      required=True)
     tail_frac = cfg_get(cfg, "evaluation.tail_fraction", type=float,
                         required=True)
+    min_user_interactions = cfg_get(cfg, "data.min_user_interactions",
+                                    type=int, required=True)
     seed = cfg_get(cfg, "reproducibility.seed", type=int, required=True)
     queries = args.queries
     if queries is None:
@@ -271,6 +285,10 @@ def main(argv=None):
         return 1
 
     inter = _load_interactions(args.interactions)
+    n_before = len(inter)
+    inter = filter_min_user_interactions(inter, min_user_interactions)
+    print(f"[{SCRIPT}] k-core filter min_user_interactions="
+          f"{min_user_interactions}: interactions {n_before} -> {len(inter)}")
     train_df, test_df = temporal_leave_one_out(inter)
     max_q = "full" if str(queries).lower() == "full" else int(queries)
     users, train_idx_list, test_idx = build_eval_cases(
@@ -300,6 +318,7 @@ def main(argv=None):
             "detected_method": ann.method,
             "N": int(N), "D": int(D), "dim": int(D),
             "ef": int(ef), "nprobe": int(nprobe),
+            "min_user_interactions": int(min_user_interactions),
             "seed": int(seed),
         })
 

@@ -3,6 +3,13 @@ param(
     # Raw datasets and normalized dataset CSVs are preserved.
     [switch]$Fresh,
 
+    # Resume an interrupted/failed run WITHOUT deleting anything. The main grid
+    # runs with --write_mode replace --reuse_existing (existing compatible
+    # embeddings/indexes are reused after metadata verification; incompatible
+    # ones are rebuilt), then downstream analyses continue. Mutually exclusive
+    # with -Fresh. Skips dependency install and dataset re-preparation.
+    [switch]$Resume,
+
     # Recreate normalized dataset CSVs even when they already exist.
     [switch]$ReprepareDatasets,
 
@@ -13,11 +20,33 @@ param(
     [switch]$SkipInstall,
 
     # Skip compileall and pytest.
-    [switch]$SkipTests
+    [switch]$SkipTests,
+
+    # DEVELOPER/DEBUG ONLY. Skip the synthetic scale-stress experiment. Scale
+    # stress is currently CRITICAL paper evidence, so a run with this switch
+    # CANNOT produce a validator-complete paper result. Use only for fast
+    # iteration; never for the final paper run.
+    [switch]$SkipScaleStress,
+
+    # Override the execution log path. Defaults to
+    # logs\full_experiment_<timestamp>.log.
+    [string]$LogPath
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+if ($Fresh -and $Resume) {
+    throw "-Fresh and -Resume are mutually exclusive: -Fresh rebuilds from " +
+          "scratch, -Resume preserves and continues. Choose one."
+}
+
+# A resumed run must never re-prepare datasets, even if -ReprepareDatasets was
+# also passed by habit.
+if ($Resume -and $ReprepareDatasets) {
+    Write-Warning "-Resume ignores -ReprepareDatasets (datasets are preserved)."
+    $ReprepareDatasets = [switch]$false
+}
 
 # =====================================================================
 # Repository setup
@@ -60,7 +89,20 @@ Remove-Item Env:AMAZON_BOOKS_URL -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Path "logs" -Force | Out-Null
 
 $Timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-$LogPath = Join-Path $RepoRoot "logs\full_experiment_$Timestamp.log"
+if ([string]::IsNullOrWhiteSpace($LogPath)) {
+    $LogPath = Join-Path $RepoRoot "logs\full_experiment_$Timestamp.log"
+}
+$LogDirectory = Split-Path -Parent $LogPath
+if (-not [string]::IsNullOrWhiteSpace($LogDirectory)) {
+    New-Item -ItemType Directory -Path $LogDirectory -Force | Out-Null
+}
+
+# Tracks the stage currently executing so the failure handler can report it.
+$script:CurrentStage = "(startup)"
+
+# Force unbuffered Python child output so progress and tracebacks stream live
+# into the transcript instead of arriving in one block at the end.
+$env:PYTHONUNBUFFERED = "1"
 
 function Invoke-PythonStep {
     param(
@@ -71,16 +113,44 @@ function Invoke-PythonStep {
         [string[]]$Arguments
     )
 
+    $script:CurrentStage = $Name
+    $commandLine = "$Python $($Arguments -join ' ')"
+
     Write-Host ""
     Write-Host ("=" * 78) -ForegroundColor Cyan
-    Write-Host $Name -ForegroundColor Cyan
+    Write-Host ("STAGE   : {0}" -f $Name) -ForegroundColor Cyan
+    Write-Host ("STARTED : {0}" -f (Get-Date -Format "yyyy-MM-dd HH:mm:ss")) `
+        -ForegroundColor Cyan
     Write-Host ("=" * 78) -ForegroundColor Cyan
-    Write-Host "$Python $($Arguments -join ' ')"
+    # Print the EXACT command before every stage (recorded in the log).
+    Write-Host "COMMAND : $commandLine" -ForegroundColor Cyan
 
-    & $Python @Arguments
+    # Run Python with stderr MERGED into stdout (2>&1) so warnings and full
+    # tracebacks are captured in execution order. Each line is re-emitted via
+    # Write-Host, which Start-Transcript records to the log — guaranteeing the
+    # log holds detailed output even for native stderr (which the transcript
+    # does not always capture on its own in PowerShell 5.1).
+    #
+    # ErrorActionPreference is relaxed to Continue only around the call so that
+    # Python writing to stderr (warnings, progress) cannot raise a spurious
+    # terminating NativeCommandError under Set-StrictMode/Stop. $LASTEXITCODE
+    # stays the real Python exit code: the native command sets it regardless of
+    # the downstream pipeline, so no Tee-Object/pipeline masks the exit code.
+    $previousEap = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+        & $Python @Arguments 2>&1 | ForEach-Object { Write-Host $_.ToString() }
+        $exit = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $previousEap
+    }
+    if ($null -eq $exit) { $exit = 0 }
 
-    if ($LASTEXITCODE -ne 0) {
-        throw "$Name failed with exit code $LASTEXITCODE."
+    Write-Host ("EXIT    : {0}" -f $exit) -ForegroundColor DarkGray
+
+    if ($exit -ne 0) {
+        throw "$Name failed with exit code $exit (see log: $LogPath)."
     }
 
     Write-Host "$Name completed successfully." -ForegroundColor Green
@@ -248,12 +318,40 @@ function Assert-MinimumCsvRows {
     Write-Host ("{0}: {1} rows" -f $Path, $Rows) -ForegroundColor Green
 }
 
-Start-Transcript -Path $LogPath -Force
+# -Append so repeated resume runs to the same -LogPath accumulate a full
+# debugging history instead of overwriting it (a default timestamped path is
+# unique per run, so nothing is lost there either).
+Start-Transcript -Path $LogPath -Append | Out-Null
+
+Write-Host ""
+Write-Host ("Execution log (live + captured): {0}" -f $LogPath) `
+    -ForegroundColor Green
+$InvokedFlags = @()
+if ($Fresh) { $InvokedFlags += "-Fresh" }
+if ($Resume) { $InvokedFlags += "-Resume" }
+if ($ReprepareDatasets) { $InvokedFlags += "-ReprepareDatasets" }
+if ($IncludeTwoTower) { $InvokedFlags += "-IncludeTwoTower" }
+if ($SkipInstall) { $InvokedFlags += "-SkipInstall" }
+if ($SkipTests) { $InvokedFlags += "-SkipTests" }
+if ($SkipScaleStress) { $InvokedFlags += "-SkipScaleStress" }
+Write-Host ("Switches: {0}" -f ($(if ($InvokedFlags.Count) { $InvokedFlags -join ' ' } else { '(none)' })))
+Write-Host ("Started : {0}" -f (Get-Date -Format "yyyy-MM-dd HH:mm:ss"))
 
 try {
     # =================================================================
     # Optional cleanup
     # =================================================================
+
+    if ($Resume) {
+        Write-Host ""
+        Write-Host "RESUME MODE: no results, embeddings, indexes, or datasets " `
+            -ForegroundColor Yellow -NoNewline
+        Write-Host "will be deleted." -ForegroundColor Yellow
+        Write-Host "  Main grid will run with --write_mode replace " `
+            "--reuse_existing." -ForegroundColor Yellow
+        Write-Host "  Dependency install and dataset re-preparation are " `
+            "skipped." -ForegroundColor Yellow
+    }
 
     if ($Fresh) {
         Write-Host ""
@@ -287,7 +385,9 @@ try {
     # Dependency installation
     # =================================================================
 
-    if (-not $SkipInstall) {
+    # On a resumed run, never reinstall dependencies unless the caller
+    # explicitly did not ask to skip AND is not resuming.
+    if ((-not $SkipInstall) -and (-not $Resume)) {
         Invoke-PythonStep `
             -Name "Upgrade pip" `
             -Arguments @(
@@ -415,13 +515,22 @@ try {
     # 4 datasets × 2 modalities × 5 methods = 40 rows
     # =================================================================
 
+    $MainArguments = @(
+        "src\run_revision_experiments.py",
+        "--config", "configs\main_cpu.yml"
+    )
+    if ($Resume) {
+        # Reuse compatible embeddings/indexes (metadata-verified) and overwrite
+        # any partial results; incompatible artifacts are rebuilt honestly.
+        $MainArguments += @("--write_mode", "replace", "--reuse_existing")
+    }
+    else {
+        $MainArguments += @("--write_mode", "fail_if_exists")
+    }
+
     Invoke-PythonStep `
         -Name "Run complete main ANN recommendation experiment" `
-        -Arguments @(
-            "src\run_revision_experiments.py",
-            "--config", "configs\main_cpu.yml",
-            "--write_mode", "fail_if_exists"
-        )
+        -Arguments $MainArguments
 
     Assert-FileExists -Path "results\main\summary_main.csv"
     Assert-FileExists -Path "results\main\run_config.json"
@@ -531,17 +640,25 @@ try {
     # 5 catalog sizes × 3 dimensions × 5 methods = 75 rows
     # =================================================================
 
-    Invoke-PythonStep `
-        -Name "Run complete scale-stress experiment" `
-        -Arguments @(
-            "src\run_scale_stress.py",
-            "--config", "configs\analyses.yml",
-            "--write_mode", "fail_if_exists"
-        )
+    if ($SkipScaleStress) {
+        Write-Host ""
+        Write-Warning ("SKIPPING scale-stress (developer/debug -SkipScaleStress). " +
+            "Scale stress is CRITICAL paper evidence: this run CANNOT be " +
+            "validator-complete and MUST NOT be used as the final paper run.")
+    }
+    else {
+        Invoke-PythonStep `
+            -Name "Run complete scale-stress experiment" `
+            -Arguments @(
+                "src\run_scale_stress.py",
+                "--config", "configs\analyses.yml",
+                "--write_mode", "fail_if_exists"
+            )
 
-    Assert-MinimumCsvRows `
-        -Path "results\analyses\scale_stress\scale_stress_all.csv" `
-        -MinimumRows 75
+        Assert-MinimumCsvRows `
+            -Path "results\analyses\scale_stress\scale_stress_all.csv" `
+            -MinimumRows 75
+    }
 
     # =================================================================
     # ANN selection decision framework
@@ -615,7 +732,6 @@ try {
         "results\analyses\exposure\exposure_analysis_all.csv",
         "results\analyses\pq_diagnostics\pq_diagnostics_all.csv",
         "results\analyses\pq_diagnostics\pq_diagnostics_summary.csv",
-        "results\analyses\scale_stress\scale_stress_all.csv",
         "results\analyses\decision_framework\ann_decision_framework_scores.csv",
         "results\paper\tables\dataset_stats.csv",
         "results\paper\tables\claim_support_audit.csv",
@@ -626,6 +742,10 @@ try {
         "results\_meta\validation_report.json",
         "results\_meta\validation_report.md"
     )
+
+    if (-not $SkipScaleStress) {
+        $RequiredOutputs += "results\analyses\scale_stress\scale_stress_all.csv"
+    }
 
     foreach ($Output in $RequiredOutputs) {
         Assert-FileExists -Path $Output
@@ -666,11 +786,31 @@ catch {
     Write-Host ("=" * 78) -ForegroundColor Red
     Write-Host "FULL EXPERIMENT WORKFLOW FAILED" -ForegroundColor Red
     Write-Host ("=" * 78) -ForegroundColor Red
-    Write-Host $_.Exception.Message -ForegroundColor Red
+    Write-Host ("Failed stage : {0}" -f $script:CurrentStage) -ForegroundColor Red
+    if ($null -ne $LASTEXITCODE) {
+        Write-Host ("Exit code    : {0}" -f $LASTEXITCODE) -ForegroundColor Red
+    }
+    Write-Host ("Error        : {0}" -f $_.Exception.Message) -ForegroundColor Red
 
     Write-Host ""
-    Write-Host "Review the execution log:"
-    Write-Host "  $LogPath"
+    Write-Host "Diagnostics:" -ForegroundColor Red
+    Write-Host "  Execution log : $LogPath"
+    Write-Host "  Run manifest  : results\_meta\run_manifest.json"
+    Write-Host "  Step statuses : results\main\status"
+
+    # Print the last useful output lines from the transcript, if available.
+    try {
+        Stop-Transcript | Out-Null
+    }
+    catch {
+    }
+    if (Test-Path $LogPath -PathType Leaf) {
+        Write-Host ""
+        Write-Host "Last 40 log lines:" -ForegroundColor Red
+        Get-Content -Path $LogPath -Tail 40 | ForEach-Object {
+            Write-Host "  $_"
+        }
+    }
 
     exit 1
 }
