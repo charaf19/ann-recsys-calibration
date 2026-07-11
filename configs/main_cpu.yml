@@ -1,6 +1,6 @@
 # IndexWise-Recsys — canonical revised-paper experiment configuration.
 # This is the COMPLETE paper run (all four datasets), not a quick test;
-# for a fast structural check use configs/test_tiny.yml instead.
+# for a fast structural check use tests/fixtures/test_tiny.yml instead.
 # Consumed by src/run_revision_experiments.py and the downstream analysis
 # scripts; explicit CLI flags override these values.
 

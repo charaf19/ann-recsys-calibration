@@ -34,9 +34,9 @@ DEFAULT_CONFIG = "configs/main_cpu.yml"
 FALLBACK_N_BOOT = 2000  # emergency code fallback = the paper value
 METRICS = ["recall", "precision", "hr", "ndcg", "map", "mrr",
            "ann_recall_vs_exact"]
-CI_KEY = ["dataset", "weighting", "modality", "method", "metric", "seed",
-          "n_boot"]
-TEST_KEY = ["dataset", "weighting", "modality", "method", "baseline",
+CI_KEY = ["dataset", "weighting", "dim", "modality", "method", "metric",
+          "seed", "n_boot"]
+TEST_KEY = ["dataset", "weighting", "dim", "modality", "method", "baseline",
             "metric", "seed", "n_boot"]
 
 

@@ -72,4 +72,8 @@ def test_manifest_requires_cpu_scope(repo_root):
         manifest = yaml.safe_load(f)
     scope = manifest["scope"]
     assert scope["cpu_only"] is True
-    assert scope["require_fields"]["main_experiments_accelerator_used"] is False
+    assert scope["status"] == "critical"
+    assert "gpu_energy_joules" in scope["forbidden_columns"]
+    hardware = manifest["hardware"]
+    assert hardware["required_values"]["main_experiments_accelerator_used"] is False
+    assert "main_experiments_accelerator_used" in hardware["required_fields"]

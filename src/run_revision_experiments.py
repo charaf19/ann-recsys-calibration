@@ -52,6 +52,15 @@ DEFAULT_CONFIG = "configs/main_cpu.yml"
 MAIN_KEY = ["dataset", "weighting", "dim", "modality", "method", "seed"]
 
 
+def run_config_path() -> Path:
+    """Canonical location of the resolved run configuration.
+
+    Must equal the manifest's main.run_config_file
+    (results/main/run_config.json); the validator reads the same path.
+    """
+    return Path(RESULTS["main"]) / "run_config.json"
+
+
 class StepError(Exception):
     """A pipeline step failed; downstream steps for this method are skipped."""
 
@@ -233,12 +242,12 @@ def main():
     status_dir = Path(RESULTS["status"])
     summary_path = main_dir / "summary_main.csv"
     checkpoint_path = status_dir / "summary_main_checkpoint.csv"
-    run_config_path = meta_dir / "run_config.json"
+    run_config_file = run_config_path()  # canonical: results/main/run_config.json
 
     # ---- fail-fast argument/input validation (before any expensive work) --
     try:
         write_mode = preflight_output(summary_path, args.write_mode)
-        preflight_output(run_config_path, args.write_mode)
+        preflight_output(run_config_file, args.write_mode)
         for dataset in datasets:
             for method in methods:
                 if write_mode == "fail_if_exists":
@@ -306,8 +315,8 @@ def main():
         "metric_topk": metric_topk, "omp_threads": omp_threads,
         "cpu_only": cpu_only, "seed": seed,
     }
-    write_json_atomic(run_meta, run_config_path, mode=write_mode)
-    manifest.add_output(str(run_config_path))
+    write_json_atomic(run_meta, run_config_file, mode=write_mode)
+    manifest.add_output(str(run_config_file))
 
     def checkpoint(rows):
         df = pd.DataFrame(rows)

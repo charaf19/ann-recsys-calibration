@@ -48,7 +48,7 @@ environment metadata only; `main_experiments_accelerator_used` is always
 
 ```text
 configs/            defaults.yml, main_cpu.yml, analyses.yml,
-                    paper_evidence_manifest.yml, test_tiny.yml
+                    paper_evidence_manifest.yml
 src/                pipeline scripts (one canonical entry point per stage)
 src/utils/          config loader, canonical paths, atomic result I/O,
                     provenance, metrics, splits
@@ -153,7 +153,7 @@ python src\claim_support_audit.py
 
 This list describes execution order; the main run and several analyses are
 deliberately expensive — do not launch them casually. For a quick
-structural check use `configs\test_tiny.yml` (never for paper
+structural check use `tests\fixtures\test_tiny.yml` (never for paper
 reproduction).
 
 ## 9. Critical experiments and expected evidence counts

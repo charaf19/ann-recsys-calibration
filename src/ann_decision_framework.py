@@ -43,7 +43,7 @@ from utils.result_io import (preflight_output, write_dataframe_atomic,
 
 SCRIPT = "ann_decision_framework"
 DEFAULT_CONFIG = "configs/analyses.yml"
-KEY = ["dataset", "weighting", "dim", "modality", "method"]
+KEY = ["dataset", "weighting", "dim", "modality", "method", "seed"]
 
 USE_CASES = ("exact_reference", "online_serving_recommended",
              "memory_constrained_online_serving", "offline_batch_only",

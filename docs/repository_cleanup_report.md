@@ -63,7 +63,7 @@ their absence and removed the remaining documentation references
 | `configs/defaults.yml` | single source of every scientific default |
 | `configs/analyses.yml` | embedding-sensitivity / scale-stress / decision-framework protocol |
 | `configs/paper_evidence_manifest.yml` | the strict evidence contract (validator input) |
-| `configs/test_tiny.yml` | tiny structural test config (explicitly NOT for paper reproduction) |
+| `configs/test_tiny.yml` | tiny structural test config (explicitly NOT for paper reproduction); later relocated to `tests/fixtures/test_tiny.yml` |
 | `src/utils/config.py` | shared loader: `inherits`, deep merge, typed access, hashing, CLI overrides |
 | `src/utils/result_io.py` | atomic writes, `fail_if_exists`/`replace`/`merge`, key validation, conflict detection |
 | `src/utils/provenance.py` | run manifest, hardware/environment capture, `.sources.json` sidecars |
@@ -159,18 +159,47 @@ scale-stress OPQ consistency); all other components produce numerically
 identical results from the same inputs. Because ALL old results were
 deleted intentionally, every experiment requires a fresh run regardless.
 
-## Verification
+## Final integration fixes (stabilization pass, contract_version 3)
+
+After the manifest was expanded to contract_version 3, a final pass fixed
+the remaining producer/validator integration inconsistencies:
+
+- `run_config.json` producer path corrected from `results/_meta/` to the
+  canonical `results/main/run_config.json` (shared helper
+  `run_revision_experiments.run_config_path()`; regression tests assert
+  helper–manifest agreement and that the legacy `_meta` location fails
+  validation).
+- The validator's passing fixture was rebuilt to be **generated from the
+  current manifest** (datasets, methods, metrics, grids, counts, and
+  required columns are read from `configs/paper_evidence_manifest.yml`),
+  covering every critical artifact including hardware, run manifest,
+  decision framework, dataset statistics, 280-row bootstrap CIs, 192-row
+  paired tests, and a ≥840-row exposure fixture. The previous fixture did
+  not satisfy the expanded manifest, so the earlier "83 passed" claim no
+  longer described a contract-complete suite.
+- Stale test assertions corrected (`sections["cpu_scope"]` → the current
+  `hardware`/`scope` sections; `scope.require_fields` → the manifest's
+  `hardware.required_values`).
+- Producer/manifest schema audit completed (`docs/final_completion_audit.md`);
+  four natural-key mismatches fixed (`dim` added to the bootstrap CI/test
+  keys and the exposure key, `seed` added to the decision-framework key) —
+  merge/uniqueness keys only, no numerical semantics changed.
+- `test_tiny.yml` now lives at `tests/fixtures/test_tiny.yml` (it is a test
+  fixture, not a canonical config); documentation references updated.
+
+## Verification (final stabilization pass)
 
 | check | result |
 | --- | --- |
-| `python -m py_compile` over all 62 active src/ + tests/ files | 0 failures |
-| `python -m pytest tests -q` | **83 passed** |
-| YAML parsing of all 5 configs | all parse as mappings |
-| CLI `--help` (run_revision_experiments, run_calibration_sensitivity, bootstrap_significance, run_embedding_backbone_sensitivity, run_scale_stress, validate_paper_evidence, + 7 more via tests) | all exit 0 with canonical flags advertised |
+| `python -m compileall src tests` | exit 0, no failures |
+| `python -m pytest tests -q` | **102 passed, 0 failed, 0 skipped** |
+| YAML parsing of all 4 canonical configs (+ the test fixture) | all parse as mappings |
+| CLI `--help` (run_revision_experiments, run_calibration_sensitivity, bootstrap_significance, run_embedding_backbone_sensitivity, run_scale_stress, validate_paper_evidence, + 7 more via `test_cli_contracts`) | all exit 0 with canonical flags advertised |
 | legacy pipeline reference scan (README, reproduction, docs, configs, src) | none (guarded by `test_no_legacy_references`) |
 | GPU execution reference scan (`--use_gpu`, `faiss-gpu`, `index_cpu_to_gpu`, `StandardGpuResources`, `pynvml`, `gpu_energy_joules`) | none (guarded by `test_cpu_only_scope`) |
 | `first_existing` / legacy result-path scan | none |
-| strict validator vs deliberately empty `results/` | FAIL with 11 missing-evidence checks, exit 1 — **the expected pre-rerun state**, not a cleanup failure; no placeholder evidence was created |
+| strict validator vs the complete manifest-driven tmp fixture | PASS, exit 0 (`test_complete_tiny_fixture_passes`) |
+| strict validator vs deliberately empty `results/` | FAIL with 14 critical missing-evidence checks, exit 1 — **the expected pre-rerun state**, not a cleanup failure; generated report files removed afterwards so the tree stays `.gitkeep`-only |
 | deprecated `validate_results.py` | emits DeprecationWarning and delegates to the canonical validator |
 
 ## Paper evidence status

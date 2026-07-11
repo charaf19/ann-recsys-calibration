@@ -223,7 +223,7 @@ def cfg_get(cfg: dict, dotted: str, default=_MISSING, type=None, required=False)
         except (TypeError, ValueError) as e:
             raise ConfigError(
                 f"config key {dotted} has value {node!r}, "
-                f"not coercible to {type.__name__}") from e
+                f"not coercible to {type.__name__}: {e}") from e
     return node
 
 

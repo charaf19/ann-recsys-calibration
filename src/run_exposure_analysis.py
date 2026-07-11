@@ -26,7 +26,7 @@ from utils.result_io import (preflight_output, write_dataframe_atomic,
 SCRIPT = "run_exposure_analysis"
 REQUIRED_KEYS = ["exposure_counts_at_k", "exposure_counts_at_100",
                  "pop_counts", "recs_at_k", "hist_pop_mean"]
-KEY = ["dataset", "weighting", "modality", "method", "metric", "k",
+KEY = ["dataset", "weighting", "dim", "modality", "method", "metric", "k",
        "decile", "group", "seed"]
 
 

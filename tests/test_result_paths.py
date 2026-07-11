@@ -65,3 +65,19 @@ def test_directory_scaffold_exists(repo_root):
 def test_no_archive_directory(repo_root):
     assert not (repo_root / "results" / "archive").exists(), \
         "results/archive must not exist; canonical scripts never read it"
+
+
+def test_run_config_canonical_path(repo_root):
+    """The orchestrator, the manifest, and the validator must agree on ONE
+    run-configuration location: results/main/run_config.json."""
+    import yaml
+    import run_revision_experiments as orchestrator
+
+    resolved = orchestrator.run_config_path()
+    assert str(resolved).replace("\\", "/") == "results/main/run_config.json"
+
+    with open(repo_root / "configs" / "paper_evidence_manifest.yml",
+              encoding="utf-8") as f:
+        manifest = yaml.safe_load(f)
+    assert manifest["main"]["run_config_file"] == \
+        str(resolved).replace("\\", "/")
