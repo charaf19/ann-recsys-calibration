@@ -37,6 +37,8 @@ def main():
     ap.add_argument("--normalize", choices=["none", "l2"], default="none",
                     help="L2-normalize item vectors after SVD (default: none)")
     ap.add_argument("--seed", type=int, default=42)
+    ap.add_argument("--config_hash", default="unknown",
+                    help="resolved experiment configuration hash")
     args = ap.parse_args()
 
     print(f"[{SCRIPT}] starting...")
@@ -90,6 +92,7 @@ def main():
         "bm25_b": float(args.bm25_b),
         "normalize": args.normalize,
         "seed": int(args.seed),
+        "config_hash": str(args.config_hash),
         "explained_variance_ratio_sum": float(np.sum(svd.explained_variance_ratio_)),
     }
     with open(out / "embedding_meta.json", "w", encoding="utf-8") as f:

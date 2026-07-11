@@ -1,34 +1,36 @@
 """Run PQ diagnostics over built indexes (Flat vs Flat-PQ vs IVF-PQ).
 
-Requires embeddings + indexes from run_revision_experiments.py (or manual
-train_embeddings.py + build_index.py) and, optionally, the interactions CSVs
-for popularity deciles and results/main/summary_main.csv for delta-NDCG
-correlations. Missing artifacts are skipped with warnings.
+Requires embeddings + indexes from run_revision_experiments.py and,
+optionally, the interactions CSVs for popularity deciles and
+results/main/summary_main.csv for delta-NDCG correlations. Interpretation
+labels are diagnostic evidence only — no claim of implicit regularization
+is made or implied.
 
 Outputs:
-    results/pq_diagnostics/pq_diagnostics_all.csv        (long format)
-    results/paper_tables/pq_diagnostics_summary.csv/.tex (+ .md)
-    results/figures_paper/pq_reconstruction_error_by_dataset.pdf
-    results/figures_paper/pq_neighbor_overlap_vs_quality_delta.pdf
-    results/figures_paper/pq_popularity_decile_effect.pdf
+    results/analyses/pq_diagnostics/pq_diagnostics_all.csv       (long format)
+    results/analyses/pq_diagnostics/pq_diagnostics_summary.csv   (wide format)
+(presentation tables/figures come from tables_paper.py / figures_paper.py)
 """
 import argparse
+import sys
+from pathlib import Path
+
 import faiss
 import numpy as np
 import pandas as pd
-from pathlib import Path
 
 import pq_diagnostics as PQ
 from utils.ann_io import resolve_index_path, load_ann_index, build_exact_index
 from utils.common import set_global_seed
-from utils.paths import dataset_csv, emb_dir, index_dir, RESULTS, first_existing
-from utils.reporting import write_table
-from utils.figures_ext import (fig_pq_reconstruction_error_by_dataset,
-                               fig_pq_neighbor_overlap_vs_quality_delta,
-                               fig_pq_popularity_decile_effect)
+from utils.config import load_config, cfg_get, ConfigError
+from utils.paths import dataset_csv, emb_dir, index_dir, RESULTS
+from utils.result_io import (preflight_output, write_dataframe_atomic,
+                             ResultExistsError)
 
 SCRIPT = "run_pq_diagnostics"
+DEFAULT_CONFIG = "configs/main_cpu.yml"
 PQ_METHODS = ["flatpq", "ivfpq"]
+KEY = ["dataset", "weighting", "dim", "method", "metric", "decile", "seed"]
 
 
 def _popularity(csv_path, item_ids_path):
@@ -48,9 +50,11 @@ def _popularity(csv_path, item_ids_path):
 def _delta_ndcg(summary, dataset, weighting, method):
     if summary is None:
         return float("nan")
-    flat = summary[(summary["dataset"] == dataset) & (summary["weighting"] == weighting)
+    flat = summary[(summary["dataset"] == dataset)
+                   & (summary["weighting"] == weighting)
                    & (summary["method"] == "flat")]
-    pq = summary[(summary["dataset"] == dataset) & (summary["weighting"] == weighting)
+    pq = summary[(summary["dataset"] == dataset)
+                 & (summary["weighting"] == weighting)
                  & (summary["method"] == method)]
     if flat.empty or pq.empty:
         return float("nan")
@@ -59,44 +63,78 @@ def _delta_ndcg(summary, dataset, weighting, method):
 
 
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--datasets", nargs="*", default=["ml-1m", "ml-20m", "goodbooks"])
-    ap.add_argument("--methods", nargs="*", default=PQ_METHODS,
-                    choices=PQ_METHODS)
-    ap.add_argument("--weighting", default="bm25")
-    ap.add_argument("--dim", type=int, default=128)
+    ap = argparse.ArgumentParser(
+        description="PQ codec diagnostics: reconstruction error, neighbor "
+                    "overlap, score variance, popularity-decile effects, "
+                    "and long-tail exposure shift for flatpq/ivfpq.")
+    ap.add_argument("--config", default=DEFAULT_CONFIG,
+                    help="experiment YAML (datasets, weighting, dim, seed)")
+    ap.add_argument("--datasets", nargs="*", default=None)
+    ap.add_argument("--methods", nargs="*", default=None, choices=PQ_METHODS)
+    ap.add_argument("--weighting", default=None)
+    ap.add_argument("--dim", type=int, default=None)
     ap.add_argument("--sample_vectors", type=int, default=5000)
     ap.add_argument("--sample_queries", type=int, default=1000)
     ap.add_argument("--tail_frac", type=float, default=0.2)
-    ap.add_argument("--summary_csv", default=None)
-    ap.add_argument("--seed", type=int, default=42)
+    ap.add_argument("--summary_csv", default=None,
+                    help="main summary for delta-NDCG correlations "
+                         "(default: results/main/summary_main.csv)")
+    ap.add_argument("--seed", type=int, default=None)
     ap.add_argument("--out_dir", default=RESULTS["pq_diagnostics"])
+    ap.add_argument("--write_mode", default="fail_if_exists",
+                    choices=["fail_if_exists", "replace", "merge"])
     args = ap.parse_args()
 
-    summary_csv = args.summary_csv or first_existing(
-        f"{RESULTS['main']}/summary_main.csv", f"{RESULTS['main']}/main_results_all.csv")
+    try:
+        cfg = load_config(args.config, cli_overrides={
+            "datasets": args.datasets,
+            "embedding.weighting": args.weighting,
+            "embedding.dim": args.dim,
+            "reproducibility.seed": args.seed,
+        })
+    except ConfigError as e:
+        print(f"[{SCRIPT}] ERROR: {e}")
+        sys.exit(1)
+
+    datasets = list(cfg_get(cfg, "datasets", required=True))
+    methods = args.methods or PQ_METHODS
+    weighting = cfg_get(cfg, "embedding.weighting", required=True)
+    dim = cfg_get(cfg, "embedding.dim", type=int, required=True)
+    seed = cfg_get(cfg, "reproducibility.seed", type=int, default=42)
+
+    summary_csv = args.summary_csv or str(Path(RESULTS["main"])
+                                          / "summary_main.csv")
     out_dir = Path(args.out_dir)
+    all_path = out_dir / "pq_diagnostics_all.csv"
+    summary_path = out_dir / "pq_diagnostics_summary.csv"
+    try:
+        preflight_output(all_path, args.write_mode)
+        preflight_output(summary_path, args.write_mode)
+    except (ResultExistsError, ValueError) as e:
+        print(f"[{SCRIPT}] ERROR: {e}")
+        sys.exit(1)
 
     print(f"[{SCRIPT}] starting...")
     print(f"[{SCRIPT}] input path: {summary_csv}")
     print(f"[{SCRIPT}] output path: {out_dir}")
 
-    set_global_seed(args.seed)
+    set_global_seed(seed)
     summary = pd.read_csv(summary_csv) if Path(summary_csv).is_file() else None
     if summary is None:
-        print(f"[{SCRIPT}] WARN: {summary_csv} missing; delta-NDCG correlations "
-              f"will be NaN (insufficient_evidence labels).")
+        print(f"[{SCRIPT}] WARN: {summary_csv} missing; delta-NDCG "
+              f"correlations will be NaN (insufficient_evidence labels).")
 
     long_rows, summary_rows = [], []
-    for dataset in args.datasets:
-        emb = emb_dir(dataset, args.weighting, args.dim)
+    for dataset in datasets:
+        emb = emb_dir(dataset, weighting, dim)
         vec_path = Path(emb) / "item_vecs.npy"
         if not vec_path.is_file():
-            print(f"[{SCRIPT}] WARN: missing embeddings {vec_path}; skipping {dataset}.")
+            print(f"[{SCRIPT}] WARN: missing embeddings {vec_path}; "
+                  f"skipping {dataset}.")
             continue
         item_vecs = np.load(vec_path).astype("float32")
         N, D = item_vecs.shape
-        rng = np.random.default_rng(args.seed)
+        rng = np.random.default_rng(seed)
         v_idx = rng.choice(N, size=min(args.sample_vectors, N), replace=False)
         q_idx = rng.choice(N, size=min(args.sample_queries, N), replace=False)
         X = item_vecs[v_idx]
@@ -110,8 +148,8 @@ def main():
         flat_faiss.add(item_vecs)
         flat_score_var = PQ.score_variance(flat_faiss, Q, k=min(100, N))
 
-        for method in args.methods:
-            idx_dir = index_dir(dataset, args.weighting, args.dim, method)
+        for method in methods:
+            idx_dir = index_dir(dataset, weighting, dim, method)
             if not Path(idx_dir).exists():
                 print(f"[{SCRIPT}] WARN: missing index {idx_dir}; skipping.")
                 continue
@@ -124,7 +162,7 @@ def main():
             X_hat = PQ.reconstruct(raw_index, X)
             rerr = PQ.reconstruction_error(X, X_hat)
             ndist = PQ.norm_distortion(X, X_hat)
-            pdist = PQ.pairwise_distance_distortion(X, X_hat, seed=args.seed)
+            pdist = PQ.pairwise_distance_distortion(X, X_hat, seed=seed)
 
             # 4: neighbor overlap
             ov10 = PQ.neighbor_overlap(exact, ann, Q, k=min(10, N))
@@ -145,11 +183,11 @@ def main():
                 shift = PQ.exposure_shift(exact, ann, Q, pop, k=10,
                                           tail_frac=args.tail_frac)
 
-            delta = _delta_ndcg(summary, dataset, args.weighting, method)
+            delta = _delta_ndcg(summary, dataset, weighting, method)
             label = PQ.interpretation_label(delta)
 
-            base = {"dataset": dataset, "weighting": args.weighting,
-                    "dim": args.dim, "method": method, "seed": args.seed}
+            base = {"dataset": dataset, "weighting": weighting,
+                    "dim": dim, "method": method, "seed": seed}
             headline = {
                 "reconstruction_error_rel_mean": float(rerr.mean()),
                 "norm_distortion_mean": float(np.mean(np.abs(ndist))),
@@ -172,16 +210,18 @@ def main():
                     long_rows.append({**base, "metric": metric, "decile": None,
                                       "value": float(value)})
             for d, v in decile_rerr.items():
-                long_rows.append({**base, "metric": "reconstruction_error_rel_decile",
+                long_rows.append({**base,
+                                  "metric": "reconstruction_error_rel_decile",
                                   "decile": d, "value": v})
             for d, v in decile_ov10.items():
-                long_rows.append({**base, "metric": "neighbor_overlap_at_10_decile",
+                long_rows.append({**base,
+                                  "metric": "neighbor_overlap_at_10_decile",
                                   "decile": d, "value": v})
 
     if not summary_rows:
-        print(f"[{SCRIPT}] WARN: no PQ indexes diagnosed (build them first).")
-        print(f"[{SCRIPT}] completed.")
-        return
+        print(f"[{SCRIPT}] ERROR: no PQ indexes diagnosed (build them first "
+              f"with run_revision_experiments.py).")
+        sys.exit(1)
 
     # 8-9: cross-dataset correlations with delta-NDCG
     sdf = pd.DataFrame(summary_rows)
@@ -197,23 +237,15 @@ def main():
               f"correlations reported as NaN.")
 
     out_dir.mkdir(parents=True, exist_ok=True)
-    all_path = out_dir / "pq_diagnostics_all.csv"
-    if all_path.exists():
-        raise FileExistsError(f"Refusing to overwrite existing evidence: {all_path}")
-    pd.DataFrame(long_rows).to_csv(all_path, index=False)
-    print(f"[{SCRIPT}] output path: {all_path}")
-
-    written = write_table(sdf, Path(RESULTS["paper_tables"]) / "pq_diagnostics_summary")
-    for p in written:
-        print(f"[{SCRIPT}] output path: {p}")
-
-    fig_dir = Path(RESULTS["figures_paper"])
-    fig_dir.mkdir(parents=True, exist_ok=True)
     long_df = pd.DataFrame(long_rows)
-    for p in (fig_pq_reconstruction_error_by_dataset(sdf, fig_dir)
-              + fig_pq_neighbor_overlap_vs_quality_delta(sdf, fig_dir)
-              + fig_pq_popularity_decile_effect(long_df, fig_dir)):
-        print(f"[{SCRIPT}] output path: {p}")
+    write_dataframe_atomic(long_df, all_path, mode=args.write_mode,
+                           key=KEY, sort_by=KEY)
+    print(f"[{SCRIPT}] output path: {all_path} ({len(long_df)} rows)")
+
+    write_dataframe_atomic(sdf, summary_path, mode=args.write_mode,
+                           key=["dataset", "weighting", "dim", "method", "seed"],
+                           sort_by=["dataset", "method"])
+    print(f"[{SCRIPT}] output path: {summary_path} ({len(sdf)} rows)")
 
     print(f"[{SCRIPT}] NOTE: labels are diagnostic evidence only; no claim of "
           f"implicit regularization is made or implied.")

@@ -2,45 +2,39 @@
 
 `src/claim_support_audit.py` writes
 `results/paper/tables/claim_support_audit.{csv,md,tex}` with one row per
-claim area. The audit is regenerated on demand; `evidence_available` always
-reflects the filesystem at audit time — it is honest by construction (rows
-are `False` until the corresponding pipeline stage has produced its output).
+claim area. The audit consumes the strict validation report
+(`results/_meta/validation_report.json`, produced by
+`src/validate_paper_evidence.py`) — a claim is marked supported ONLY when
+every validation section it depends on passes, never merely because a file
+exists on disk. Before results exist, every claim is honestly unsupported.
 
 ## Columns
 
 | column | meaning |
 | --- | --- |
 | `claim_area` | The topic a paper sentence might make a claim about (fixed list below). |
-| `claim_strength_allowed` | The *maximum* strength the artifact supports: `strong` (directly measured under the stated protocol), `moderate` (measured but scoped/diagnostic), `weak` (sensitivity/proxy only), `conditional` (depends on a runtime flag such as `direct_energy_available`), or `none` for a stated aspect. |
-| `required_evidence_file` | Result file(s) that must exist (and be produced by real runs) before the claim may appear. Multiple files are `;`-separated. |
-| `evidence_available` | `True`/`False` — whether those files exist on disk right now. |
+| `claim_strength_allowed` | The *maximum* strength the artifact supports: `strong` (directly measured under the stated protocol), `moderate` (measured but scoped/diagnostic), or `weak` (sensitivity/proxy only). |
+| `required_validation_sections` | Validation-report sections that must pass before the claim may appear (`;`-separated). |
+| `evidence_supported` | `True`/`False` — whether those sections pass in the current validation report. |
+| `failing_checks` | The specific failed validator checks blocking the claim (empty when supported). |
 | `safe_interpretation` | A phrasing of the claim that the evidence supports. |
 | `unsafe_interpretation_to_avoid` | The overclaim this row exists to block. |
 
 ## Claim areas (fixed)
 
 1. ANN method selection
-2. U2I vs I2I modality effect
-3. SVD-based embedding scope
-4. neural embedding generalization
-5. PQ compression behavior
-6. long-tail exposure
-7. fairness
+2. larger-catalog generalization (Amazon Books)
+3. U2I vs I2I modality effect
+4. statistical significance
+5. embedding-sensitivity generalization
+6. PQ compression behavior
+7. long-tail exposure
 8. production-scale catalogs
-9. energy consumption
-10. FAISS-specific scope
-11. Flat-PQ deployment role
+9. CPU-only scope
 
-IndexWise-Recsys is evaluated as a CPU-only framework. GPU-specific
-acceleration is outside the present scope and has no claim area here.
+## Workflow position
 
-## Usage rules
-
-- Regenerate the audit after every pipeline stage:
-  `python src/claim_support_audit.py`
-- A paper statement in a claim area with `evidence_available=false` must be
-  removed or rewritten as future work.
-- A statement stronger than `claim_strength_allowed` must be weakened to the
-  row's `safe_interpretation`.
-- The audit table itself is a paper appendix candidate
-  (`claim_support_audit.tex`).
+Run order: pipeline stages → `validate_paper_evidence.py` →
+`claim_support_audit.py`. Regenerating the audit without re-running the
+validator reuses the last validation report and says so via its
+`.sources.json` sidecar.

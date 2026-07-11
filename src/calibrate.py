@@ -19,6 +19,7 @@ import numpy as np
 from utils.ann_io import (load_ann_index, build_exact_index,
                           CALIBRATION_PARAM, DEFAULT_PARAM_GRIDS)
 from utils.common import set_global_seed
+from utils.paths import RESULTS
 
 SCRIPT = "calibrate"
 
@@ -122,7 +123,8 @@ def main():
     ap.add_argument("--weighting", default="none", help="weighting tag for the output record")
     ap.add_argument("--out", default=None,
                     help="output JSON (default: results/main/calibration/"
-                         "{dataset}__{weighting}__{method}__t{target}.json)")
+                         "{dataset}__{weighting}__d{dim}__{method}"
+                         "__target_{target}.json)")
     args = ap.parse_args()
 
     print(f"[{SCRIPT}] starting...")
@@ -146,8 +148,9 @@ def main():
     if args.out:
         out_path = Path(args.out)
     else:
-        out_path = Path("results/main/calibration") / (
-            f"{dataset}__{args.weighting}__{ann.method}__t{args.target:.2f}.json")
+        out_path = Path(RESULTS["calibration"]) / (
+            f"{dataset}__{args.weighting}__d{D}__{ann.method}"
+            f"__target_{args.target:.2f}.json")
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(result, f, indent=2)

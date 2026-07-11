@@ -139,6 +139,8 @@ def main():
     ap.add_argument("--batch_size", type=int, default=2048)
     ap.add_argument("--normalize", choices=["none", "l2"], default="l2")
     ap.add_argument("--seed", type=int, default=42)
+    ap.add_argument("--config_hash", default="unknown",
+                    help="resolved experiment configuration hash")
     ap.add_argument("--out_dir", required=True)
     args = ap.parse_args()
 
@@ -181,7 +183,11 @@ def main():
         "n_users": int(n_users), "n_items": int(n_items),
         "n_interactions": int(len(df)),
         "dim": int(args.dim), "epochs": int(epochs), "lr": float(lr),
+        "reg": float(args.reg), "n_negatives": int(args.n_negatives),
+        "hidden_dim": int(args.hidden_dim),
+        "batch_size": int(args.batch_size),
         "normalize": args.normalize, "seed": int(args.seed),
+        "config_hash": str(args.config_hash),
     }
     with open(out / "embedding_meta.json", "w", encoding="utf-8") as f:
         json.dump(meta, f, indent=2)

@@ -8,9 +8,9 @@ Protocol (deterministic, temporal leave-one-out; see utils/splits.py):
   - I2I: the query vector is the user's chronologically last *training* item;
     the anchor item itself is excluded from the ranked list.
 
-Outputs:
-  - Aggregate JSON:      {out_dir}/{dataset}__{weighting}__{modality}__{method}.json
-  - Per-query metrics:   {out_dir}/perquery/{dataset}__{weighting}__{modality}__{method}.npz
+Outputs (dim is read from the item-vector matrix, so filenames are truthful):
+  - Aggregate JSON:      {out_dir}/aggregates/{dataset}__{weighting}__d{dim}__{modality}__{method}.json
+  - Per-query metrics:   {out_dir}/perquery/{dataset}__{weighting}__d{dim}__{modality}__{method}.npz
     (consumed by bootstrap_significance.py and effect_size_tables.py; per-query
     arrays align across methods because query construction is method-independent.)
 
@@ -37,10 +37,15 @@ import pandas as pd
 
 from utils import metrics as M
 from utils.ann_io import load_ann_index, build_exact_index
+from utils.paths import RESULTS
 from utils.splits import temporal_leave_one_out, build_eval_cases
 from utils.common import set_global_seed, normalize_modality_label
+from utils.config import ConfigError, cfg_get, load_config
+from utils.result_io import (ResultExistsError, preflight_output,
+                             write_json_atomic, write_npz_atomic)
 
 SCRIPT = "eval_modalities"
+DEFAULT_CONFIG = "configs/main_cpu.yml"
 
 
 def _load_id_map(item_vecs_path: Path, N: int):
@@ -94,7 +99,10 @@ def _build_queries(modality: str, item_vecs: np.ndarray, train_idx_list, test_id
 def _ranked_lists(index, Q, exclusions, topk, N, batch=1024):
     """Search in batches with extra depth, then strip excluded items."""
     max_excl = max((len(e) for e in exclusions), default=0)
-    depth = min(N, topk + min(max_excl, 300) + 1)
+    # Searching topk + |excluded| is sufficient to return topk unseen items
+    # whenever the catalog contains that many. Capping this allowance biases
+    # long-history users by returning short recommendation lists.
+    depth = min(N, topk + max_excl)
     ranked = []
     for s in range(0, Q.shape[0], batch):
         I = index.search(Q[s:s + batch], depth)
@@ -169,87 +177,145 @@ def evaluate_modality(modality, item_vecs, ann, exact, train_idx_list, test_idx,
     return aggregate, per_query, exposure_counts, extras
 
 
-def main():
+def parse_args(argv=None):
     ap = argparse.ArgumentParser()
+    ap.add_argument("--config", default=DEFAULT_CONFIG,
+                    help="resolved scientific defaults for standalone use")
     ap.add_argument("--interactions", required=True)
     ap.add_argument("--item_vecs", required=True)
     ap.add_argument("--index", required=True)
     ap.add_argument("--ann_method", required=True,
                     help="label recorded in outputs (flat/hnsw/ivfflat/ivfpq/flatpq)")
     ap.add_argument("--modality", choices=["u2i", "i2i", "both"], default="both")
-    ap.add_argument("--queries", default="2000",
+    ap.add_argument("--queries", default=None,
                     help="int, or 'full' to evaluate every eligible user")
-    ap.add_argument("--topk", type=int, default=100)
-    ap.add_argument("--metric_topk", type=int, default=10)
-    ap.add_argument("--ef", type=int, default=128)
-    ap.add_argument("--nprobe", type=int, default=16)
-    ap.add_argument("--tail_frac", type=float, default=0.2)
-    ap.add_argument("--seed", type=int, default=42)
+    ap.add_argument("--topk", type=int, default=None)
+    ap.add_argument("--metric_topk", type=int, default=None)
+    ap.add_argument("--ef", type=int, default=None)
+    ap.add_argument("--nprobe", type=int, default=None)
+    ap.add_argument("--tail_frac", type=float, default=None)
+    ap.add_argument("--seed", type=int, default=None)
     ap.add_argument("--dataset", default=None, help="dataset tag; defaults to interactions stem")
-    ap.add_argument("--weighting", default="none", help="embedding weighting tag (metadata only)")
-    ap.add_argument("--out_dir", default="results/main")
-    args = ap.parse_args()
+    ap.add_argument("--weighting", default=None,
+                    help="embedding weighting tag (metadata only)")
+    ap.add_argument("--aggregate_dir", default=RESULTS["aggregates"])
+    ap.add_argument("--perquery_dir", default=RESULTS["perquery"])
+    ap.add_argument("--write_mode", default="fail_if_exists",
+                    choices=["fail_if_exists", "replace", "merge"])
+    return ap.parse_args(argv)
+
+
+def main(argv=None):
+    args = parse_args(argv)
+
+    try:
+        cfg = load_config(args.config, cli_overrides={
+            "retrieval.topk": args.topk,
+            "retrieval.metric_topk": args.metric_topk,
+            "retrieval.runtime_defaults.ef": args.ef,
+            "retrieval.runtime_defaults.nprobe": args.nprobe,
+            "evaluation.tail_fraction": args.tail_frac,
+            "embedding.weighting": args.weighting,
+            "reproducibility.seed": args.seed,
+        })
+    except ConfigError as exc:
+        print(f"[{SCRIPT}] ERROR: {exc}")
+        return 1
 
     dataset = args.dataset or Path(args.interactions).stem
-    out_dir = Path(args.out_dir)
-    perquery_dir = out_dir / "perquery"
+    agg_dir = Path(args.aggregate_dir)
+    perquery_dir = Path(args.perquery_dir)
+    weighting = cfg_get(cfg, "embedding.weighting", required=True)
+    topk = cfg_get(cfg, "retrieval.topk", type=int, required=True)
+    metric_topk = cfg_get(cfg, "retrieval.metric_topk", type=int,
+                          required=True)
+    ef = cfg_get(cfg, "retrieval.runtime_defaults.ef", type=int,
+                 required=True)
+    nprobe = cfg_get(cfg, "retrieval.runtime_defaults.nprobe", type=int,
+                     required=True)
+    tail_frac = cfg_get(cfg, "evaluation.tail_fraction", type=float,
+                        required=True)
+    seed = cfg_get(cfg, "reproducibility.seed", type=int, required=True)
+    queries = args.queries
+    if queries is None:
+        query_key = ("evaluation.queries_ml1m" if dataset == "ml-1m"
+                     else "evaluation.queries_large")
+        queries = cfg_get(cfg, query_key, required=True)
 
     print(f"[{SCRIPT}] starting...")
     print(f"[{SCRIPT}] input path: {args.interactions}")
     print(f"[{SCRIPT}] input path: {args.item_vecs}")
     print(f"[{SCRIPT}] input path: {args.index}")
-    print(f"[{SCRIPT}] output path: {out_dir}")
+    print(f"[{SCRIPT}] output path: {agg_dir}")
+    print(f"[{SCRIPT}] output path: {perquery_dir}")
 
-    set_global_seed(args.seed)
+    set_global_seed(seed)
 
     item_vecs_path = Path(args.item_vecs)
     item_vecs = np.load(item_vecs_path).astype("float32")
     N, D = item_vecs.shape
     id2idx = _load_id_map(item_vecs_path, N)
 
+    modalities = (["u2i", "i2i"] if args.modality == "both"
+                  else [normalize_modality_label(args.modality)])
+    stems = {
+        mod: f"{dataset}__{weighting}__d{D}__{mod}__{args.ann_method}"
+        for mod in modalities
+    }
+    try:
+        for stem in stems.values():
+            preflight_output(agg_dir / f"{stem}.json", args.write_mode)
+            preflight_output(perquery_dir / f"{stem}.npz", args.write_mode)
+    except (ResultExistsError, ValueError) as exc:
+        print(f"[{SCRIPT}] ERROR: {exc}")
+        return 1
+
     inter = _load_interactions(args.interactions)
     train_df, test_df = temporal_leave_one_out(inter)
-    max_q = "full" if str(args.queries).lower() == "full" else int(args.queries)
+    max_q = "full" if str(queries).lower() == "full" else int(queries)
     users, train_idx_list, test_idx = build_eval_cases(
-        train_df, test_df, id2idx, max_queries=max_q, seed=args.seed)
+        train_df, test_df, id2idx, max_queries=max_q, seed=seed)
     pop_counts = _popularity(train_df, id2idx, N)
     print(f"[{SCRIPT}] split: train={len(train_df)} test_users={len(users)} "
           f"modality={args.modality} method={args.ann_method}")
 
-    ann = load_ann_index(args.index, D, N, ef=args.ef, nprobe=args.nprobe)
+    ann = load_ann_index(args.index, D, N, ef=ef, nprobe=nprobe)
+    if ann.method != args.ann_method:
+        print(f"[{SCRIPT}] ERROR: requested method label {args.ann_method!r} "
+              f"does not match detected index method {ann.method!r}.")
+        return 1
     exact = build_exact_index(item_vecs)
 
-    modalities = (["u2i", "i2i"] if args.modality == "both"
-                  else [normalize_modality_label(args.modality)])
-    out_dir.mkdir(parents=True, exist_ok=True)
+    agg_dir.mkdir(parents=True, exist_ok=True)
     perquery_dir.mkdir(parents=True, exist_ok=True)
 
     for mod in modalities:
         aggregate, per_query, exposure_counts, extras = evaluate_modality(
             mod, item_vecs, ann, exact, train_idx_list, test_idx,
-            pop_counts, args.topk, args.metric_topk, args.tail_frac)
+            pop_counts, topk, metric_topk, tail_frac)
         aggregate.update({
             "dataset": dataset,
-            "weighting": args.weighting,
+            "weighting": weighting,
             "method": args.ann_method,
             "detected_method": ann.method,
-            "N": int(N), "D": int(D),
-            "ef": int(args.ef), "nprobe": int(args.nprobe),
-            "seed": int(args.seed),
+            "N": int(N), "D": int(D), "dim": int(D),
+            "ef": int(ef), "nprobe": int(nprobe),
+            "seed": int(seed),
         })
 
-        stem = f"{dataset}__{args.weighting}__{mod}__{args.ann_method}"
-        agg_path = out_dir / f"{stem}.json"
-        with open(agg_path, "w", encoding="utf-8") as f:
-            json.dump(aggregate, f, indent=2)
+        stem = stems[mod]
+        agg_path = agg_dir / f"{stem}.json"
+        write_json_atomic(aggregate, agg_path, mode=args.write_mode)
 
         npz_path = perquery_dir / f"{stem}.npz"
-        np.savez_compressed(
-            npz_path,
-            meta=json.dumps({"dataset": dataset, "weighting": args.weighting,
+        write_npz_atomic(
+            npz_path, mode=args.write_mode,
+            meta=json.dumps({"dataset": dataset, "weighting": weighting,
+                             "dim": int(D),
                              "modality": mod, "method": args.ann_method,
-                             "metric_topk": int(args.metric_topk),
-                             "seed": int(args.seed)}),
+                             "metric_topk": int(metric_topk),
+                             "seed": int(seed)}),
+            query_ids=np.asarray(users, dtype=str),
             exposure_proxy=M.exposure_proxy(exposure_counts),
             **extras,
             **per_query,
@@ -259,7 +325,8 @@ def main():
         print(json.dumps(aggregate, indent=2))
 
     print(f"[{SCRIPT}] completed.")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

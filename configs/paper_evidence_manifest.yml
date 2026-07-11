@@ -1,0 +1,478 @@
+# IndexWise-Recsys strict paper-evidence contract.
+#
+# Every evidence section declares whether it is critical to the revised
+# paper or optional presentation output, plus the paper claim/section it
+# supports.  src/validate_paper_evidence.py interprets this file; scientific
+# grid values and expected counts are not duplicated in the validator.
+
+contract_version: 3
+
+scope:
+  status: critical
+  associated_paper_evidence:
+    - CPU-only scope
+  cpu_only: true
+  forbidden_result_paths:
+    - results/gpu_experiments
+    - results/analyses/gpu_experiments
+  forbidden_columns:
+    - gpu_used
+    - gpu_device
+    - gpu_energy_joules
+
+main:
+  status: critical
+  associated_paper_evidence:
+    - Main quality and efficiency results
+    - Larger-catalog generalization
+    - U2I versus I2I comparison
+  file: results/main/summary_main.csv
+  run_config_file: results/main/run_config.json
+  datasets: [ml-1m, ml-20m, goodbooks, amazon-books]
+  modalities: [u2i, i2i]
+  methods: [flat, hnsw, ivfflat, ivfpq, flatpq]
+  weighting: bm25
+  dim: 128
+  seed: 42
+  expected_rows: 40
+  key: [dataset, weighting, dim, modality, method, seed]
+  required_columns:
+    - dataset
+    - weighting
+    - dim
+    - modality
+    - method
+    - seed
+    - queries
+    - recall_at_k_mean
+    - precision_at_k_mean
+    - hr_at_k_mean
+    - ndcg_at_k_mean
+    - map_at_k_mean
+    - mrr_at_k_mean
+    - ann_recall_vs_exact_at_k_mean
+    - recall_at_100_mean
+    - ann_recall_vs_exact_at_100_mean
+    - coverage_at_k
+    - gini_exposure
+    - long_tail_exposure
+    - long_tail_uplift
+    - latency_p50_ms
+    - latency_p95_ms
+  metric_columns_no_nulls:
+    - recall_at_k_mean
+    - precision_at_k_mean
+    - hr_at_k_mean
+    - ndcg_at_k_mean
+    - map_at_k_mean
+    - mrr_at_k_mean
+    - ann_recall_vs_exact_at_k_mean
+    - recall_at_100_mean
+    - ann_recall_vs_exact_at_100_mean
+    - coverage_at_k
+    - gini_exposure
+    - long_tail_exposure
+    - long_tail_uplift
+    - latency_p50_ms
+    - latency_p95_ms
+  run_config_must_match:
+    weighting: bm25
+    dim: 128
+    seed: 42
+
+calibration_sensitivity:
+  status: critical
+  associated_paper_evidence:
+    - Calibration-sensitivity analysis
+  file: results/analyses/calibration_sensitivity/calibration_sensitivity.csv
+  datasets: [ml-1m, ml-20m, goodbooks, amazon-books]
+  methods: [hnsw, ivfflat, ivfpq]
+  targets: [0.90, 0.95, 0.98]
+  weighting: bm25
+  dim: 128
+  seed: 42
+  calibration_queries: 1000
+  expected_rows: 36
+  key: [dataset, weighting, dim, method, target_recall, seed]
+  required_columns:
+    - dataset
+    - weighting
+    - dim
+    - method
+    - target_recall
+    - target_reached
+    - param_name
+    - calibrated_param_value
+    - achieved_recall_vs_exact
+    - latency_p50_ms
+    - latency_p95_ms
+    - n_calibration_queries
+    - seed
+  required_non_null:
+    - target_reached
+    - param_name
+    - achieved_recall_vs_exact
+    - latency_p50_ms
+    - latency_p95_ms
+    - n_calibration_queries
+
+embedding_sensitivity:
+  status: critical
+  associated_paper_evidence:
+    - Embedding-backbone sensitivity
+  file: results/analyses/embedding_sensitivity/embedding_backbone_sensitivity_all.csv
+  datasets: [ml-1m]
+  modalities: [u2i]
+  backbones:
+    - svd_bm25
+    - svd_tfidf
+    - svd_none
+    - bpr_matrix_factorization
+  optional_backbones:
+    - two_tower_mlp
+  methods: [flat, hnsw, ivfflat, ivfpq, flatpq]
+  dim: 128
+  seed: 42
+  expected_rows: 20
+  key: [dataset, backbone, modality, method, dim, seed]
+  required_columns:
+    - dataset
+    - backbone
+    - modality
+    - method
+    - dim
+    - seed
+    - ndcg_at_10
+    - recall_at_10
+    - ann_recall_vs_exact_at_k_mean
+    - backend_available
+    - status
+    - error_message
+    - ann_ranking_stability
+  required_success_status: ok
+
+scale_stress:
+  status: critical
+  associated_paper_evidence:
+    - Production-scale cost analysis
+  file: results/analyses/scale_stress/scale_stress_all.csv
+  catalog_sizes: [10000, 50000, 100000, 500000, 1000000]
+  dimensions: [64, 128, 256]
+  methods: [flat, hnsw, ivfflat, ivfpq, flatpq]
+  seed: 42
+  expected_rows: 75
+  key: [n_items, dim, method, seed]
+  required_columns:
+    - n_items
+    - dim
+    - method
+    - seed
+    - build_wall_time_sec
+    - index_size_mb
+    - rss_mb_after
+    - calibration_target
+    - target_reached
+    - achieved_recall_vs_exact
+    - latency_p50_ms
+    - latency_p95_ms
+    - quality_measured
+  required_non_null:
+    - build_wall_time_sec
+    - index_size_mb
+    - rss_mb_after
+    - target_reached
+    - achieved_recall_vs_exact
+    - latency_p50_ms
+    - latency_p95_ms
+  require_values:
+    quality_measured: false
+  forbidden_quality_columns:
+    - recall_at_k_mean
+    - precision_at_k_mean
+    - hr_at_k_mean
+    - ndcg_at_k_mean
+    - map_at_k_mean
+    - mrr_at_k_mean
+
+bootstrap:
+  status: critical
+  associated_paper_evidence:
+    - Paired statistical significance
+  cis_file: results/analyses/bootstrap/bootstrap_cis.csv
+  tests_file: results/analyses/bootstrap/paired_tests.csv
+  datasets: [ml-1m, ml-20m, goodbooks, amazon-books]
+  modalities: [u2i, i2i]
+  methods: [flat, hnsw, ivfflat, ivfpq, flatpq]
+  comparison_methods: [hnsw, ivfflat, ivfpq, flatpq]
+  metrics: [recall, precision, hr, ndcg, map, mrr, ann_recall_vs_exact]
+  comparison_metrics: [recall, precision, hr, ndcg, map, mrr]
+  weighting: bm25
+  dim: 128
+  seed: 42
+  n_boot: 2000
+  expected_cis_rows: 280
+  expected_tests_rows: 192
+  cis_key: [dataset, weighting, dim, modality, method, metric, seed, n_boot]
+  tests_key: [dataset, weighting, dim, modality, method, baseline, metric, seed, n_boot]
+  required_columns_cis:
+    - dataset
+    - weighting
+    - dim
+    - modality
+    - method
+    - metric
+    - mean
+    - ci_low
+    - ci_high
+    - n
+    - n_boot
+    - seed
+  required_columns_tests:
+    - dataset
+    - weighting
+    - dim
+    - modality
+    - method
+    - baseline
+    - metric
+    - mean_diff
+    - ci_low
+    - ci_high
+    - p_value
+    - n
+    - n_boot
+    - seed
+
+effect_sizes:
+  status: critical
+  associated_paper_evidence:
+    - Paired effect-size analysis
+  file: results/analyses/effect_sizes/effect_sizes.csv
+  datasets: [ml-1m, ml-20m, goodbooks, amazon-books]
+  modalities: [u2i, i2i]
+  methods: [hnsw, ivfflat, ivfpq, flatpq]
+  metrics: [recall, precision, hr, ndcg, map, mrr]
+  baseline: flat
+  weighting: bm25
+  dim: 128
+  seed: 42
+  expected_rows: 192
+  key: [dataset, weighting, dim, modality, method, baseline, metric, seed]
+  required_columns:
+    - dataset
+    - weighting
+    - dim
+    - modality
+    - method
+    - baseline
+    - metric
+    - mean_diff
+    - cohens_d
+    - cohens_d_magnitude
+    - cliffs_delta
+    - cliffs_delta_magnitude
+    - n
+    - seed
+
+exposure:
+  status: critical
+  associated_paper_evidence:
+    - Long-tail exposure and popularity-proxy analysis
+  file: results/analyses/exposure/exposure_analysis_all.csv
+  datasets: [ml-1m, ml-20m, goodbooks, amazon-books]
+  modalities: [u2i, i2i]
+  methods: [flat, hnsw, ivfflat, ivfpq, flatpq]
+  required_metrics:
+    - long_tail_exposure
+    - long_tail_uplift
+    - gini_exposure
+    - coverage
+    - exposure_share_decile
+    - exposure_share_group
+    - user_popularity_calibration_error
+  weighting: bm25
+  dim: 128
+  seed: 42
+  expected_rows_min: 840
+  key: [dataset, weighting, dim, modality, method, metric, k, decile, group, seed]
+  scope_column: fairness_scope
+  allowed_scope_values:
+    - long_tail_exposure_proxy_only
+    - popularity_calibration_proxy
+    - provider_proxy_if_metadata_available
+  required_columns:
+    - dataset
+    - weighting
+    - dim
+    - modality
+    - method
+    - metric
+    - k
+    - decile
+    - group
+    - value
+    - fairness_scope
+    - seed
+
+pq_diagnostics:
+  status: critical
+  associated_paper_evidence:
+    - Product-quantization diagnostics
+  file: results/analyses/pq_diagnostics/pq_diagnostics_all.csv
+  datasets: [ml-1m, ml-20m, goodbooks, amazon-books]
+  methods: [flatpq, ivfpq]
+  required_metrics:
+    - reconstruction_error_rel_mean
+    - neighbor_overlap_at_10
+    - neighbor_overlap_at_100
+  weighting: bm25
+  dim: 128
+  seed: 42
+  expected_rows_min: 24
+  key: [dataset, weighting, dim, method, metric, decile, seed]
+  required_columns:
+    - dataset
+    - weighting
+    - dim
+    - method
+    - metric
+    - decile
+    - value
+    - seed
+
+decision_framework:
+  status: critical
+  associated_paper_evidence:
+    - ANN selection decision framework
+  file: results/analyses/decision_framework/ann_decision_framework_scores.csv
+  datasets: [ml-1m, ml-20m, goodbooks, amazon-books]
+  modalities: [u2i, i2i]
+  methods: [flat, hnsw, ivfflat, ivfpq, flatpq]
+  weighting: bm25
+  dim: 128
+  seed: 42
+  expected_rows: 40
+  key: [dataset, weighting, dim, modality, method, seed]
+  required_columns:
+    - dataset
+    - weighting
+    - dim
+    - modality
+    - method
+    - seed
+    - quality_retention
+    - latency_score
+    - memory_score
+    - exposure_score
+    - w_quality
+    - w_latency
+    - w_memory
+    - w_exposure
+    - deployment_score
+    - deployment_rank
+    - recommended_use_case
+    - recommendation_reason
+  required_values:
+    w_quality: 0.45
+    w_latency: 0.30
+    w_memory: 0.15
+    w_exposure: 0.10
+
+dataset_stats:
+  status: critical
+  associated_paper_evidence:
+    - Dataset statistics
+  file: results/paper/tables/dataset_stats.csv
+  datasets: [ml-1m, ml-20m, goodbooks, amazon-books]
+  expected_rows: 4
+  key: [dataset]
+  required_columns:
+    - dataset
+    - users
+    - items
+    - interactions
+    - density
+    - inter_per_user_median
+    - inter_per_user_p95
+    - train_interactions
+    - test_users
+    - popularity_gini
+    - min_user_interactions_filter
+  required_values:
+    min_user_interactions_filter: 5
+
+hardware:
+  status: critical
+  associated_paper_evidence:
+    - CPU-only scope
+    - Hardware provenance
+  file: results/_meta/hardware.json
+  required_fields:
+    - captured_at_utc
+    - accelerator_present
+    - main_experiments_accelerator_used
+    - accelerator_note
+    - platform
+    - cpu
+    - memory
+    - python
+    - packages
+    - threads
+  required_values:
+    main_experiments_accelerator_used: false
+  forbidden_fields:
+    - gpu_used
+    - gpu_device
+    - gpu_energy_joules
+
+run_manifest:
+  status: critical
+  associated_paper_evidence:
+    - Full-run provenance
+    - CPU-only scope
+  file: results/_meta/run_manifest.json
+  required_fields:
+    - run_id
+    - project
+    - started_at_utc
+    - finished_at_utc
+    - status
+    - resolved_configuration
+    - configuration_hash
+    - git_commit
+    - git_dirty_state
+    - python_version
+    - dependency_versions
+    - hardware
+    - datasets
+    - methods
+    - modalities
+    - outputs
+    - failed_combinations
+  required_values:
+    project: IndexWise-Recsys
+    status: completed
+  datasets: [ml-1m, ml-20m, goodbooks, amazon-books]
+  methods: [flat, hnsw, ivfflat, ivfpq, flatpq]
+  modalities: [u2i, i2i]
+  required_output: results/main/summary_main.csv
+
+# The claim audit consumes validation_report.json, so requiring it during the
+# same validation pass would be circular.  It is listed and validated when
+# present, but its absence or staleness is optional and cannot change the
+# critical validator exit status.
+claim_support_audit:
+  status: optional
+  associated_paper_evidence:
+    - Claim-to-evidence traceability table
+  file: results/paper/tables/claim_support_audit.csv
+  expected_rows: 9
+  key: [claim_area]
+  required_columns:
+    - claim_area
+    - claim_strength_allowed
+    - required_validation_sections
+    - evidence_supported
+    - failing_checks
+    - safe_interpretation
+    - unsafe_interpretation_to_avoid

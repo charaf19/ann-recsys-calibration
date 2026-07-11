@@ -1,21 +1,16 @@
-"""Generate the paper figures (PNG + PDF) from measured result CSVs.
+"""Generate the paper figures (PNG + PDF, 300 dpi) from measured results.
 
-Pure post-processing over existing CSVs; missing inputs are skipped with a
-warning. Uses the Agg backend (headless, CPU-only).
+Pure post-processing: reads ONLY the canonical evidence under results/main/
+and results/analyses/ and writes ONLY under results/paper/figures/. Uses
+the Agg backend (headless, CPU-only). Every figure gets a
+distinct <full-filename>.sources.json sidecar recording source files, hashes,
+the canonical run's config hash, git commit, and timestamp.
 
-Figures (results/figures_paper/):
-    fig_latency_vs_ndcg          quality/latency trade-off per modality
-    fig_calibration_sensitivity  calibrated param + latency vs recall target
-    fig_long_tail_exposure       long_tail_exposure by method and dataset
-    fig_effect_sizes             Cliff's delta vs Flat (NDCG)
-    fig_scaling                  latency vs catalog size (if scaling ran)
-
-Reviewer-limitation module figures (regenerated from module CSVs when
-present; identical to the ones the run_* scripts emit, via utils/figures_ext):
-    pq_* (3), exposure_* / user_popularity_* (3), embedding_backbone_sensitivity,
-    scale_stress_* (3)
+The main summary is a critical input (clear error when absent); analysis
+inputs are optional (visible warning, only the dependent figures skipped).
 """
 import argparse
+import sys
 from pathlib import Path
 
 import matplotlib
@@ -24,12 +19,24 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from utils.paths import RESULTS
+from utils.result_io import resolve_write_mode, ResultExistsError
 from utils import figures_ext as FX
 
 SCRIPT = "figures_paper"
 
+IN = {
+    "summary": Path(RESULTS["main"]) / "summary_main.csv",
+    "calibration": Path(RESULTS["calibration_sensitivity"]) / "calibration_sensitivity.csv",
+    "effect_sizes": Path(RESULTS["effect_sizes"]) / "effect_sizes.csv",
+    "embedding": Path(RESULTS["embedding_sensitivity"]) / "embedding_backbone_sensitivity_all.csv",
+    "pq_summary": Path(RESULTS["pq_diagnostics"]) / "pq_diagnostics_summary.csv",
+    "pq_all": Path(RESULTS["pq_diagnostics"]) / "pq_diagnostics_all.csv",
+    "exposure": Path(RESULTS["exposure_analysis"]) / "exposure_analysis_all.csv",
+    "scale": Path(RESULTS["scale_stress"]) / "scale_stress_all.csv",
+}
 
-def _read(path):
+
+def _read_optional(path):
     p = Path(path)
     if not p.is_file():
         print(f"[{SCRIPT}] WARN: {p} not found; skipping dependent figures.")
@@ -37,26 +44,26 @@ def _read(path):
     return pd.read_csv(p)
 
 
-def _save(fig, out_dir, name):
-    paths = []
-    for ext in ("png", "pdf"):
-        p = out_dir / f"{name}.{ext}"
-        fig.savefig(p, dpi=300, bbox_inches="tight")  # publication quality
-        paths.append(p)
-    plt.close(fig)
+def _save(fig, out_dir, name, sources, write_mode="replace"):
+    paths = FX.save_figure_artifacts(
+        fig, out_dir, name, write_mode=write_mode, source_files=sources,
+        script=SCRIPT)
     for p in paths:
         print(f"[{SCRIPT}] output path: {p}")
+    return paths
 
 
-def fig_latency_vs_ndcg(summary, out_dir):
+def fig_latency_vs_ndcg(summary, out_dir, write_mode="replace"):
     modalities = sorted(summary["modality"].dropna().unique())
     fig, axes = plt.subplots(1, max(1, len(modalities)),
-                             figsize=(5.5 * max(1, len(modalities)), 4.2), squeeze=False)
+                             figsize=(5.5 * max(1, len(modalities)), 4.2),
+                             squeeze=False)
     for ax, mod in zip(axes[0], modalities):
         sub = summary[summary["modality"] == mod]
         for method in sorted(sub["method"].unique()):
             s = sub[sub["method"] == method]
-            ax.scatter(s["latency_p95_ms"], s["ndcg_at_k_mean"], label=method, s=40)
+            ax.scatter(s["latency_p95_ms"], s["ndcg_at_k_mean"],
+                       label=method, s=40)
         ax.set_xscale("log")
         ax.set_xlabel("Latency p95 (ms, log)")
         ax.set_ylabel("NDCG@k (mean)")
@@ -64,10 +71,11 @@ def fig_latency_vs_ndcg(summary, out_dir):
         ax.grid(alpha=0.3)
     axes[0][-1].legend(fontsize=8)
     fig.suptitle("Quality vs latency at the calibrated operating point")
-    _save(fig, out_dir, "fig_latency_vs_ndcg")
+    return _save(fig, out_dir, "fig_latency_vs_ndcg", [IN["summary"]],
+                 write_mode=write_mode)
 
 
-def fig_calibration_sensitivity(cal, out_dir):
+def fig_calibration_sensitivity(cal, out_dir, write_mode="replace"):
     fig, axes = plt.subplots(1, 2, figsize=(11, 4.2))
     for (dataset, method), g in cal.groupby(["dataset", "method"]):
         g = g.sort_values("target_recall")
@@ -84,14 +92,16 @@ def fig_calibration_sensitivity(cal, out_dir):
         ax.grid(alpha=0.3)
     axes[1].legend(fontsize=7)
     fig.suptitle("Calibration sensitivity across recall targets")
-    _save(fig, out_dir, "fig_calibration_sensitivity")
+    return _save(fig, out_dir, "fig_calibration_sensitivity",
+                 [IN["calibration"]], write_mode=write_mode)
 
 
-def fig_long_tail_exposure(summary, out_dir):
+def fig_long_tail_exposure(summary, out_dir, write_mode="replace"):
     sub = summary.dropna(subset=["long_tail_exposure"])
     datasets = sorted(sub["dataset"].unique())
     fig, axes = plt.subplots(1, max(1, len(datasets)),
-                             figsize=(4.2 * max(1, len(datasets)), 4.0), squeeze=False)
+                             figsize=(4.2 * max(1, len(datasets)), 4.0),
+                             squeeze=False)
     for ax, dataset in zip(axes[0], datasets):
         d = sub[(sub["dataset"] == dataset)]
         piv = d.pivot_table(index="method", columns="modality",
@@ -103,15 +113,18 @@ def fig_long_tail_exposure(summary, out_dir):
     axes[0][-1].legend(title="modality", fontsize=8)
     fig.suptitle("Long-tail exposure by index method")
     fig.tight_layout()
-    _save(fig, out_dir, "fig_long_tail_exposure")
+    return _save(fig, out_dir, "fig_long_tail_exposure", [IN["summary"]],
+                 write_mode=write_mode)
 
 
-def fig_effect_sizes(effects, out_dir):
+def fig_effect_sizes(effects, out_dir, write_mode="replace"):
     sub = effects[effects["metric"] == "ndcg"].copy()
     if sub.empty:
-        print(f"[{SCRIPT}] WARN: no NDCG effect sizes; skipping fig_effect_sizes.")
+        print(f"[{SCRIPT}] WARN: no NDCG effect sizes; skipping "
+              f"fig_effect_sizes.")
         return
-    sub["label"] = (sub["dataset"] + "/" + sub["modality"] + "/" + sub["method"])
+    sub["label"] = (sub["dataset"] + "/" + sub["modality"] + "/"
+                    + sub["method"])
     sub = sub.sort_values("cliffs_delta")
     fig, ax = plt.subplots(figsize=(7, 0.35 * len(sub) + 1.5))
     ax.barh(sub["label"], sub["cliffs_delta"])
@@ -120,86 +133,79 @@ def fig_effect_sizes(effects, out_dir):
     ax.set_xlabel("Cliff's delta vs Flat (NDCG@k); dashed = negligible band")
     ax.grid(alpha=0.3, axis="x")
     fig.suptitle("Effect sizes of ANN vs exact search")
-    _save(fig, out_dir, "fig_effect_sizes")
+    return _save(fig, out_dir, "fig_effect_sizes", [IN["effect_sizes"]],
+                 write_mode=write_mode)
 
 
-def fig_scaling(scaling, out_dir):
-    fig, ax = plt.subplots(figsize=(6, 4.2))
-    for method, g in scaling.groupby("method"):
-        g = g.sort_values("n_items")
-        ax.plot(g["n_items"], g["latency_p95_ms"], marker="o", label=method)
-    ax.set_xscale("log")
-    ax.set_yscale("log")
-    ax.set_xlabel("Catalog size (items, log)")
-    ax.set_ylabel("Latency p95 (ms, log)")
-    ax.grid(alpha=0.3)
-    ax.legend()
-    fig.suptitle("Synthetic scaling at fixed calibration target")
-    _save(fig, out_dir, "fig_scaling")
+def generate_figures(out_dir, write_mode):
+    """Generate every figure whose canonical inputs are available."""
+    summary = pd.read_csv(IN["summary"])
+    fig_latency_vs_ndcg(summary, out_dir, write_mode)
+    fig_long_tail_exposure(summary, out_dir, write_mode)
+
+    cal = _read_optional(IN["calibration"])
+    if cal is not None:
+        fig_calibration_sensitivity(cal, out_dir, write_mode)
+
+    effects = _read_optional(IN["effect_sizes"])
+    if effects is not None:
+        fig_effect_sizes(effects, out_dir, write_mode)
+
+    # Analysis-module figures share the same atomic renderer and sidecar
+    # contract as the headline figures.
+    module_figures = [
+        (IN["pq_summary"], [FX.fig_pq_reconstruction_error_by_dataset,
+                            FX.fig_pq_neighbor_overlap_vs_quality_delta]),
+        (IN["pq_all"], [FX.fig_pq_popularity_decile_effect]),
+        (IN["exposure"], [FX.fig_exposure_by_popularity_decile,
+                          FX.fig_user_popularity_calibration_error,
+                          FX.fig_exposure_gini_by_method]),
+        (IN["embedding"], [FX.fig_embedding_backbone_sensitivity]),
+        (IN["scale"], [FX.fig_scale_stress_latency,
+                       FX.fig_scale_stress_memory,
+                       FX.fig_scale_stress_index_size]),
+    ]
+    for csv_path, fig_fns in module_figures:
+        df = _read_optional(csv_path)
+        if df is None:
+            continue
+        for fn in fig_fns:
+            written = fn(
+                df, out_dir, write_mode=write_mode,
+                source_files=[csv_path], script=SCRIPT)
+            for path in written:
+                print(f"[{SCRIPT}] output path: {path}")
 
 
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--summary_csv", default=f"{RESULTS['main']}/summary_main.csv")
-    ap.add_argument("--calibration_csv",
-                    default=f"{RESULTS['calibration_sensitivity']}/calibration_sensitivity.csv")
-    ap.add_argument("--effect_sizes_csv", default=f"{RESULTS['effect_sizes']}/effect_sizes.csv")
-    ap.add_argument("--scaling_csv", default=f"{RESULTS['scale_stress']}/scale_stress_all.csv")
-    ap.add_argument("--out_dir", default=RESULTS["figures_paper"])
+    ap = argparse.ArgumentParser(
+        description="Generate every paper figure (PNG+PDF, 300 dpi, source "
+                    "sidecars) from the canonical results directories.")
+    ap.add_argument("--out_dir", default=RESULTS["paper_figures"])
+    ap.add_argument("--write_mode", default="replace",
+                    choices=["fail_if_exists", "replace"],
+                    help="regenerated presentation figures; default replace")
     args = ap.parse_args()
 
     out_dir = Path(args.out_dir)
     print(f"[{SCRIPT}] starting...")
-    for p in (args.summary_csv, args.calibration_csv, args.effect_sizes_csv, args.scaling_csv):
+    for p in IN.values():
         print(f"[{SCRIPT}] input path: {p}")
     print(f"[{SCRIPT}] output path: {out_dir}")
+
+    # main summary is CRITICAL: without it there are no headline figures
+    if not IN["summary"].is_file():
+        print(f"[{SCRIPT}] ERROR: canonical input missing: {IN['summary']}\n"
+              f"  produce it first with: python src/run_revision_experiments.py"
+              f" --config configs/main_cpu.yml")
+        sys.exit(1)
+    write_mode = resolve_write_mode(args.write_mode)
     out_dir.mkdir(parents=True, exist_ok=True)
-
-    summary = _read(args.summary_csv)
-    if summary is not None:
-        fig_latency_vs_ndcg(summary, out_dir)
-        fig_long_tail_exposure(summary, out_dir)
-
-    cal = _read(args.calibration_csv)
-    if cal is not None:
-        fig_calibration_sensitivity(cal, out_dir)
-
-    effects = _read(args.effect_sizes_csv)
-    if effects is not None:
-        fig_effect_sizes(effects, out_dir)
-
-    scaling = Path(args.scaling_csv)
-    if scaling.is_file():
-        fig_scaling(pd.read_csv(scaling), out_dir)
-    else:
-        print(f"[{SCRIPT}] INFO: {scaling} not found (scaling study optional).")
-
-    # reviewer-limitation module figures (skip silently-missing inputs)
-    module_figures = [
-        (f"{RESULTS['paper_tables']}/pq_diagnostics_summary.csv",
-         [FX.fig_pq_reconstruction_error_by_dataset,
-          FX.fig_pq_neighbor_overlap_vs_quality_delta]),
-        (f"{RESULTS['pq_diagnostics']}/pq_diagnostics_all.csv",
-         [FX.fig_pq_popularity_decile_effect]),
-        (f"{RESULTS['exposure_analysis']}/exposure_analysis_all.csv",
-         [FX.fig_exposure_by_popularity_decile,
-          FX.fig_user_popularity_calibration_error,
-          FX.fig_exposure_gini_by_method]),
-        (f"{RESULTS['embedding_sensitivity']}/embedding_backbone_sensitivity_all.csv",
-         [FX.fig_embedding_backbone_sensitivity]),
-        (f"{RESULTS['scale_stress']}/scale_stress_all.csv",
-         [FX.fig_scale_stress_latency, FX.fig_scale_stress_memory,
-          FX.fig_scale_stress_index_size]),
-    ]
-    for csv_path, fig_fns in module_figures:
-        p = Path(csv_path)
-        if not p.is_file():
-            print(f"[{SCRIPT}] INFO: {p} not found (module optional); skipping.")
-            continue
-        df = pd.read_csv(p)
-        for fn in fig_fns:
-            for written in fn(df, out_dir):
-                print(f"[{SCRIPT}] output path: {written}")
+    try:
+        generate_figures(out_dir, write_mode)
+    except ResultExistsError as e:
+        print(f"[{SCRIPT}] ERROR: {e}")
+        sys.exit(1)
 
     print(f"[{SCRIPT}] completed.")
 

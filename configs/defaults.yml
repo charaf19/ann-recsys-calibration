@@ -1,0 +1,61 @@
+# IndexWise-Recsys — shared scientific defaults.
+# Every experiment config inherits from this file; changing a value here
+# changes the paper protocol. See docs/critical_experiment_contract.md.
+
+project:
+  name: IndexWise-Recsys
+
+reproducibility:
+  seed: 42
+  omp_threads: 1          # FAISS build threads; 1 = bit-reproducible HNSW/IVF
+
+embedding:
+  method: truncated_svd
+  dim: 128
+  weighting: bm25         # none | tfidf | bm25
+  normalize: l2
+  bm25_k1: 1.2
+  bm25_b: 0.75
+
+retrieval:
+  methods:
+    - flat
+    - hnsw
+    - ivfflat
+    - ivfpq
+    - flatpq
+  modalities:
+    - u2i
+    - i2i
+  topk: 100
+  metric_topk: 10
+  budget_mb: 100
+  runtime_defaults:
+    ef: 128
+    nprobe: 16
+
+evaluation:
+  tail_fraction: 0.2
+
+index:
+  hnsw:
+    M: 24
+    ef_construction: 200
+  ivf:
+    nlist: auto
+  pq:
+    m: 32
+    bits: 8
+  ivfpq:
+    use_opq: true
+
+calibration:
+  targets:
+    - 0.90
+    - 0.95
+    - 0.98
+  primary_target: 0.95
+  queries: 1000
+
+statistics:
+  bootstrap_iterations: 2000

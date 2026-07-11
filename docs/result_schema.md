@@ -1,32 +1,61 @@
 # Canonical result schema and write policy
 
-Only five top-level result directories are valid: `results/_meta/`, `results/main/`, `results/analyses/`, `results/paper/`, and `results/archive/`. `archive/` is reserved and is never read by canonical code.
+Only four top-level result directories are valid: `results/_meta/`,
+`results/main/`, `results/analyses/`, and `results/paper/`. Canonical
+scripts read canonical filenames only — there is no legacy-path or
+alternate-filename fallback, and missing canonical inputs fail with a clear
+error.
 
-## Metadata
+## Metadata (`results/_meta/`)
 
-- `_meta/hardware/hardware.json`: CPU/platform/package/thread metadata, `gpu_present` (passive disclosure), and `gpu_used_in_main_experiments=false`.
-- `_meta/status/status_{dataset}_{method}.json`: step status for the current main run.
-- `_meta/validation/`: schema and paper-evidence validation reports.
+- `hardware.json` / `hardware.md`: CPU/platform/package/thread metadata,
+  `accelerator_present` (passive disclosure), and
+  `main_experiments_accelerator_used=false`.
+- `environment.txt`: `pip freeze` snapshot.
+- `run_manifest.json`: run id, resolved configuration + hash, Git commit and
+  dirty status, package versions, requested grid, outputs, failures.
+- `validation_report.{csv,md,json}`: strict paper-evidence validation.
 
-## Main evidence
+## Main evidence (`results/main/`)
 
-- `main/summary_main.csv`: exactly one row per dataset × method × modality.
-- `main/{dataset}__{weighting}__{modality}__{method}.json`: aggregate metrics.
-- `main/perquery/*.npz`: aligned per-query metrics used for paired inference.
-- `main/calibration/*.json`: exact-Flat agreement calibration records.
+- `summary_main.csv`: exactly one row per dataset × modality × method, with
+  natural key `(dataset, weighting, dim, modality, method, seed)` and
+  provenance columns (`run_id`, `config_hash`, `code_commit`,
+  `created_at_utc`).
+- `run_config.json`: the resolved run configuration.
+- `aggregates/{dataset}__{weighting}__d{dim}__{modality}__{method}.json`
+- `perquery/{dataset}__{weighting}__d{dim}__{modality}__{method}.npz`
+  (aligned per-query metrics; input to paired inference)
+- `calibration/{dataset}__{weighting}__d{dim}__{method}__target_{t:.2f}.json`
+- `status/{dataset}__{weighting}__d{dim}__{method}.status.json`
 
-Agreement recall and held-out recommendation relevance are distinct fields.
+Agreement recall (`ann_recall_vs_exact_*`, index fidelity vs exact Flat) and
+held-out recommendation relevance (`recall/ndcg/...`) are distinct fields
+and must never be conflated.
 
-## Analyses and paper evidence
+## Analyses (`results/analyses/`)
 
-Named subdirectories under `analyses/` contain calibration sensitivity, bootstrap confidence intervals and paired tests, effect sizes, embedding sensitivity, exposure analysis, PQ diagnostics, scale stress, optional CPU backend comparisons, CPU energy measurement, and the ANN decision framework.
+One named subdirectory per analysis: `calibration_sensitivity/`,
+`bootstrap/`, `effect_sizes/`, `embedding_sensitivity/`, `exposure/`,
+`pq_diagnostics/`, `scale_stress/`, `decision_framework/`,
+`optional_backends/`, `energy/`.
 
-`paper/tables/` contains CSV/Markdown/LaTeX tables and the claim-support audit. `paper/figures/` contains PNG/PDF figures generated only from current-run evidence.
+## Paper artifacts (`results/paper/`)
 
-## Validation and safe writes
+`tables/` (CSV/Markdown/LaTeX + the claim-support audit), `figures/`
+(PNG+PDF, 300 dpi), `supplementary/`. Every generated table/figure has a
+`<name>.sources.json` sidecar with source files, hashes, config hash,
+timestamp, script, and Git commit.
 
-Consolidated evidence must be complete, parseable, non-empty, use canonical modality labels, and have unique scientific keys. Writers must write through a temporary sibling and atomically replace a destination only when overwrite was explicitly authorized. A fresh canonical run starts from the empty directory skeleton so evidence from different runs cannot be combined.
+## Safe writes
 
-`src/validate_paper_evidence.py` checks all 4 × 5 × 2 dataset/method/modality rows, canonical configuration values, and every required analysis.
+All consolidated evidence is written through `src/utils/result_io.py`:
+atomic temp-file writes, three modes (`fail_if_exists` — the default for
+experiment producers, `replace`, `merge` by natural key), duplicate-key
+validation, and deterministic row ordering. A failed write never damages
+the previous file; conflicting rows with the same key raise an error.
 
-IndexWise-Recsys is evaluated as a CPU-only framework. GPU acceleration and GPU-specific latency behavior are outside the current scope. GPU output is not part of any result schema or evidence manifest.
+`src/validate_paper_evidence.py` validates the complete contract from
+`configs/paper_evidence_manifest.yml` (40 main rows, 36 calibration rows,
+20 embedding-sensitivity rows, 75 scale rows, `n_boot=2000`, CPU-only
+scope) and writes its reports to `results/_meta/`.

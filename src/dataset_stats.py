@@ -16,6 +16,8 @@ import numpy as np
 import pandas as pd
 
 from utils.metrics import gini_exposure
+from utils.paths import RESULTS
+from utils.provenance import write_sources_sidecar
 from utils.splits import temporal_leave_one_out
 from utils.reporting import write_table
 
@@ -61,7 +63,7 @@ def main():
     ap.add_argument("--datasets", nargs="+", required=True,
                     help="name:path pairs, e.g. ml-1m:data/ml1m.csv")
     ap.add_argument("--min_user_interactions", type=int, default=1)
-    ap.add_argument("--out_dir", default="results/paper/tables")
+    ap.add_argument("--out_dir", default=RESULTS["paper_tables"])
     args = ap.parse_args()
 
     print(f"[{SCRIPT}] starting...")
@@ -69,6 +71,7 @@ def main():
     print(f"[{SCRIPT}] output path: {out_dir}")
 
     rows = []
+    sources = []
     for spec in args.datasets:
         name, _, path = spec.partition(":")
         if not path:
@@ -78,6 +81,7 @@ def main():
             print(f"[{SCRIPT}] WARN: {path} not found; skipping {name}.")
             continue
         rows.append(stats_for(name, path, args.min_user_interactions))
+        sources.append(path)
 
     if not rows:
         print(f"[{SCRIPT}] WARN: no datasets processed.")
@@ -86,6 +90,7 @@ def main():
 
     df = pd.DataFrame(rows)
     written = write_table(df, out_dir / "dataset_stats", float_fmt="{:.6f}")
+    write_sources_sidecar(out_dir / "dataset_stats.csv", sources, SCRIPT)
     for p in written:
         print(f"[{SCRIPT}] output path: {p}")
     print(df.to_string(index=False))

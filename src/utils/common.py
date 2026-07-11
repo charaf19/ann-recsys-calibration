@@ -1,4 +1,4 @@
-\
+"""Shared runtime helpers: seeding, modality normalization, small utilities."""
 import os, time, json, math, random, psutil, numpy as np
 from contextlib import contextmanager
 

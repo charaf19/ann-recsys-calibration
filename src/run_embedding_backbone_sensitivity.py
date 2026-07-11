@@ -1,20 +1,22 @@
 """Embedding backbone sensitivity study.
 
 Reviewer concern addressed: "SVD-only embeddings". For each backbone
-(svd_bm25 / svd_tfidf / svd_none / bpr_matrix_factorization /
-two_tower_mlp) this trains embeddings, builds indexes, calibrates, and runs
-the U2I evaluation — then reports `ann_ranking_stability`: the Spearman
-correlation of the ANN-method ranking (by NDCG@10) under each backbone
-against the ranking under the reference backbone `svd_bm25`.
+(svd_bm25 / svd_tfidf / svd_none / bpr_matrix_factorization, plus the
+optional two_tower_mlp) this trains embeddings, builds indexes, calibrates,
+and runs the U2I evaluation — then reports `ann_ranking_stability`: the
+Spearman correlation of the ANN-method ranking (by NDCG@10) under each
+backbone against the ranking under the reference backbone `svd_bm25`.
+Stability is REPORTED, never required: unstable rankings are honest results.
 
 This is a sensitivity check, not the main pipeline. `two_tower_mlp` needs
-PyTorch (optional dependency); if torch is missing, that backbone is skipped
-with a warning and the others still run.
+PyTorch (optional dependency); if torch is missing that backbone is recorded
+with backend_available=false and the required backbones still run.
 
-Outputs:
-    results/embedding_sensitivity/embedding_backbone_sensitivity_all.csv
-    results/paper_tables/embedding_backbone_sensitivity_summary.csv/.tex (+ .md)
-    results/figures_paper/embedding_backbone_sensitivity.pdf
+Configuration: configs/analyses.yml, section embedding_sensitivity
+(inherits scientific defaults from configs/defaults.yml).
+
+Output: results/analyses/embedding_sensitivity/embedding_backbone_sensitivity_all.csv
+(presentation tables/figures come from tables_paper.py / figures_paper.py)
 """
 import argparse
 import json
@@ -24,19 +26,23 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import yaml
 from scipy.stats import spearmanr
 
 from calibrate import calibrate_index
 from utils.ann_io import load_ann_index, CALIBRATION_PARAM
 from utils.common import set_global_seed
+from utils.config import load_config, cfg_get, config_hash, ConfigError
+from utils.index_config import build_index_command
 from utils.paths import dataset_csv, dataset_stem, RESULTS
-from utils.reporting import write_table
-from utils.figures_ext import fig_embedding_backbone_sensitivity
+from utils.provenance import make_run_id, provenance_columns
+from utils.result_io import (preflight_output, write_dataframe_atomic,
+                             ResultExistsError)
 
 SCRIPT = "run_embedding_backbone_sensitivity"
+DEFAULT_CONFIG = "configs/analyses.yml"
 REFERENCE_BACKBONE = "svd_bm25"
 SVD_BACKBONES = {"svd_bm25": "bm25", "svd_tfidf": "tfidf", "svd_none": "none"}
+KEY = ["dataset", "backbone", "modality", "method", "dim", "seed"]
 
 
 def run(cmd, check=True):
@@ -45,30 +51,76 @@ def run(cmd, check=True):
     return subprocess.run(full, check=check).returncode
 
 
-def load_config(path):
-    p = Path(path)
-    if not p.is_file():
-        print(f"[{SCRIPT}] WARN: config {path} not found; using defaults.")
-        return {}
-    with open(p, "r", encoding="utf-8") as f:
-        return yaml.safe_load(f) or {}
+def _require_embedding_metadata(emb, expected, backbone):
+    path = Path(emb) / "embedding_meta.json"
+    if not path.is_file():
+        raise RuntimeError(f"metadata missing for reusable {backbone}: {path}")
+    try:
+        meta = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise RuntimeError(f"invalid embedding metadata {path}: {exc}") from exc
+    mismatch = {k: {"expected": v, "found": meta.get(k)}
+                for k, v in expected.items() if meta.get(k) != v}
+    if mismatch:
+        raise RuntimeError(
+            f"refusing stale {backbone} embeddings in {emb}: {mismatch}")
 
 
-def ensure_embeddings(backbone, dataset, dim, seed, cfg):
-    """Train (or reuse) embeddings for a backbone; returns emb dir or None."""
+def ensure_embeddings(backbone, dataset, dim, normalize, seed, es_cfg,
+                      embedding_cfg, cfg_hash):
+    """Train (or reuse) embeddings for a backbone; returns emb dir or None
+    when an optional dependency is missing."""
     csv = dataset_csv(dataset)
     stem = dataset_stem(dataset)
     if backbone in SVD_BACKBONES:
         weighting = SVD_BACKBONES[backbone]
         emb = f"data/emb_{stem}_{weighting}_d{dim}"
-        if not Path(f"{emb}/item_vecs.npy").is_file():
-            run(["python", "src/train_embeddings.py", "--interactions", csv,
-                 "--dim", str(dim), "--weighting", weighting,
-                 "--normalize", "l2", "--seed", str(seed), "--out_dir", emb])
+        expected = {"dim_requested": dim, "weighting": weighting,
+                    "normalize": normalize, "seed": seed}
+        if weighting == "bm25":
+            expected.update({
+                "bm25_k1": cfg_get(embedding_cfg, "bm25_k1", type=float,
+                                   required=True),
+                "bm25_b": cfg_get(embedding_cfg, "bm25_b", type=float,
+                                  required=True),
+            })
+        if Path(f"{emb}/item_vecs.npy").is_file():
+            _require_embedding_metadata(emb, expected, backbone)
+        else:
+            cmd = ["python", "src/train_embeddings.py", "--interactions", csv,
+                   "--dim", str(dim), "--weighting", weighting,
+                   "--normalize", normalize, "--seed", str(seed),
+                   "--config_hash", cfg_hash,
+                   "--out_dir", emb]
+            if weighting == "bm25":
+                cmd += [
+                    "--bm25_k1", str(cfg_get(
+                        embedding_cfg, "bm25_k1", type=float, required=True)),
+                    "--bm25_b", str(cfg_get(
+                        embedding_cfg, "bm25_b", type=float, required=True)),
+                ]
+            run(cmd)
         return emb
 
     emb = f"data/emb_{stem}_{backbone}_d{dim}"
     if Path(f"{emb}/item_vecs.npy").is_file():
+        hp_name = "bpr" if backbone == "bpr_matrix_factorization" else "two_tower"
+        hp = cfg_get(es_cfg, hp_name, required=True)
+        expected = {"embedding_backend": backbone, "dim": dim,
+                    "normalize": normalize, "seed": seed,
+                    "epochs": int(cfg_get(hp, "epochs", required=True)),
+                    "lr": float(cfg_get(hp, "lr", required=True))}
+        if backbone == "bpr_matrix_factorization":
+            expected.update({
+                "reg": float(cfg_get(hp, "reg", required=True)),
+                "n_negatives": int(cfg_get(hp, "n_negatives", required=True)),
+            })
+        else:
+            expected.update({
+                "hidden_dim": int(cfg_get(hp, "hidden_dim", required=True)),
+                "batch_size": int(cfg_get(hp, "batch_size", required=True)),
+            })
+        _require_embedding_metadata(emb, expected, backbone)
         return emb
     if backbone == "two_tower_mlp":
         try:
@@ -77,37 +129,31 @@ def ensure_embeddings(backbone, dataset, dim, seed, cfg):
             print(f"[{SCRIPT}] WARN: PyTorch not installed; skipping optional "
                   f"backbone two_tower_mlp (pip install torch to enable).")
             return None
-    hp = cfg.get("bpr" if backbone == "bpr_matrix_factorization" else "two_tower", {})
+    hp = es_cfg.get("bpr" if backbone == "bpr_matrix_factorization"
+                    else "two_tower", {})
     cmd = ["python", "src/train_neural_embeddings.py", "--interactions", csv,
-           "--backbone", backbone, "--dim", str(dim), "--normalize", "l2",
-           "--seed", str(seed), "--out_dir", emb]
-    if "epochs" in hp:
-        cmd += ["--epochs", str(hp["epochs"])]
-    if "lr" in hp:
-        cmd += ["--lr", str(hp["lr"])]
+           "--backbone", backbone, "--dim", str(dim), "--normalize", normalize,
+           "--seed", str(seed), "--config_hash", cfg_hash,
+           "--out_dir", emb,
+           "--epochs", str(cfg_get(hp, "epochs", required=True)),
+           "--lr", str(cfg_get(hp, "lr", required=True))]
+    if backbone == "bpr_matrix_factorization":
+        cmd += ["--reg", str(cfg_get(hp, "reg", required=True)),
+                "--n_negatives", str(cfg_get(hp, "n_negatives",
+                                             required=True))]
+    else:
+        cmd += ["--hidden_dim", str(cfg_get(hp, "hidden_dim", required=True)),
+                "--batch_size", str(cfg_get(hp, "batch_size", required=True))]
     run(cmd)
     return emb
 
 
-def build_index_cmd(method, emb, idx_dir, budget_mb):
-    cmd = ["python", "src/build_index.py", "--method", method,
-           "--item_vecs", f"{emb}/item_vecs.npy",
-           "--item_ids", f"{emb}/item_ids.npy",
-           "--out_dir", idx_dir, "--budget_mb", str(budget_mb)]
-    if method == "hnsw":
-        cmd += ["--M", "24", "--efc", "200"]
-    elif method == "ivfflat":
-        cmd += ["--nlist", "auto"]
-    elif method == "ivfpq":
-        cmd += ["--nlist", "auto", "--m", "32", "--bits", "8"]
-    elif method == "flatpq":
-        cmd += ["--m", "32", "--bits", "8"]
-    return cmd
-
-
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--config", default="configs/embedding_backbones.yml")
+    ap = argparse.ArgumentParser(
+        description="ANN-method-ranking stability across embedding backbones "
+                    "(U2I; reference backbone svd_bm25).")
+    ap.add_argument("--config", default=DEFAULT_CONFIG,
+                    help="analyses YAML (section embedding_sensitivity)")
     ap.add_argument("--datasets", nargs="*", default=None)
     ap.add_argument("--backbones", nargs="*", default=None)
     ap.add_argument("--methods", nargs="*", default=None)
@@ -115,28 +161,98 @@ def main():
     ap.add_argument("--queries", default=None)
     ap.add_argument("--seed", type=int, default=None)
     ap.add_argument("--out_dir", default=RESULTS["embedding_sensitivity"])
+    ap.add_argument("--write_mode", default="fail_if_exists",
+                    choices=["fail_if_exists", "replace", "merge"])
+    ap.add_argument("--include_optional_backbones", action="store_true",
+                    help="also run configured optional backbones such as "
+                         "two_tower_mlp (off by default)")
     args = ap.parse_args()
 
-    cfg = load_config(args.config)
-    datasets = args.datasets or cfg.get("datasets", ["ml-1m"])
-    backbones = args.backbones or cfg.get("backbones", list(SVD_BACKBONES)
-                                          + ["bpr_matrix_factorization", "two_tower_mlp"])
-    methods = args.methods or cfg.get("methods",
-                                      ["flat", "hnsw", "ivfflat", "ivfpq", "flatpq"])
-    dim = args.dim or int(cfg.get("dim", 128))
-    queries = str(args.queries or cfg.get("queries", 2000))
-    topk = int(cfg.get("topk", 100))
-    metric_topk = int(cfg.get("metric_topk", 10))
-    budget_mb = int(cfg.get("budget_mb", 100))
-    seed = args.seed if args.seed is not None else int(cfg.get("seed", 42))
+    try:
+        cfg = load_config(args.config, cli_overrides={
+            "embedding_sensitivity.datasets": args.datasets,
+            "embedding_sensitivity.backbones": args.backbones,
+            "embedding_sensitivity.methods": args.methods,
+            "embedding.dim": args.dim,
+            "embedding_sensitivity.queries": args.queries,
+            "reproducibility.seed": args.seed,
+        })
+    except ConfigError as e:
+        print(f"[{SCRIPT}] ERROR: {e}")
+        sys.exit(1)
+
+    es = cfg_get(cfg, "embedding_sensitivity", default={})
+    datasets = list(es.get("datasets", ["ml-1m"]))
+    backbones = list(es.get("backbones", list(SVD_BACKBONES)
+                            + ["bpr_matrix_factorization"]))
+    optional_backbones = list(es.get("optional_backbones", ["two_tower_mlp"]))
+    if args.backbones is None and args.include_optional_backbones:
+        backbones = backbones + [b for b in optional_backbones
+                                 if b not in backbones]
+    methods = list(es.get("methods",
+                          ["flat", "hnsw", "ivfflat", "ivfpq", "flatpq"]))
+    modalities = list(es.get("modalities", ["u2i"]))
+    queries = str(es.get("queries", 10000))
+    dim = cfg_get(cfg, "embedding.dim", type=int, default=128)
+    embedding_cfg = cfg_get(cfg, "embedding", required=True)
+    normalize = cfg_get(cfg, "embedding.normalize", required=True)
+    topk = cfg_get(cfg, "retrieval.topk", type=int, required=True)
+    metric_topk = cfg_get(cfg, "retrieval.metric_topk", type=int, required=True)
+    budget_mb = cfg_get(cfg, "retrieval.budget_mb", type=int, required=True)
+    cal_queries = cfg_get(cfg, "calibration.queries", type=int, required=True)
+    primary_target = cfg_get(cfg, "calibration.primary_target", type=float,
+                             required=True)
+    omp_threads = cfg_get(cfg, "reproducibility.omp_threads", type=int,
+                          required=True)
+    seed = cfg_get(cfg, "reproducibility.seed", type=int, required=True)
+    default_ef = cfg_get(cfg, "retrieval.runtime_defaults.ef", type=int,
+                         required=True)
+    default_nprobe = cfg_get(cfg, "retrieval.runtime_defaults.nprobe", type=int,
+                             required=True)
+    index_cfg = cfg_get(cfg, "index", required=True)
+    cfg_hash = config_hash(cfg)
+    prov = provenance_columns(make_run_id(cfg_hash), cfg_hash)
+
+    required_backbones = list(es.get("backbones", []))
+    expected_datasets = ["ml-1m"]
+    expected_modalities = ["u2i"]
+    canonical_methods = list(cfg_get(cfg, "retrieval.methods", required=True))
+    if datasets != expected_datasets or modalities != expected_modalities:
+        print(f"[{SCRIPT}] ERROR: canonical sensitivity scope is "
+              f"datasets={expected_datasets}, modalities={expected_modalities}; "
+              f"resolved {datasets}/{modalities}.")
+        sys.exit(1)
+    if methods != canonical_methods:
+        print(f"[{SCRIPT}] ERROR: embedding sensitivity must use the canonical "
+              f"five methods {canonical_methods}; resolved {methods}.")
+        sys.exit(1)
+    if any(b not in backbones for b in required_backbones):
+        print(f"[{SCRIPT}] ERROR: required backbones cannot be omitted: "
+              f"{required_backbones}.")
+        sys.exit(1)
 
     out_dir = Path(args.out_dir)
+    all_path = out_dir / "embedding_backbone_sensitivity_all.csv"
     eval_dir = out_dir / "eval"
+    eval_aggregate_dir = eval_dir / "aggregates"
+    eval_perquery_dir = eval_dir / "perquery"
+    try:
+        preflight_output(all_path, args.write_mode)
+    except (ResultExistsError, ValueError) as e:
+        print(f"[{SCRIPT}] ERROR: {e}")
+        sys.exit(1)
+
+    missing = [d for d in datasets if not Path(dataset_csv(d)).is_file()]
+    if missing:
+        print(f"[{SCRIPT}] ERROR: dataset CSV(s) missing: "
+              f"{[dataset_csv(d) for d in missing]}; prepare them first.")
+        sys.exit(1)
 
     print(f"[{SCRIPT}] starting...")
     print(f"[{SCRIPT}] input path: {args.config}")
     print(f"[{SCRIPT}] output path: {out_dir}")
-    print(f"[{SCRIPT}] datasets={datasets} backbones={backbones} methods={methods}")
+    print(f"[{SCRIPT}] datasets={datasets} backbones={backbones} "
+          f"methods={methods} modalities={modalities} queries={queries}")
 
     set_global_seed(seed)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -144,80 +260,110 @@ def main():
     rows = []
     for dataset in datasets:
         csv = dataset_csv(dataset)
-        if not Path(csv).is_file():
-            print(f"[{SCRIPT}] WARN: {csv} missing; prepare it first. Skipping.")
-            continue
         stem = dataset_stem(dataset)
         for backbone in backbones:
-            emb = ensure_embeddings(backbone, dataset, dim, seed, cfg)
+            emb = ensure_embeddings(backbone, dataset, dim, normalize, seed, es,
+                                    embedding_cfg, cfg_hash)
             if emb is None:
-                # graceful skip: keep the backbone visible in the schema
-                # instead of silently dropping it
-                rows.append({
-                    "dataset": dataset, "backbone": backbone,
-                    "embedding_backend": backbone, "modality": "u2i",
-                    "method": None, "dim": dim,
-                    "ndcg_at_10": None, "recall_at_10": None,
-                    "ann_recall_vs_exact_at_k_mean": None,
-                    "long_tail_uplift": None,
-                    "backend_available": False,
-                    "status": "skipped_missing_dependency",
-                    "error_message": "torch_not_installed",
-                    "seed": seed,
-                })
+                # optional backbone with missing dependency: keep it visible
+                # in the schema instead of silently dropping it
+                for modality in modalities:
+                    for method in methods:
+                        rows.append({
+                            "dataset": dataset, "backbone": backbone,
+                            "embedding_backend": backbone,
+                            "modality": modality, "method": method,
+                            "dim": dim, "ndcg_at_10": None,
+                            "recall_at_10": None,
+                            "ann_recall_vs_exact_at_k_mean": None,
+                            "long_tail_uplift": None,
+                            "backend_available": False,
+                            "status": "skipped_missing_dependency",
+                            "error_message": "torch_not_installed",
+                            "seed": seed, **prov,
+                        })
                 continue
             item_vecs = np.load(f"{emb}/item_vecs.npy").astype("float32")
             N, D = item_vecs.shape
+            if D != dim:
+                raise RuntimeError(
+                    f"embedding dimension mismatch for {dataset}/{backbone}: "
+                    f"configured d{dim}, loaded d{D}")
 
             for method in methods:
                 idx_dir = f"data/index_{stem}_{backbone}_d{dim}_{method}"
                 if not (Path(idx_dir).exists() and any(Path(idx_dir).iterdir())):
-                    run(build_index_cmd(method, emb, idx_dir, budget_mb))
+                    run(build_index_command(
+                        method, Path(emb) / "item_vecs.npy",
+                        Path(emb) / "item_ids.npy", idx_dir, budget_mb,
+                        seed, omp_threads, index_cfg,
+                        configuration_hash=cfg_hash))
 
-                ef, nprobe = 128, 16
+                ef, nprobe = default_ef, default_nprobe
                 if CALIBRATION_PARAM.get(method) is not None:
                     ann = load_ann_index(idx_dir, D, N)
-                    cal = calibrate_index(ann, item_vecs, 0.95, topk,
-                                          n_queries=1000, seed=seed)
+                    cal = calibrate_index(ann, item_vecs, primary_target, topk,
+                                          n_queries=cal_queries, seed=seed)
                     if cal["calibrated_param_value"] is not None:
                         if CALIBRATION_PARAM[method] == "ef":
                             ef = int(cal["calibrated_param_value"])
                         else:
                             nprobe = int(cal["calibrated_param_value"])
 
-                run(["python", "src/eval_modalities.py",
-                     "--interactions", csv, "--item_vecs", f"{emb}/item_vecs.npy",
-                     "--index", idx_dir, "--ann_method", method,
-                     "--modality", "u2i", "--queries", queries,
-                     "--topk", str(topk), "--metric_topk", str(metric_topk),
-                     "--ef", str(ef), "--nprobe", str(nprobe),
-                     "--seed", str(seed), "--dataset", dataset,
-                     "--weighting", backbone, "--out_dir", str(eval_dir)])
+                for modality in modalities:
+                    run(["python", "src/eval_modalities.py",
+                         "--interactions", csv, "--item_vecs",
+                         f"{emb}/item_vecs.npy",
+                         "--index", idx_dir, "--ann_method", method,
+                         "--modality", modality, "--queries", queries,
+                         "--topk", str(topk), "--metric_topk", str(metric_topk),
+                         "--ef", str(ef), "--nprobe", str(nprobe),
+                         "--seed", str(seed), "--dataset", dataset,
+                         "--weighting", backbone, "--config", args.config,
+                         "--aggregate_dir", str(eval_aggregate_dir),
+                         "--perquery_dir", str(eval_perquery_dir),
+                         "--write_mode", args.write_mode])
 
-                agg = eval_dir / f"{dataset}__{backbone}__u2i__{method}.json"
-                e = json.load(open(agg)) if agg.is_file() else {}
-                rows.append({
-                    "dataset": dataset, "backbone": backbone,
-                    "embedding_backend": backbone, "modality": "u2i",
-                    "method": method, "dim": dim,
-                    "ndcg_at_10": e.get("ndcg_at_k_mean"),
-                    "recall_at_10": e.get("recall_at_k_mean"),
-                    "ann_recall_vs_exact_at_k_mean": e.get("ann_recall_vs_exact_at_k_mean"),
-                    "long_tail_uplift": e.get("long_tail_uplift"),
-                    "backend_available": True,
-                    "status": "ok",
-                    "error_message": "",
-                    "seed": seed,
-                })
+                    agg = (eval_aggregate_dir
+                           / f"{dataset}__{backbone}__d{D}__{modality}__{method}.json")
+                    if not agg.is_file():
+                        raise RuntimeError(
+                            f"evaluation completed without aggregate {agg}")
+                    with open(agg, encoding="utf-8") as handle:
+                        e = json.load(handle)
+                    rows.append({
+                        "dataset": dataset, "backbone": backbone,
+                        "embedding_backend": backbone, "modality": modality,
+                        "method": method, "dim": dim,
+                        "ndcg_at_10": e.get("ndcg_at_k_mean"),
+                        "recall_at_10": e.get("recall_at_k_mean"),
+                        "ann_recall_vs_exact_at_k_mean": e.get("ann_recall_vs_exact_at_k_mean"),
+                        "long_tail_uplift": e.get("long_tail_uplift"),
+                        "backend_available": True,
+                        "status": "ok",
+                        "error_message": "",
+                        "seed": seed, **prov,
+                    })
 
     if not rows:
-        print(f"[{SCRIPT}] WARN: nothing evaluated.")
-        print(f"[{SCRIPT}] completed.")
-        return
+        print(f"[{SCRIPT}] ERROR: nothing evaluated.")
+        sys.exit(1)
 
     df = pd.DataFrame(rows)
 
-    # ann_ranking_stability: Spearman of method ranking vs the reference backbone
+    required_df = df[df["backbone"].isin(required_backbones)]
+    expected_required_rows = (len(datasets) * len(required_backbones)
+                              * len(modalities) * len(methods))
+    successful = ((required_df["backend_available"] == True)  # noqa: E712
+                  & (required_df["status"] == "ok"))
+    if len(required_df) != expected_required_rows or not successful.all():
+        print(f"[{SCRIPT}] ERROR: required sensitivity grid incomplete: "
+              f"expected {expected_required_rows} successful rows, found "
+              f"{int(successful.sum())}/{len(required_df)}.")
+        sys.exit(1)
+
+    # ann_ranking_stability: Spearman of the method ranking vs the reference
+    # backbone. Reported honestly — never required to be stable.
     df["ann_ranking_stability"] = np.nan
     for dataset, g in df.groupby("dataset"):
         ref = g[g["backbone"] == REFERENCE_BACKBONE].set_index("method")["ndcg_at_10"]
@@ -234,23 +380,9 @@ def main():
             df.loc[(df["dataset"] == dataset) & (df["backbone"] == backbone),
                    "ann_ranking_stability"] = float(rho)
 
-    all_path = out_dir / "embedding_backbone_sensitivity_all.csv"
-    if all_path.exists():
-        raise FileExistsError(f"Refusing to overwrite existing evidence: {all_path}")
-    df.to_csv(all_path, index=False)
-    print(f"[{SCRIPT}] output path: {all_path}")
-
-    summary = (df.groupby(["dataset", "backbone"])
-               .agg(ndcg_at_10_best=("ndcg_at_10", "max"),
-                    ann_ranking_stability=("ann_ranking_stability", "first"),
-                    n_methods=("method", "nunique")).reset_index())
-    written = write_table(summary, Path(RESULTS["paper_tables"])
-                          / "embedding_backbone_sensitivity_summary")
-    for p in written:
-        print(f"[{SCRIPT}] output path: {p}")
-
-    for p in fig_embedding_backbone_sensitivity(df, Path(RESULTS["figures_paper"])):
-        print(f"[{SCRIPT}] output path: {p}")
+    write_dataframe_atomic(df, all_path, mode=args.write_mode,
+                           key=KEY, sort_by=KEY)
+    print(f"[{SCRIPT}] output path: {all_path} ({len(df)} rows)")
     print(f"[{SCRIPT}] completed.")
 
 

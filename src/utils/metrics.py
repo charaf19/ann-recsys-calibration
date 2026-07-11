@@ -136,7 +136,7 @@ def long_tail_uplift(exposure_counts, pop_counts, tail_frac=0.2):
 # Bootstrap confidence intervals
 # ----------------------------
 
-def bootstrap_ci(values, n_boot=1000, alpha=0.05, seed=42):
+def bootstrap_ci(values, n_boot=2000, alpha=0.05, seed=42):
     """Percentile bootstrap CI for the mean of per-query values.
 
     Returns dict with mean, ci_low, ci_high, n, n_boot.
@@ -153,7 +153,7 @@ def bootstrap_ci(values, n_boot=1000, alpha=0.05, seed=42):
             "n": int(n), "n_boot": int(n_boot)}
 
 
-def paired_bootstrap_test(a, b, n_boot=1000, seed=42):
+def paired_bootstrap_test(a, b, n_boot=2000, seed=42):
     """Paired bootstrap for mean(a - b) on per-query metrics of two systems
     evaluated on the *same* queries (arrays aligned by query).
 
