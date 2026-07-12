@@ -62,6 +62,29 @@ def _delta_ndcg(summary, dataset, weighting, method):
     return float(pq["ndcg_at_k_mean"].mean() - flat["ndcg_at_k_mean"].mean())
 
 
+def _diagnostic_nprobe(summary, dataset, weighting, method):
+    """Return the calibrated I2I nprobe for item-vector diagnostics."""
+    if summary is None or "nprobe" not in summary.columns:
+        return 1
+
+    rows = summary[
+        (summary["dataset"] == dataset)
+        & (summary["weighting"] == weighting)
+        & (summary["method"] == method)
+    ]
+
+    if "modality" in rows.columns:
+        i2i_rows = rows[rows["modality"] == "i2i"]
+        if not i2i_rows.empty:
+            rows = i2i_rows
+
+    values = pd.to_numeric(rows["nprobe"], errors="coerce").dropna()
+    if values.empty:
+        return 1
+
+    return max(1, int(values.max()))
+
+
 def main():
     ap = argparse.ArgumentParser(
         description="PQ codec diagnostics: reconstruction error, neighbor "
@@ -156,7 +179,22 @@ def main():
             print(f"[{SCRIPT}] diagnosing {dataset}/{method}")
             fpath = resolve_index_path(idx_dir)
             raw_index = faiss.read_index(str(fpath))
-            ann = load_ann_index(idx_dir, D, N)
+
+            nprobe_used = None
+            if method == "ivfpq":
+                nprobe_used = _diagnostic_nprobe(
+                    summary, dataset, weighting, method
+                )
+                ivf = faiss.extract_index_ivf(raw_index)
+                ivf.nprobe = int(nprobe_used)
+                print(
+                    f"[{SCRIPT}] using calibrated I2I "
+                    f"nprobe={nprobe_used} for {dataset}/{method}"
+                )
+
+            ann = load_ann_index(
+                idx_dir, D, N, nprobe=nprobe_used
+            )
 
             # 1-3: codec geometry
             X_hat = PQ.reconstruct(raw_index, X)
@@ -202,9 +240,17 @@ def main():
                 "delta_ndcg_vs_flat": delta,
                 "interpretation_label": label,
             }
-            summary_rows.append({**base, **headline,
-                                 "n_sample_vectors": len(v_idx),
-                                 "n_sample_queries": len(q_idx)})
+            summary_rows.append({
+                **base,
+                **headline,
+                "nprobe_used": (
+                    int(nprobe_used)
+                    if nprobe_used is not None
+                    else -1
+                ),
+                "n_sample_vectors": len(v_idx),
+                "n_sample_queries": len(q_idx),
+            })
             for metric, value in headline.items():
                 if isinstance(value, (int, float)):
                     long_rows.append({**base, "metric": metric, "decile": None,
@@ -238,6 +284,21 @@ def main():
 
     out_dir.mkdir(parents=True, exist_ok=True)
     long_df = pd.DataFrame(long_rows)
+
+    # Global metrics do not belong to a popularity decile. Represent that
+    # dimension explicitly because natural-key columns cannot contain nulls.
+    long_df["decile"] = (
+        pd.to_numeric(long_df["decile"], errors="coerce")
+        .fillna(-1)
+        .astype(int)
+    )
+    long_df["dim"] = (
+        pd.to_numeric(long_df["dim"], errors="raise").astype(int)
+    )
+    long_df["seed"] = (
+        pd.to_numeric(long_df["seed"], errors="raise").astype(int)
+    )
+
     write_dataframe_atomic(long_df, all_path, mode=args.write_mode,
                            key=KEY, sort_by=KEY)
     print(f"[{SCRIPT}] output path: {all_path} ({len(long_df)} rows)")

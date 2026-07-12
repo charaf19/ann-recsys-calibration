@@ -77,13 +77,41 @@ def neighbor_overlap(exact, ann, Q, k):
 
 
 def score_variance(index_like, Q, k=100):
-    """Variance of top-k retrieval scores (L2 distances), mean over queries."""
+    """Mean per-query variance of valid top-k L2 distances.
+
+    FAISS IVF indexes can fill missing neighbors with a float32-maximum
+    sentinel. These entries are not retrieval scores and must be excluded.
+    Calculations are performed in float64 to prevent overflow.
+    """
     import faiss  # noqa: F401  (index_like is a faiss index or AnnIndex-like)
+
     if hasattr(index_like, "search") and not hasattr(index_like, "d"):
-        # AnnIndex wrapper does not expose distances; use raw faiss instead
-        raise ValueError("score_variance needs a raw faiss index (returns distances)")
-    D, _ = index_like.search(np.ascontiguousarray(Q, dtype=np.float32), k)
-    return float(np.mean(np.var(D, axis=1)))
+        raise ValueError(
+            "score_variance needs a raw faiss index (returns distances)"
+        )
+
+    distances, _ = index_like.search(
+        np.ascontiguousarray(Q, dtype=np.float32), int(k)
+    )
+    distances = np.asarray(distances, dtype=np.float64)
+
+    sentinel_limit = float(np.finfo(np.float32).max) / 2.0
+    valid = np.isfinite(distances) & (distances < sentinel_limit)
+
+    row_variances = []
+    for row, mask in zip(distances, valid):
+        values = row[mask]
+        if values.size >= 2:
+            row_variances.append(
+                float(np.var(values, dtype=np.float64))
+            )
+
+    if not row_variances:
+        return float("nan")
+
+    return float(
+        np.mean(np.asarray(row_variances, dtype=np.float64))
+    )
 
 
 def popularity_deciles(pop_counts):
