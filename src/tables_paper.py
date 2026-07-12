@@ -78,8 +78,8 @@ def table_long_tail(em, summary):
 
 
 def table_calibration(em, cal):
-    df = cal.copy().sort_values(["dataset", "method", "target_recall"])
-    cols = ["dataset", "weighting", "dim", "method", "target_recall",
+    df = cal.copy().sort_values(["dataset", "modality", "method", "target_recall"])
+    cols = ["dataset", "weighting", "dim", "modality", "method", "target_recall",
             "target_reached", "param_name", "calibrated_param_value",
             "achieved_recall_vs_exact", "latency_p50_ms", "latency_p95_ms"]
     df = df[[c for c in cols if c in df.columns]]

@@ -43,15 +43,12 @@ scale_stress:
     - 500000
     - 1000000
   dimensions:
-    - 64
     - 128
-    - 256
   methods:
     - flat
     - hnsw
     - ivfflat
     - ivfpq
-    - flatpq
   calibration_target: 0.95
   quality_measured: false   # cost-only stress test; never a quality claim
   # synthetic vector generation (seeded Gaussian mixture)

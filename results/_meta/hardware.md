@@ -1,6 +1,6 @@
 # Hardware / environment capture
 
-- Captured (UTC): 2026-07-11T16:37:06.974433+00:00
+- Captured (UTC): 2026-07-12T17:29:37.704236+00:00
 - Accelerator present on machine: True
 - Accelerator used in main experiments: **False**
 
@@ -8,7 +8,7 @@
 > No GPU was used by the canonical experiments.
 
 - OS: Windows 10
-- CPU: Intel64 Family 6 Model 197 Stepping 2, GenuineIntel
+- CPU: Intel(R) Core(TM) Ultra 7 255H
 - Physical cores: 16
 - RAM: 31.4 GB
 

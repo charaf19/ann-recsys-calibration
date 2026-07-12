@@ -68,13 +68,14 @@ def _build_calibration(root, m):
     spec = m["calibration_sensitivity"]
     rows = [{
         "dataset": d, "weighting": spec["weighting"], "dim": spec["dim"],
-        "method": me, "target_recall": t, "target_reached": True,
+        "modality": mo, "method": me, "target_recall": t, "target_reached": True,
         "param_name": "ef" if me == "hnsw" else "nprobe",
-        "calibrated_param_value": 32, "achieved_recall_vs_exact": t + 0.005,
+        "selected_param_value": 32, "achieved_recall_vs_exact": t + 0.005,
         "latency_p50_ms": 0.4, "latency_p95_ms": 1.2,
         "n_calibration_queries": spec["calibration_queries"],
+        "query_source": "shared_modality_query_cache",
         "seed": spec["seed"],
-    } for d, me, t in product(spec["datasets"], spec["methods"],
+    } for d, mo, me, t in product(spec["datasets"], spec["modalities"], spec["methods"],
                               spec["targets"])]
     assert len(rows) == spec["expected_rows"]
     _write_csv(root, spec["file"], rows)

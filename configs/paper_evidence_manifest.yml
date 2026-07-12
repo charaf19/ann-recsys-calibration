@@ -87,30 +87,34 @@ calibration_sensitivity:
   file: results/analyses/calibration_sensitivity/calibration_sensitivity.csv
   datasets: [ml-1m, ml-20m, goodbooks, amazon-books]
   methods: [hnsw, ivfflat, ivfpq]
+  modalities: [u2i, i2i]
   targets: [0.90, 0.95, 0.98]
   weighting: bm25
   dim: 128
   seed: 42
   calibration_queries: 1000
-  expected_rows: 36
-  key: [dataset, weighting, dim, method, target_recall, seed]
+  expected_rows: 72
+  key: [dataset, weighting, dim, modality, method, target_recall, seed]
   required_columns:
     - dataset
     - weighting
     - dim
+    - modality
     - method
     - target_recall
     - target_reached
     - param_name
-    - calibrated_param_value
+    - selected_param_value
     - achieved_recall_vs_exact
     - latency_p50_ms
     - latency_p95_ms
     - n_calibration_queries
+    - query_source
     - seed
   required_non_null:
     - target_reached
     - param_name
+    - selected_param_value
     - achieved_recall_vs_exact
     - latency_p50_ms
     - latency_p95_ms
@@ -157,10 +161,10 @@ scale_stress:
     - Production-scale cost analysis
   file: results/analyses/scale_stress/scale_stress_all.csv
   catalog_sizes: [10000, 50000, 100000, 500000, 1000000]
-  dimensions: [64, 128, 256]
-  methods: [flat, hnsw, ivfflat, ivfpq, flatpq]
+  dimensions: [128]
+  methods: [flat, hnsw, ivfflat, ivfpq]
   seed: 42
-  expected_rows: 75
+  expected_rows: 20
   key: [n_items, dim, method, seed]
   required_columns:
     - n_items

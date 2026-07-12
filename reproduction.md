@@ -66,8 +66,9 @@ For every dataset × method this trains the SVD/BM25 embeddings, builds the
 index (parameters resolved from `configs/defaults.yml`: HNSW M=24
 efConstruction=200, IVF nlist=auto, PQ m=32 bits=8, IVF-PQ with OPQ),
 calibrates ef/nprobe against exact Flat at targets 0.90/0.95/0.98 with
-1000 calibration queries, measures single-query latency (2000 queries) at
-the 0.95 operating point, and runs the U2I and I2I evaluations
+1000 deterministic queries from each modality population, measures
+single-query latency (2000 queries) at each modality's 0.95 operating point,
+and runs the U2I and I2I evaluations
 (ml-1m: all eligible users; other datasets: 10000 seeded users).
 
 The run fails before any expensive work if a configured dataset CSV is
@@ -121,7 +122,7 @@ Notes:
   (U2I, ml-1m, 10000 queries); `two_tower_mlp` is optional and is recorded
   as unavailable when PyTorch is not installed. Ranking stability is
   reported, never required.
-- The scale stress test is cost-only: every one of its 75 rows carries
+- The scale stress test is cost-only: every one of its 20 rows carries
   `quality_measured=false` and no recommendation-quality metric.
 
 ## 5. Paper artifacts
@@ -153,9 +154,9 @@ The validator checks the full contract in
 | evidence | expectation |
 | --- | --- |
 | main rows | 40 (4 datasets × 2 modalities × 5 methods), weighting=bm25, dim=128, seed=42 |
-| calibration-sensitivity rows | 36 (4 datasets × hnsw/ivfflat/ivfpq × targets 0.90/0.95/0.98) |
+| calibration-sensitivity rows | 72 (4 datasets × 2 modalities × hnsw/ivfflat/ivfpq × targets 0.90/0.95/0.98) |
 | embedding-sensitivity rows | 20 required (4 backbones × 5 methods), stability reported |
-| scale-stress rows | 75, all `quality_measured=false` |
+| scale-stress rows | 20, all `quality_measured=false` |
 | bootstrap | `n_boot=2000` on every row, paired vs flat |
 | effect sizes | Cohen's d + Cliff's delta vs flat |
 | exposure | all datasets/modalities/methods with a `fairness_scope` field |

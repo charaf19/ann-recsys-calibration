@@ -1,7 +1,7 @@
 {
   "accelerator_note": "The presence of an accelerator is environment metadata only. No GPU was used by the canonical experiments.",
   "accelerator_present": true,
-  "captured_at_utc": "2026-07-11T16:37:06.974433+00:00",
+  "captured_at_utc": "2026-07-12T17:29:37.704236+00:00",
   "cpu": {
     "freq": {
       "current_mhz": 2000.0,
@@ -9,6 +9,7 @@
       "min_mhz": 0.0
     },
     "logical_cores": 16,
+    "model": "Intel(R) Core(TM) Ultra 7 255H",
     "physical_cores": 16
   },
   "main_experiments_accelerator_used": false,

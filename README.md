@@ -209,7 +209,7 @@ leaves no temporary residue.
 
 Existing embeddings and indexes are **not** trusted by path existence: with
 `--reuse_existing` they are reused only after their `*_meta.json` matches the
-resolved configuration (including `config_hash` and `min_user_interactions`).
+relevant stage fingerprint and population/construction metadata.
 Artifacts built under a different population or protocol are rejected as stale
 and rebuilt honestly.
 
@@ -218,9 +218,9 @@ and rebuilt honestly.
 | evidence | count |
 | --- | --- |
 | main rows (4 datasets × 2 modalities × 5 methods) | 40 |
-| calibration-sensitivity rows (4 × 3 tunable methods × 3 targets) | 36 |
+| calibration-sensitivity rows (4 × 2 modalities × 3 tunable methods × 3 targets) | 72 |
 | embedding-sensitivity rows (4 required backbones × 5 methods) | 20 |
-| scale-stress rows (5 sizes × 3 dims × 5 methods, cost only) | 75 |
+| scale-stress rows (5 sizes × 1 dim × 4 methods, cost only) | 20 |
 | bootstrap iterations (every row) | 2000 |
 
 The full component contract is in

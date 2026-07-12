@@ -24,7 +24,6 @@ import numpy as np
 import pandas as pd
 
 from utils.config import load_config, cfg_get, ConfigError
-from utils.metrics import bootstrap_ci, paired_bootstrap_test
 from utils.paths import RESULTS
 from utils.result_io import (preflight_output, write_dataframe_atomic,
                              ResultExistsError)
@@ -38,6 +37,44 @@ CI_KEY = ["dataset", "weighting", "dim", "modality", "method", "metric",
           "seed", "n_boot"]
 TEST_KEY = ["dataset", "weighting", "dim", "modality", "method", "baseline",
             "metric", "seed", "n_boot"]
+
+
+def grouped_bootstrap_means(arrays, n_boot, seed, batch_size=128):
+    """Resample aligned arrays with one deterministic index stream in batches."""
+    arrays = {key: np.asarray(value, dtype=np.float64)
+              for key, value in arrays.items()}
+    lengths = {value.size for value in arrays.values()}
+    if len(lengths) != 1:
+        raise ValueError(f"bootstrap arrays are not aligned: lengths={lengths}")
+    n = lengths.pop() if lengths else 0
+    out = {key: np.empty(n_boot, dtype=np.float64) for key in arrays}
+    if n == 0:
+        for value in out.values():
+            value.fill(0.0)
+        return out
+    rng = np.random.default_rng(seed)
+    for start in range(0, n_boot, batch_size):
+        stop = min(start + batch_size, n_boot)
+        idx = rng.integers(0, n, size=(stop - start, n))
+        for key, value in arrays.items():
+            out[key][start:stop] = value[idx].mean(axis=1)
+    return out
+
+
+def _ci(values, boot):
+    lo, hi = np.percentile(boot, [2.5, 97.5])
+    return {"mean": float(np.mean(values)), "ci_low": float(lo),
+            "ci_high": float(hi), "n": int(len(values)),
+            "n_boot": int(len(boot))}
+
+
+def _paired(values, baseline, boot):
+    diff = np.asarray(values) - np.asarray(baseline)
+    lo, hi = np.percentile(boot, [2.5, 97.5])
+    p = 2.0 * min((boot <= 0).mean(), (boot >= 0).mean())
+    return {"mean_diff": float(diff.mean()), "ci_low": float(lo),
+            "ci_high": float(hi), "p_value": float(min(1.0, p)),
+            "n": int(len(diff)), "n_boot": int(len(boot))}
 
 
 def load_perquery(perquery_dir):
@@ -185,50 +222,47 @@ def main():
 
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # 1) per-run bootstrap CIs
+    # Generate one deterministic, bounded bootstrap stream per aligned group
+    # and reuse it for every method, metric, and paired difference.
     ci_rows = []
-    for (dataset, weighting, dim, modality, method), rec in sorted(
-            runs.items(), key=lambda kv: tuple(map(str, kv[0]))):
-        for metric, values in rec["arrays"].items():
-            ci = bootstrap_ci(values, n_boot=n_boot, seed=seed)
-            ci_rows.append({
-                "dataset": dataset, "weighting": weighting, "dim": dim,
-                "modality": modality, "method": method, "metric": metric,
-                **ci, "seed": seed, "evaluation_seed": rec["seed"],
-            })
+    test_rows = []
+    groups = sorted({key[:4] for key in runs}, key=lambda key: tuple(map(str, key)))
+    for dataset, weighting, dim, modality in groups:
+        base = runs[(dataset, weighting, dim, modality, args.baseline_method)]
+        samples = {}
+        for method in cfg_get(cfg, "retrieval.methods", required=True):
+            rec = runs[(dataset, weighting, dim, modality, method)]
+            for metric, values in rec["arrays"].items():
+                samples[("ci", method, metric)] = values
+                if method != args.baseline_method and metric != "ann_recall_vs_exact":
+                    samples[("diff", method, metric)] = (
+                        values - base["arrays"][metric])
+        boot = grouped_bootstrap_means(samples, n_boot, seed)
+        for method in cfg_get(cfg, "retrieval.methods", required=True):
+            rec = runs[(dataset, weighting, dim, modality, method)]
+            for metric, values in rec["arrays"].items():
+                ci_rows.append({
+                    "dataset": dataset, "weighting": weighting, "dim": dim,
+                    "modality": modality, "method": method, "metric": metric,
+                    **_ci(values, boot[("ci", method, metric)]), "seed": seed,
+                    "evaluation_seed": rec["seed"],
+                })
+                if method == args.baseline_method or metric == "ann_recall_vs_exact":
+                    continue
+                t = _paired(values, base["arrays"][metric],
+                            boot[("diff", method, metric)])
+                test_rows.append({
+                    "dataset": dataset, "weighting": weighting, "dim": dim,
+                    "modality": modality, "method": method,
+                    "baseline": args.baseline_method, "metric": metric, **t,
+                    "significant_at_0.05": bool(t["p_value"] < 0.05),
+                    "seed": seed, "evaluation_seed": rec["seed"],
+                })
     ci_df = pd.DataFrame(ci_rows)
     write_dataframe_atomic(ci_df, ci_path, mode=args.write_mode,
                            key=CI_KEY, sort_by=CI_KEY)
     print(f"[{SCRIPT}] output path: {ci_path} ({len(ci_df)} rows)")
 
-    # 2) paired tests vs baseline within each (dataset, weighting, dim,
-    #    modality)
-    test_rows = []
-    for (dataset, weighting, dim, modality, method), rec in sorted(
-            runs.items(), key=lambda kv: tuple(map(str, kv[0]))):
-        if method == args.baseline_method:
-            continue
-        base = runs.get((dataset, weighting, dim, modality,
-                         args.baseline_method))
-        if base is None:  # guarded by validate_pairing_contract
-            raise RuntimeError("validated Flat baseline unexpectedly absent")
-        for metric in METRICS:
-            if metric == "ann_recall_vs_exact":
-                continue  # trivially 1.0 for the flat baseline; not paired
-            arrays, base_arrays = rec["arrays"], base["arrays"]
-            if metric not in arrays or metric not in base_arrays:
-                raise RuntimeError("validated metric unexpectedly absent")
-            a, b = arrays[metric], base_arrays[metric]
-            if a.shape != b.shape:
-                raise RuntimeError("validated paired arrays unexpectedly differ")
-            t = paired_bootstrap_test(a, b, n_boot=n_boot, seed=seed)
-            test_rows.append({
-                "dataset": dataset, "weighting": weighting, "dim": dim,
-                "modality": modality, "method": method,
-                "baseline": args.baseline_method, "metric": metric, **t,
-                "significant_at_0.05": bool(t["p_value"] < 0.05),
-                "seed": seed, "evaluation_seed": rec["seed"],
-            })
     test_df = pd.DataFrame(test_rows)
     write_dataframe_atomic(test_df, test_path, mode=args.write_mode,
                            key=TEST_KEY, sort_by=TEST_KEY)

@@ -70,6 +70,8 @@ def main():
                     help="seed for training-sample draws and FAISS clustering")
     ap.add_argument("--config_hash", default="unknown",
                     help="resolved experiment configuration hash")
+    ap.add_argument("--embedding_fingerprint", default=None)
+    ap.add_argument("--index_fingerprint", default=None)
     args = ap.parse_args()
 
     print(f"[{SCRIPT}] starting...")
@@ -102,6 +104,8 @@ def main():
         "omp_threads": int(args.omp_threads),
         "seed": int(args.seed),
         "config_hash": str(args.config_hash),
+        "embedding_fingerprint": args.embedding_fingerprint,
+        "index_fingerprint": args.index_fingerprint,
         "item_vecs": str(args.item_vecs),
     }
 

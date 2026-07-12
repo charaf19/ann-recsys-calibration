@@ -38,8 +38,9 @@ import pandas as pd
 from utils import metrics as M
 from utils.ann_io import load_ann_index, build_exact_index
 from utils.paths import RESULTS
-from utils.splits import temporal_leave_one_out, build_eval_cases
-from utils.preprocessing import filter_min_user_interactions
+from utils.modality_queries import (build_query_population, build_query_vectors,
+                                    item_id_map, load_interactions,
+                                    load_query_cache)
 from utils.common import set_global_seed, normalize_modality_label
 from utils.config import ConfigError, cfg_get, load_config
 from utils.result_io import (ResultExistsError, preflight_output,
@@ -50,19 +51,11 @@ DEFAULT_CONFIG = "configs/main_cpu.yml"
 
 
 def _load_id_map(item_vecs_path: Path, N: int):
-    ids_path = item_vecs_path.with_name("item_ids.npy")
-    if ids_path.is_file():
-        arr = np.load(ids_path, allow_pickle=True)
-        return {str(arr[i]): i for i in range(len(arr))}
-    return {str(i): i for i in range(N)}
+    return item_id_map(item_vecs_path, N)
 
 
 def _load_interactions(csv_path: str) -> pd.DataFrame:
-    df = pd.read_csv(csv_path, usecols=["user_id", "item_id", "timestamp"])
-    df["user_id"] = df["user_id"].astype(str)
-    df["item_id"] = df["item_id"].astype(str)
-    df["timestamp"] = pd.to_numeric(df["timestamp"], errors="coerce").fillna(0).astype(np.int64)
-    return df
+    return load_interactions(csv_path)
 
 
 def _popularity(train_df: pd.DataFrame, id2idx: dict, N: int) -> np.ndarray:
@@ -79,22 +72,7 @@ def _build_queries(modality: str, item_vecs: np.ndarray, train_idx_list, test_id
     exclusions[i]: set of item indices to strip from the ranked list.
     positives[i]: set containing the held-out item index.
     """
-    n = len(train_idx_list)
-    D = item_vecs.shape[1]
-    Q = np.zeros((n, D), dtype=np.float32)
-    exclusions = []
-    for i, hist in enumerate(train_idx_list):
-        if modality == "u2i":
-            Q[i] = item_vecs[hist].mean(axis=0)
-            exclusions.append(set(int(h) for h in hist))
-        elif modality == "i2i":
-            anchor = int(hist[-1])  # chronologically last training item
-            Q[i] = item_vecs[anchor]
-            exclusions.append({anchor})
-        else:
-            raise ValueError(f"unknown modality {modality}")
-    positives = [{int(t)} for t in test_idx]
-    return Q, exclusions, positives
+    return build_query_vectors(modality, item_vecs, train_idx_list, test_idx)
 
 
 def _ranked_lists(index, Q, exclusions, topk, N, batch=1024):
@@ -121,9 +99,14 @@ def _ranked_lists(index, Q, exclusions, topk, N, batch=1024):
 
 
 def evaluate_modality(modality, item_vecs, ann, exact, train_idx_list, test_idx,
-                      pop_counts, topk, metric_topk, tail_frac):
+                      pop_counts, topk, metric_topk, tail_frac, query_vectors=None):
     N = item_vecs.shape[0]
-    Q, exclusions, positives = _build_queries(modality, item_vecs, train_idx_list, test_idx)
+    built_q, exclusions, positives = _build_queries(
+        modality, item_vecs, train_idx_list, test_idx)
+    Q = built_q if query_vectors is None else np.ascontiguousarray(
+        query_vectors, dtype=np.float32)
+    if Q.shape != built_q.shape:
+        raise ValueError(f"query vector shape mismatch: {Q.shape} != {built_q.shape}")
 
     ann_ranked = _ranked_lists(ann, Q, exclusions, topk, N)
     exact_ranked = _ranked_lists(exact, Q, exclusions, topk, N)
@@ -195,6 +178,8 @@ def parse_args(argv=None):
     ap.add_argument("--ann_method", required=True,
                     help="label recorded in outputs (flat/hnsw/ivfflat/ivfpq/flatpq)")
     ap.add_argument("--modality", choices=["u2i", "i2i", "both"], default="both")
+    ap.add_argument("--query_cache", default=None,
+                    help="validated shared modality-query NPZ; avoids rebuilding the split")
     ap.add_argument("--queries", default=None,
                     help="int, or 'full' to evaluate every eligible user")
     ap.add_argument("--topk", type=int, default=None)
@@ -284,18 +269,7 @@ def main(argv=None):
         print(f"[{SCRIPT}] ERROR: {exc}")
         return 1
 
-    inter = _load_interactions(args.interactions)
-    n_before = len(inter)
-    inter = filter_min_user_interactions(inter, min_user_interactions)
-    print(f"[{SCRIPT}] k-core filter min_user_interactions="
-          f"{min_user_interactions}: interactions {n_before} -> {len(inter)}")
-    train_df, test_df = temporal_leave_one_out(inter)
     max_q = "full" if str(queries).lower() == "full" else int(queries)
-    users, train_idx_list, test_idx = build_eval_cases(
-        train_df, test_df, id2idx, max_queries=max_q, seed=seed)
-    pop_counts = _popularity(train_df, id2idx, N)
-    print(f"[{SCRIPT}] split: train={len(train_df)} test_users={len(users)} "
-          f"modality={args.modality} method={args.ann_method}")
 
     ann = load_ann_index(args.index, D, N, ef=ef, nprobe=nprobe)
     if ann.method != args.ann_method:
@@ -308,9 +282,28 @@ def main(argv=None):
     perquery_dir.mkdir(parents=True, exist_ok=True)
 
     for mod in modalities:
+        if args.query_cache:
+            population = load_query_cache(args.query_cache, {
+                "modality": mod, "seed": int(seed),
+                "min_user_interactions": int(min_user_interactions),
+                "max_queries": str(max_q), "dim": int(D), "n_items": int(N),
+            })
+        else:
+            population = build_query_population(
+                interactions_path=args.interactions, item_vecs=item_vecs,
+                id2idx=id2idx, modality=mod, max_queries=max_q, seed=seed,
+                min_user_interactions=min_user_interactions,
+                metadata={"query_fingerprint": "standalone-unfingerprinted"})
+        users = population.query_ids
+        train_idx_list = population.train_indices
+        test_idx = population.test_indices
+        pop_counts = population.pop_counts
+        print(f"[{SCRIPT}] query population: queries={len(users)} "
+              f"modality={mod} method={args.ann_method}")
         aggregate, per_query, exposure_counts, extras = evaluate_modality(
             mod, item_vecs, ann, exact, train_idx_list, test_idx,
-            pop_counts, topk, metric_topk, tail_frac)
+            pop_counts, topk, metric_topk, tail_frac,
+            query_vectors=population.query_vectors)
         aggregate.update({
             "dataset": dataset,
             "weighting": weighting,
@@ -320,6 +313,7 @@ def main(argv=None):
             "ef": int(ef), "nprobe": int(nprobe),
             "min_user_interactions": int(min_user_interactions),
             "seed": int(seed),
+            "query_fingerprint": population.metadata.get("query_fingerprint"),
         })
 
         stem = stems[mod]
@@ -333,7 +327,9 @@ def main(argv=None):
                              "dim": int(D),
                              "modality": mod, "method": args.ann_method,
                              "metric_topk": int(metric_topk),
-                             "seed": int(seed)}),
+                             "seed": int(seed),
+                             "query_fingerprint": population.metadata.get(
+                                 "query_fingerprint")}),
             query_ids=np.asarray(users, dtype=str),
             exposure_proxy=M.exposure_proxy(exposure_counts),
             **extras,

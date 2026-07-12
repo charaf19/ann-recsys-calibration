@@ -31,7 +31,8 @@ import pandas as pd
 from calibrate import calibrate_index
 from utils.ann_io import load_ann_index
 from utils.common import set_global_seed, rss_mb
-from utils.config import load_config, cfg_get, config_hash, ConfigError
+from utils.config import load_config, cfg_get, ConfigError
+from utils.fingerprints import scale_stress_fingerprint
 from utils.index_config import build_index_command
 from utils.paths import RESULTS
 from utils.result_io import (preflight_output, write_dataframe_atomic,
@@ -226,6 +227,8 @@ def main():
     ap.add_argument("--resume", action="store_true",
                     help="resume from scale_stress_checkpoint.csv; completed "
                          "natural keys are skipped after config-hash validation")
+    ap.add_argument("--validate_existing", action="store_true",
+                    help="validate a completed final grid and exit without work")
     ap.add_argument("--measure_quality", default="false",
                     help="end-to-end recommendation quality at synthetic "
                          "scale (true/false; deliberately NOT implemented)")
@@ -256,9 +259,8 @@ def main():
     ss = cfg_get(cfg, "scale_stress", default={})
     sizes = list(ss.get("catalog_sizes",
                         [10000, 50000, 100000, 500000, 1000000]))
-    dims = list(ss.get("dimensions", [64, 128, 256]))
-    methods = list(ss.get("methods",
-                          ["flat", "hnsw", "ivfflat", "ivfpq", "flatpq"]))
+    dims = list(ss.get("dimensions", [128]))
+    methods = list(ss.get("methods", ["flat", "hnsw", "ivfflat", "ivfpq"]))
     n_clusters = int(ss.get("n_clusters", 64))
     cluster_std = float(ss.get("cluster_std", 0.3))
     target = float(ss.get("calibration_target", 0.95))
@@ -270,7 +272,12 @@ def main():
                           default=1)
     seed = cfg_get(cfg, "reproducibility.seed", type=int, default=42)
     index_cfg = cfg_get(cfg, "index", default={})
-    resolved_hash = config_hash(cfg)
+    resolved_hash = scale_stress_fingerprint(
+        catalog_sizes=sizes, dimensions=dims, methods=methods,
+        calibration_target=target, calibration_queries=cal_queries,
+        timed_queries=timed_queries, seed=seed, index_config=index_cfg,
+        n_clusters=n_clusters, cluster_std=cluster_std, topk=topk,
+        budget_mb=budget_mb, omp_threads=omp_threads)
 
     try:
         require_cost_only(cfg_get(
@@ -303,6 +310,20 @@ def main():
     print(f"[{SCRIPT}] config_hash={resolved_hash}")
     print(f"[{SCRIPT}] NOTE: cost-only stress test; quality_measured=false on "
           f"every row by design.")
+
+    if args.validate_existing:
+        if not all_path.is_file():
+            print(f"[{SCRIPT}] ERROR: completed scale result does not exist: {all_path}")
+            sys.exit(1)
+        try:
+            frame = pd.read_csv(all_path, dtype={"config_hash": str})
+            validate_complete_grid(frame, sizes, dims, methods, seed,
+                                   resolved_hash)
+        except (OSError, ValueError) as exc:
+            print(f"[{SCRIPT}] ERROR: incompatible completed scale result: {exc}")
+            sys.exit(1)
+        print(f"[{SCRIPT}] validated completed {len(frame)}-row scale grid; skipping.")
+        return
 
     if args.dry_run:
         for n_items in sizes:
@@ -401,6 +422,7 @@ def main():
                                       "(achieved_recall_vs_exact) is reported"),
                     "seed": seed,
                     "config_hash": resolved_hash,
+                    "scale_stress_fingerprint": resolved_hash,
                 })
                 # checkpoint after every cell (long-running grid)
                 write_checkpoint(rows, checkpoint_path)

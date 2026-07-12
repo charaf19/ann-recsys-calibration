@@ -40,22 +40,22 @@ Configuration precedence everywhere:
 | index construction | `src/build_index.py` | FAISS index builders | item vectors | `data/index_*/` FAISS index + `index_meta.json` | `index.*` via orchestrator `build_index_cmd()` | HNSW M=24 efC=200; IVF nlist=auto; PQ m=32 bits=8; IVF-PQ OPQ on; omp_threads=1 | Methods | yes |
 | exact Flat reference | `src/utils/ann_io.py` | `build_exact_index()` (IndexFlatL2) | item vectors | exact top-k | none | L2 exact search is the reference | Methods | yes |
 | HNSW / IVF-Flat / IVF-PQ / Flat-PQ | `src/build_index.py` + `src/utils/ann_io.py` | `load_ann_index()`, `CALIBRATION_PARAM` | index dir | `AnnIndex` handle | `index.*` | calibrated param: ef (HNSW), nprobe (IVF-*); flat/flatpq untunable | Methods | yes |
-| calibration | `src/calibrate.py` | `calibrate_index()` | index + item vectors | `results/main/calibration/*.json` | `calibration.*` | ascending grid sweep; smallest param meeting target agreement recall@topk; 1000 queries | Calibration | yes |
+| calibration | `src/calibrate.py` | `calibrate_index()` | index + corpus vectors + shared modality queries | `results/main/calibration/*.json` | `calibration.*` | separate U2I/I2I sweeps; smallest param meeting target agreement recall@topk; 1000 queries | Calibration | yes |
 | U2I evaluation | `src/eval_modalities.py` | `_build_queries("u2i")`, `evaluate_modality()` | split + vectors + index | aggregates + perquery npz | `retrieval.*`, `evaluation.*` | query = mean of training history; seen items excluded | Main results | yes |
 | I2I evaluation | `src/eval_modalities.py` | `_build_queries("i2i")`, `evaluate_modality()` | split + vectors + index | aggregates + perquery npz | `retrieval.*`, `evaluation.*` | query = last chronological training item; anchor excluded | Main results | yes |
-| latency measurement | `src/run_device.py` | single-query timing loop | index + vectors | `latency_*.json` (p50/p95) | `evaluation.latency_queries` | 2000 timed queries at the calibrated operating point | Efficiency | yes |
+| latency measurement | `src/run_device.py` | single-query timing loop | index + shared modality queries | `latency_*.json` (mean/p50/p95/p99) | `evaluation.latency_queries` | 2000 timed queries at each modality-calibrated operating point | Efficiency | yes |
 | bootstrap CIs | `src/bootstrap_significance.py` | `utils.metrics.bootstrap_ci()` | `results/main/perquery/*.npz` | `results/analyses/bootstrap/bootstrap_cis.csv` | `statistics.bootstrap_iterations` | n_boot=2000, seed=42 | Statistics | yes |
 | paired significance | `src/bootstrap_significance.py` | `utils.metrics.paired_bootstrap_test()` | aligned perquery arrays | `results/analyses/bootstrap/paired_tests.csv` | `statistics.bootstrap_iterations` | paired vs flat baseline; two-sided bootstrap p | Statistics | yes |
 | effect sizes | `src/effect_size_tables.py` | `cohens_d_paired()`, `cliffs_delta()` | aligned perquery arrays | `results/analyses/effect_sizes/effect_sizes.csv` | seed via CLI/meta | paired Cohen's d + Cliff's delta vs flat | Statistics | yes |
 | embedding sensitivity | `src/run_embedding_backbone_sensitivity.py` | `ann_ranking_stability` (Spearman vs `svd_bm25`) | ml-1m + 4 required backbones (+ optional two-tower) | `results/analyses/embedding_sensitivity/embedding_backbone_sensitivity_all.csv` | `embedding_sensitivity.*` in `configs/analyses.yml` | U2I, 10000 queries, 5 methods; stability reported, never required | Sensitivity | yes |
 | exposure analysis | `src/run_exposure_analysis.py` + `src/exposure_analysis.py` | `analyze_run()` | perquery npz extras | `results/analyses/exposure/exposure_analysis_all.csv` | CLI (`tail_frac=0.2`, `head_frac=0.1`) | every row carries `fairness_scope` (proxies only) | Exposure | yes |
 | PQ diagnostics | `src/run_pq_diagnostics.py` + `src/pq_diagnostics.py` | reconstruction/overlap/variance/decile diagnostics | PQ indexes + embeddings | `results/analyses/pq_diagnostics/pq_diagnostics_{all,summary}.csv` | main config (datasets/weighting/dim/seed) | flatpq+ivfpq; conservative evidence-bound labels | PQ behavior | yes |
-| scale stress | `src/run_scale_stress.py` | `synth_vectors()` + cost measurement | seeded synthetic vectors (internal) | `results/analyses/scale_stress/scale_stress_all.csv` | `scale_stress.*` in `configs/analyses.yml` | 5 sizes × 3 dims × 5 methods = 75 cells; target 0.95; `quality_measured=false` | Scale | yes |
+| scale stress | `src/run_scale_stress.py` | `synth_vectors()` + cost measurement | seeded synthetic vectors (internal) | `results/analyses/scale_stress/scale_stress_all.csv` | `scale_stress.*` in `configs/analyses.yml` | 5 sizes × 1 dim × 4 methods = 20 cells; target 0.95; `quality_measured=false` | Scale | yes |
 | decision framework | `src/ann_decision_framework.py` | deployment scoring + `use_case_label()` | main summary + effect sizes + calibration | `results/analyses/decision_framework/ann_decision_framework_scores.csv` | `decision_framework.*` in `configs/analyses.yml` | weights 0.45/0.30/0.15/0.10; `allow_flatpq_online=false` | Guidance | yes (logic) |
 | claim-support audit | `src/claim_support_audit.py` | `CLAIMS` × validation report | `results/_meta/validation_report.json` | `results/paper/tables/claim_support_audit.*` | fixed claim list | supported only when required validator sections pass | All | n/a (meta) |
 | table generation | `src/tables_paper.py` | `TableEmitter` | canonical `results/main` + `results/analyses` | `results/paper/tables/*` + `.sources.json` sidecars | CLI (`--write_mode replace`) | no legacy inputs; sidecars mandatory | All | n/a (presentation) |
 | figure generation | `src/figures_paper.py` + `src/utils/figures_ext.py` | figure functions | canonical results CSVs | `results/paper/figures/*.{png,pdf}` + sidecars | CLI (`--write_mode replace`) | 300 dpi, tight bbox, PNG+PDF | All | n/a (presentation) |
-| paper-evidence validation | `src/validate_paper_evidence.py` | `SECTION_VALIDATORS` | `configs/paper_evidence_manifest.yml` + results | `results/_meta/validation_report.{csv,md,json}` | the manifest | 40 main / 36 calibration / 20 embedding / 75 scale rows; n_boot=2000; CPU-only | All | n/a (meta) |
+| paper-evidence validation | `src/validate_paper_evidence.py` | `SECTION_VALIDATORS` | `configs/paper_evidence_manifest.yml` + results | `results/_meta/validation_report.{csv,md,json}` | the manifest | 40 main / 72 calibration / 20 embedding / 20 scale rows; n_boot=2000; CPU-only | All | n/a (meta) |
 
 ## Canonical entry-point sequence
 
@@ -84,9 +84,9 @@ Supporting canonical packages: `src/datasets/`, `src/utils/`,
 ## Expected evidence counts
 
 - main rows = 40 (4 datasets × 2 modalities × 5 methods)
-- calibration-sensitivity rows = 36 (4 datasets × 3 tunable methods × 3 targets)
+- calibration-sensitivity rows = 72 (4 datasets × 2 modalities × 3 tunable methods × 3 targets)
 - embedding-sensitivity rows = 20 (4 required backbones × 5 methods)
-- scale-stress rows = 75 (5 sizes × 3 dims × 5 methods)
+- scale-stress rows = 20 (5 sizes × 1 dim × 4 methods)
 - bootstrap iterations = 2000 on every row
 
 ## CPU-only boundary

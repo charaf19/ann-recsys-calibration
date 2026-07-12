@@ -57,17 +57,17 @@ def test_evaluation_protocol_values(repo_root):
     assert cfg_get(cfg, "reproducibility.omp_threads", type=int) == 1
 
 
-def test_scale_stress_grid_is_75_cost_only_cells(repo_root):
+def test_scale_stress_grid_is_20_cost_only_cells(repo_root):
     cfg = resolved(repo_root, "analyses.yml")
     ss = cfg_get(cfg, "scale_stress")
     assert ss["catalog_sizes"] == [10000, 50000, 100000, 500000, 1000000]
-    assert ss["dimensions"] == [64, 128, 256]
-    assert ss["methods"] == ["flat", "hnsw", "ivfflat", "ivfpq", "flatpq"]
+    assert ss["dimensions"] == [128]
+    assert ss["methods"] == ["flat", "hnsw", "ivfflat", "ivfpq"]
     assert float(ss["calibration_target"]) == 0.95
     assert ss["quality_measured"] is False
     n_cells = (len(ss["catalog_sizes"]) * len(ss["dimensions"])
                * len(ss["methods"]))
-    assert n_cells == 75
+    assert n_cells == 20
 
 
 def test_embedding_sensitivity_protocol(repo_root):

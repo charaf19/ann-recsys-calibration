@@ -33,6 +33,9 @@ from utils.ann_io import load_ann_index, CALIBRATION_PARAM
 from utils.common import set_global_seed
 from utils.config import load_config, cfg_get, config_hash, ConfigError
 from utils.index_config import build_index_command
+from utils.fingerprints import fingerprint
+from utils.modality_queries import (build_query_population, item_id_map,
+                                    write_query_cache)
 from utils.paths import dataset_csv, dataset_stem, RESULTS
 from utils.provenance import make_run_id, provenance_columns
 from utils.result_io import (preflight_output, write_dataframe_atomic,
@@ -43,6 +46,71 @@ DEFAULT_CONFIG = "configs/analyses.yml"
 REFERENCE_BACKBONE = "svd_bm25"
 SVD_BACKBONES = {"svd_bm25": "bm25", "svd_tfidf": "tfidf", "svd_none": "none"}
 KEY = ["dataset", "backbone", "modality", "method", "dim", "seed"]
+
+
+def reuse_main_bm25_rows(dataset, modality, methods, dim, seed,
+                         sensitivity_queries, main_dir=None, perquery_dir=None):
+    """Transform main rows only after proving query identity and fingerprints."""
+    main_dir = Path(main_dir or RESULTS["main"])
+    perquery_dir = Path(perquery_dir or RESULTS["perquery"])
+    summary = main_dir / "summary_main.csv"
+    run_config = main_dir / "run_config.json"
+    if not summary.is_file() or not run_config.is_file():
+        return None, "main summary/run configuration is missing"
+    frame = pd.read_csv(summary)
+    required = {"dataset", "weighting", "dim", "modality", "method", "seed",
+                "ndcg_at_k_mean", "recall_at_k_mean",
+                "ann_recall_vs_exact_at_k_mean", "long_tail_uplift",
+                "query_fingerprint"}
+    if not required <= set(frame.columns):
+        return None, f"main rows lack reuse fields {sorted(required - set(frame.columns))}"
+    selected = frame[(frame["dataset"] == dataset)
+                     & (frame["weighting"] == "bm25")
+                     & (frame["dim"] == dim) & (frame["modality"] == modality)
+                     & (frame["seed"] == seed) & (frame["method"].isin(methods))]
+    if len(selected) != len(methods) or selected["method"].nunique() != len(methods):
+        return None, "main BM25 method grid is incomplete or duplicated"
+    cfg = json.loads(run_config.read_text(encoding="utf-8"))
+    if cfg.get("evaluation_protocol_version") != "modality_queries_v1":
+        return None, "main evaluation protocol predates shared modality queries"
+    expected_ids = None
+    expected_fp = None
+    for method in methods:
+        path = perquery_dir / (
+            f"{dataset}__bm25__d{dim}__{modality}__{method}.npz")
+        if not path.is_file():
+            return None, f"missing main per-query evidence {path}"
+        with np.load(path, allow_pickle=True) as z:
+            if "meta" not in z or "query_ids" not in z:
+                return None, f"unalignable main per-query evidence {path}"
+            meta = json.loads(str(z["meta"]))
+            ids = np.asarray(z["query_ids"]).astype(str)
+        fp = meta.get("query_fingerprint")
+        row_fp = selected.loc[selected["method"] == method,
+                              "query_fingerprint"].iloc[0]
+        if not fp or fp != row_fp:
+            return None, f"query fingerprint mismatch for {method}"
+        if expected_ids is None:
+            expected_ids, expected_fp = ids, fp
+        elif not np.array_equal(ids, expected_ids) or fp != expected_fp:
+            return None, f"query identities/fingerprint differ for {method}"
+    if str(sensitivity_queries).lower() != "full" and int(sensitivity_queries) < len(expected_ids):
+        return None, "sensitivity query cap would select a different population"
+    rows = []
+    for row in selected.to_dict("records"):
+        rows.append({
+            "dataset": dataset, "backbone": REFERENCE_BACKBONE,
+            "embedding_backend": REFERENCE_BACKBONE, "modality": modality,
+            "method": row["method"], "dim": dim,
+            "ndcg_at_10": row["ndcg_at_k_mean"],
+            "recall_at_10": row["recall_at_k_mean"],
+            "ann_recall_vs_exact_at_k_mean": row["ann_recall_vs_exact_at_k_mean"],
+            "long_tail_uplift": row["long_tail_uplift"],
+            "backend_available": True, "status": "ok", "error_message": "",
+            "query_fingerprint": expected_fp, "reused_from_main": True,
+            "seed": seed,
+        })
+    return rows, None
 
 
 def run(cmd, check=True):
@@ -198,6 +266,8 @@ def main():
     normalize = cfg_get(cfg, "embedding.normalize", required=True)
     topk = cfg_get(cfg, "retrieval.topk", type=int, required=True)
     metric_topk = cfg_get(cfg, "retrieval.metric_topk", type=int, required=True)
+    min_user_interactions = cfg_get(cfg, "data.min_user_interactions",
+                                    type=int, required=True)
     budget_mb = cfg_get(cfg, "retrieval.budget_mb", type=int, required=True)
     cal_queries = cfg_get(cfg, "calibration.queries", type=int, required=True)
     primary_target = cfg_get(cfg, "calibration.primary_target", type=float,
@@ -262,6 +332,14 @@ def main():
         csv = dataset_csv(dataset)
         stem = dataset_stem(dataset)
         for backbone in backbones:
+            if backbone == REFERENCE_BACKBONE:
+                reused, reason = reuse_main_bm25_rows(
+                    dataset, modalities[0], methods, dim, seed, queries)
+                if reused is not None:
+                    rows.extend([{**row, **prov} for row in reused])
+                    print(f"[{SCRIPT}] reused {len(reused)} validated main BM25 rows")
+                    continue
+                print(f"[{SCRIPT}] main BM25 rows not reusable: {reason}; recomputing")
             emb = ensure_embeddings(backbone, dataset, dim, normalize, seed, es,
                                     embedding_cfg, cfg_hash)
             if emb is None:
@@ -290,6 +368,25 @@ def main():
                     f"embedding dimension mismatch for {dataset}/{backbone}: "
                     f"configured d{dim}, loaded d{D}")
 
+            modality = modalities[0]
+            qfp = fingerprint("embedding_sensitivity_query", {
+                "dataset": dataset, "backbone": backbone, "modality": modality,
+                "dim": dim, "queries": queries,
+                "min_user_interactions": min_user_interactions,
+                "split": "temporal_leave_one_out_v1", "seed": seed,
+            })
+            population = build_query_population(
+                interactions_path=csv, item_vecs=item_vecs,
+                id2idx=item_id_map(Path(emb) / "item_vecs.npy", N),
+                modality=modality,
+                max_queries="full" if queries.lower() == "full" else int(queries),
+                seed=seed, min_user_interactions=min_user_interactions,
+                metadata={"query_fingerprint": qfp, "dataset": dataset,
+                          "weighting": backbone, "dim": dim})
+            query_cache = out_dir / "query_cache" / (
+                f"{dataset}__{backbone}__d{dim}__{modality}.npz")
+            write_query_cache(population, query_cache, mode="replace")
+
             for method in methods:
                 idx_dir = f"data/index_{stem}_{backbone}_d{dim}_{method}"
                 if not (Path(idx_dir).exists() and any(Path(idx_dir).iterdir())):
@@ -303,7 +400,11 @@ def main():
                 if CALIBRATION_PARAM.get(method) is not None:
                     ann = load_ann_index(idx_dir, D, N)
                     cal = calibrate_index(ann, item_vecs, primary_target, topk,
-                                          n_queries=cal_queries, seed=seed)
+                                          n_queries=cal_queries, seed=seed,
+                                          query_vectors=population.query_vectors,
+                                          modality=modality,
+                                          query_source="embedding_sensitivity_query_cache",
+                                          query_fingerprint=qfp)
                     if cal["calibrated_param_value"] is not None:
                         if CALIBRATION_PARAM[method] == "ef":
                             ef = int(cal["calibrated_param_value"])
@@ -316,6 +417,7 @@ def main():
                          f"{emb}/item_vecs.npy",
                          "--index", idx_dir, "--ann_method", method,
                          "--modality", modality, "--queries", queries,
+                         "--query_cache", str(query_cache),
                          "--topk", str(topk), "--metric_topk", str(metric_topk),
                          "--ef", str(ef), "--nprobe", str(nprobe),
                          "--seed", str(seed), "--dataset", dataset,

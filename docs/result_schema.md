@@ -56,6 +56,6 @@ validation, and deterministic row ordering. A failed write never damages
 the previous file; conflicting rows with the same key raise an error.
 
 `src/validate_paper_evidence.py` validates the complete contract from
-`configs/paper_evidence_manifest.yml` (40 main rows, 36 calibration rows,
-20 embedding-sensitivity rows, 75 scale rows, `n_boot=2000`, CPU-only
+`configs/paper_evidence_manifest.yml` (40 main rows, 72 calibration rows,
+20 embedding-sensitivity rows, 20 scale rows, `n_boot=2000`, CPU-only
 scope) and writes its reports to `results/_meta/`.

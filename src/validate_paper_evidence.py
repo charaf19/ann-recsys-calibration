@@ -420,8 +420,10 @@ def validate_calibration_sensitivity(ck: Checker) -> None:
         target_strings = [f"{float(value):.2f}" for value in df["target_recall"]]
         grid_df = df.assign(_target=target_strings)
         expected_targets = [f"{float(value):.2f}" for value in spec.get("targets", [])]
-        _check_grid(ck, section, grid_df, ["dataset", "method", "_target"],
-                    [spec.get("datasets", []), spec.get("methods", []),
+        _check_grid(ck, section, grid_df,
+                    ["dataset", "modality", "method", "_target"],
+                    [spec.get("datasets", []), spec.get("modalities", []),
+                     spec.get("methods", []),
                      expected_targets])
     except (TypeError, ValueError) as exc:
         ck.fail(section, "exact_grid", f"invalid target_recall value: {exc}")

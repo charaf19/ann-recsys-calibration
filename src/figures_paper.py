@@ -77,12 +77,12 @@ def fig_latency_vs_ndcg(summary, out_dir, write_mode="replace"):
 
 def fig_calibration_sensitivity(cal, out_dir, write_mode="replace"):
     fig, axes = plt.subplots(1, 2, figsize=(11, 4.2))
-    for (dataset, method), g in cal.groupby(["dataset", "method"]):
+    for (dataset, modality, method), g in cal.groupby(["dataset", "modality", "method"]):
         g = g.sort_values("target_recall")
         axes[0].plot(g["target_recall"], g["calibrated_param_value"],
-                     marker="o", label=f"{dataset}/{method}")
+                     marker="o", label=f"{dataset}/{modality}/{method}")
         axes[1].plot(g["target_recall"], g["latency_p95_ms"],
-                     marker="o", label=f"{dataset}/{method}")
+                     marker="o", label=f"{dataset}/{modality}/{method}")
     axes[0].set_xlabel("Calibration target (recall vs exact)")
     axes[0].set_ylabel("Calibrated parameter (ef / nprobe)")
     axes[0].set_yscale("log")

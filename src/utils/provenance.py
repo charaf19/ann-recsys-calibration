@@ -75,6 +75,32 @@ def accelerator_present() -> bool:
     return shutil.which("nvidia-smi") is not None
 
 
+def exact_cpu_name():
+    """Best-effort commercial CPU name, with safe Windows fallbacks."""
+    commands = []
+    if platform.system() == "Windows":
+        commands = [
+            ["powershell", "-NoProfile", "-Command",
+             "(Get-CimInstance Win32_Processor | Select-Object -First 1 -ExpandProperty Name)"],
+            ["wmic", "cpu", "get", "name", "/value"],
+        ]
+    for command in commands:
+        try:
+            proc = subprocess.run(command, capture_output=True, text=True,
+                                  timeout=10)
+            if proc.returncode != 0:
+                continue
+            lines = [line.strip() for line in proc.stdout.splitlines() if line.strip()]
+            if command[0].lower() == "wmic":
+                lines = [line.split("=", 1)[1].strip() for line in lines
+                         if line.lower().startswith("name=") and "=" in line]
+            if lines and lines[0]:
+                return lines[0]
+        except (OSError, subprocess.SubprocessError):
+            continue
+    return platform.processor() or platform.machine() or "unknown"
+
+
 def hardware_info() -> dict:
     import psutil
     try:
@@ -97,7 +123,8 @@ def hardware_info() -> dict:
                              "canonical experiments."),
         "platform": {k: getattr(platform, k)() for k in
                      ("system", "release", "version", "machine", "processor")},
-        "cpu": {"physical_cores": psutil.cpu_count(logical=False),
+        "cpu": {"model": exact_cpu_name(),
+                "physical_cores": psutil.cpu_count(logical=False),
                 "logical_cores": psutil.cpu_count(logical=True), "freq": freq},
         "memory": {"total_gb": round(psutil.virtual_memory().total / 1024 ** 3, 2)},
         "python": {"version": sys.version, "executable": sys.executable},
@@ -124,7 +151,7 @@ def write_hardware_report(meta_dir=None, info=None) -> list:
         "> No GPU was used by the canonical experiments.",
         "",
         f"- OS: {info['platform']['system']} {info['platform']['release']}",
-        f"- CPU: {info['platform']['processor']}",
+        f"- CPU: {info['cpu'].get('model') or info['platform']['processor']}",
         f"- Physical cores: {info['cpu']['physical_cores']}",
         f"- RAM: {info['memory']['total_gb']} GB",
         "",

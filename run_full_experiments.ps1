@@ -4,9 +4,9 @@ param(
     [switch]$Fresh,
 
     # Resume an interrupted/failed run WITHOUT deleting anything. The main grid
-    # runs with --write_mode replace --reuse_existing (existing compatible
-    # embeddings/indexes are reused after metadata verification; incompatible
-    # ones are rebuilt), then downstream analyses continue. Mutually exclusive
+    # runs with --resume --reuse_existing (compatible embeddings/indexes and
+    # verified modality cells are reused after metadata validation), then
+    # downstream analyses continue. Mutually exclusive
     # with -Fresh. Skips dependency install and dataset re-preparation.
     [switch]$Resume,
 
@@ -318,6 +318,19 @@ function Assert-MinimumCsvRows {
     Write-Host ("{0}: {1} rows" -f $Path, $Rows) -ForegroundColor Green
 }
 
+function Assert-ExactCsvRows {
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [Parameter(Mandatory)][int]$ExpectedRows
+    )
+    Assert-FileExists -Path $Path
+    $Rows = @(Import-Csv $Path).Count
+    if ($Rows -ne $ExpectedRows) {
+        throw "$Path contains $Rows rows; expected exactly $ExpectedRows."
+    }
+    Write-Host ("{0}: {1} rows" -f $Path, $Rows) -ForegroundColor Green
+}
+
 # -Append so repeated resume runs to the same -LogPath accumulate a full
 # debugging history instead of overwriting it (a default timestamped path is
 # unique per run, so nothing is lost there either).
@@ -347,8 +360,8 @@ try {
         Write-Host "RESUME MODE: no results, embeddings, indexes, or datasets " `
             -ForegroundColor Yellow -NoNewline
         Write-Host "will be deleted." -ForegroundColor Yellow
-        Write-Host "  Main grid will run with --write_mode replace " `
-            "--reuse_existing." -ForegroundColor Yellow
+        Write-Host "  Main grid will run with --resume --reuse_existing." `
+            -ForegroundColor Yellow
         Write-Host "  Dependency install and dataset re-preparation are " `
             "skipped." -ForegroundColor Yellow
     }
@@ -522,7 +535,7 @@ try {
     if ($Resume) {
         # Reuse compatible embeddings/indexes (metadata-verified) and overwrite
         # any partial results; incompatible artifacts are rebuilt honestly.
-        $MainArguments += @("--write_mode", "replace", "--reuse_existing")
+        $MainArguments += @("--write_mode", "fail_if_exists", "--reuse_existing", "--resume")
     }
     else {
         $MainArguments += @("--write_mode", "fail_if_exists")
@@ -536,14 +549,14 @@ try {
     Assert-FileExists -Path "results\main\run_config.json"
     Assert-FileExists -Path "results\_meta\run_manifest.json"
 
-    Assert-MinimumCsvRows `
+    Assert-ExactCsvRows `
         -Path "results\main\summary_main.csv" `
-        -MinimumRows 40
+        -ExpectedRows 40
 
     # =================================================================
     # Calibration-target sensitivity
     #
-    # 4 datasets × 3 tunable methods × 3 targets = 36 rows
+    # 4 datasets × 2 modalities × 3 tunable methods × 3 targets = 72 rows
     # =================================================================
 
     Invoke-PythonStep `
@@ -554,9 +567,9 @@ try {
             "--write_mode", "fail_if_exists"
         )
 
-    Assert-MinimumCsvRows `
+    Assert-ExactCsvRows `
         -Path "results\analyses\calibration_sensitivity\calibration_sensitivity.csv" `
-        -MinimumRows 36
+        -ExpectedRows 72
 
     # =================================================================
     # Statistical analysis
@@ -637,7 +650,7 @@ try {
     # =================================================================
     # Synthetic cost-only scale stress
     #
-    # 5 catalog sizes × 3 dimensions × 5 methods = 75 rows
+    # 5 catalog sizes × 1 dimension × 4 methods = 20 rows
     # =================================================================
 
     if ($SkipScaleStress) {
@@ -647,17 +660,25 @@ try {
             "validator-complete and MUST NOT be used as the final paper run.")
     }
     else {
-        Invoke-PythonStep `
-            -Name "Run complete scale-stress experiment" `
-            -Arguments @(
-                "src\run_scale_stress.py",
-                "--config", "configs\analyses.yml",
-                "--write_mode", "fail_if_exists"
-            )
+        $ScaleArguments = @(
+            "src\run_scale_stress.py",
+            "--config", "configs\analyses.yml",
+            "--write_mode", "fail_if_exists"
+        )
+        if ($Resume -and (Test-Path "results\analyses\scale_stress\scale_stress_all.csv")) {
+            $ScaleArguments += "--validate_existing"
+        }
+        elseif ($Resume -and (Test-Path "results\analyses\scale_stress\scale_stress_checkpoint.csv")) {
+            $ScaleArguments += "--resume"
+        }
 
-        Assert-MinimumCsvRows `
+        Invoke-PythonStep `
+            -Name "Run or resume complete scale-stress experiment" `
+            -Arguments $ScaleArguments
+
+        Assert-ExactCsvRows `
             -Path "results\analyses\scale_stress\scale_stress_all.csv" `
-            -MinimumRows 75
+            -ExpectedRows 20
     }
 
     # =================================================================

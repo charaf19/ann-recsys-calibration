@@ -81,7 +81,7 @@ their absence and removed the remaining documentation references
 | `src/calibrate.py` | canonical default output filename (`__d{dim}__…__target_…`) | no |
 | `src/bootstrap_significance.py` | **default n_boot 1000 → 2000 (bug fix)**, `--config` reads `statistics.bootstrap_iterations`, rejects non-positive counts, `--write_mode`, dim-aware keys, `seed` column | yes — bug fix; full bootstrap rerun required (perquery inputs unchanged) |
 | `src/effect_size_tables.py` | shared loader, `--write_mode`, canonical output only (presentation moved to tables_paper) | no |
-| `src/run_calibration_sensitivity.py` | reads `main_cpu.yml` (all 4 datasets → 36 rows), fail-fast on missing inputs, `dim` column, `--write_mode` | no (protocol identical; grid completed) |
+| `src/run_calibration_sensitivity.py` | consolidates validated modality-specific main artifacts (4 datasets → 72 rows), `dim`/`modality` columns, `--write_mode` | no duplicate FAISS execution |
 | `src/run_embedding_backbone_sensitivity.py` | reads `analyses.yml`, config-resolved index params, queries 2000 → **10000 per the revised-paper protocol**, `--write_mode`, no paper-artifact writes | yes — protocol value now matches the revised-paper contract; rerun required |
 | `src/run_scale_stress.py` | reads `analyses.yml` (`dimensions:` key), config-resolved index params (**IVF-PQ now built with OPQ, consistent with the main pipeline**), seeded/omp-threaded builds, atomic checkpoints, `--write_mode` | yes — consistency fix for ivfpq cells; scale-stress rerun required (all results were deleted anyway) |
 | `src/run_exposure_analysis.py` | output to `results/analyses/exposure/`, `dim`/`seed` columns, `--write_mode`, no paper-artifact writes | no |
@@ -147,7 +147,7 @@ recreated as the empty canonical skeleton (`.gitkeep` files only).
 | embedding sensitivity | `run_embedding_backbone_sensitivity.py` | **yes: queries 2000→10000 (revised-paper protocol)** | same file | **yes** | `test_scientific_defaults::test_embedding_sensitivity_protocol` |
 | exposure analysis | `run_exposure_analysis.py` | no | `analyses/exposure/` | yes | `test_paper_evidence_validator` |
 | PQ diagnostics | `run_pq_diagnostics.py` | no | + summary CSV in analyses | yes | `test_paper_evidence_validator` |
-| scale stress | `run_scale_stress.py` | **ivfpq cells: OPQ now applied (consistency fix)** | same file | **yes** | `test_scientific_defaults::test_scale_stress_grid_is_75_cost_only_cells` |
+| scale stress | `run_scale_stress.py` | **20-cell cost-only grid; ivfpq uses OPQ** | same file | **yes** | `test_scientific_defaults::test_scale_stress_grid_is_20_cost_only_cells` |
 | decision framework | `ann_decision_framework.py` | no (formula unchanged) | `analyses/decision_framework/` | yes | `test_scientific_defaults::test_decision_framework_weights` |
 | claim-support audit | `claim_support_audit.py` | n/a (meta) | same table | after validation | `test_cli_contracts` |
 | tables / figures | `tables_paper.py` / `figures_paper.py` | n/a (presentation) | sidecars added | after evidence | `test_cli_contracts` |

@@ -14,7 +14,8 @@ CANONICAL_METHODS = ("flat", "hnsw", "ivfflat", "ivfpq", "flatpq")
 
 
 def build_index_command(method, item_vecs, item_ids, out_dir, budget_mb,
-                        seed, omp_threads, index_cfg, configuration_hash=None):
+                        seed, omp_threads, index_cfg, configuration_hash=None,
+                        embedding_fingerprint=None, index_fingerprint=None):
     """Return a ``build_index.py`` command for one canonical method."""
     if method not in CANONICAL_METHODS:
         raise ValueError(
@@ -32,6 +33,10 @@ def build_index_command(method, item_vecs, item_ids, out_dir, budget_mb,
     ]
     if configuration_hash is not None:
         cmd += ["--config_hash", str(configuration_hash)]
+    if embedding_fingerprint is not None:
+        cmd += ["--embedding_fingerprint", str(embedding_fingerprint)]
+    if index_fingerprint is not None:
+        cmd += ["--index_fingerprint", str(index_fingerprint)]
     if method == "hnsw":
         cmd += [
             "--M", str(cfg_get(index_cfg, "hnsw.M", type=int,

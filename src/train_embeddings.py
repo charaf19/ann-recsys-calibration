@@ -45,6 +45,8 @@ def main():
                          "(canonical value comes from data.min_user_interactions)")
     ap.add_argument("--config_hash", default="unknown",
                     help="resolved experiment configuration hash")
+    ap.add_argument("--embedding_fingerprint", default=None,
+                    help="stage-specific reuse fingerprint")
     args = ap.parse_args()
 
     print(f"[{SCRIPT}] starting...")
@@ -104,6 +106,7 @@ def main():
         "seed": int(args.seed),
         "min_user_interactions": int(args.min_user_interactions),
         "config_hash": str(args.config_hash),
+        "embedding_fingerprint": args.embedding_fingerprint,
         "explained_variance_ratio_sum": float(np.sum(svd.explained_variance_ratio_)),
     }
     with open(out / "embedding_meta.json", "w", encoding="utf-8") as f:

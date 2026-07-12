@@ -50,19 +50,37 @@ def measure_latency(ann, Q, topk, timed_queries=500):
         lat[i] = (time.perf_counter() - t0) * 1000.0
     return {"mean": float(lat.mean()),
             "p50": float(np.percentile(lat, 50)),
-            "p95": float(np.percentile(lat, 95))}
+            "p95": float(np.percentile(lat, 95)),
+            "p99": float(np.percentile(lat, 99))}
 
 
-def calibrate_index(ann, item_vecs, target, topk, n_queries, seed,
-                    param_grid=None, timed_queries=500):
+def select_calibration_queries(query_vectors, n_queries, seed):
+    """Deterministically select without replacement from the modality pool."""
+    query_vectors = np.ascontiguousarray(query_vectors, dtype=np.float32)
+    rng = np.random.default_rng(seed)
+    count = min(int(n_queries), len(query_vectors))
+    selected = rng.choice(len(query_vectors), size=count, replace=False)
+    return query_vectors[selected]
+
+
+def calibrate_index(ann, corpus_vectors, target, topk, n_queries, seed,
+                    param_grid=None, timed_queries=500, query_vectors=None,
+                    modality=None, query_source=None, query_fingerprint=None):
     """Core calibration routine (also used by run_calibration_sensitivity).
 
-    Returns a result dict; 'calibrated_param_value' is None for untunable
-    methods and for grids that never reach the target (then the best point is
-    reported with target_reached=False).
+    ``corpus_vectors`` builds the exact reference. ``query_vectors`` supplies
+    the actual modality distribution; catalog sampling is retained only for
+    backward-compatible standalone/cost-stress use.
     """
-    Q = sample_queries(item_vecs, n_queries, seed)
-    exact = build_exact_index(item_vecs)
+    if query_vectors is None:
+        Q = sample_queries(corpus_vectors, n_queries, seed)
+        source = query_source or "sampled_item_vectors"
+    else:
+        Q = select_calibration_queries(query_vectors, n_queries, seed)
+        source = query_source or "modality_query_cache"
+    if Q.shape[0] == 0:
+        raise ValueError("calibration query pool is empty")
+    exact = build_exact_index(corpus_vectors)
     exact_I = exact.search(Q, topk)
 
     param_name = CALIBRATION_PARAM.get(ann.method)
@@ -75,7 +93,8 @@ def calibrate_index(ann, item_vecs, target, topk, n_queries, seed,
         chosen = sweep[0]
         reached = rec >= target
     else:
-        grid = param_grid or DEFAULT_PARAM_GRIDS[ann.method]
+        grid = sorted(set(int(v) for v in
+                          (param_grid or DEFAULT_PARAM_GRIDS[ann.method])))
         chosen, reached = None, False
         for v in grid:
             ann.set_calibration_param(v)
@@ -88,8 +107,9 @@ def calibrate_index(ann, item_vecs, target, topk, n_queries, seed,
             if rec >= target:
                 chosen, reached = point, True
                 break
-        if chosen is None:  # target never reached; report best point
-            chosen = max(sweep, key=lambda s: s["recall_vs_exact"])
+        if chosen is None:  # target never reached: best recall, then smallest cost
+            chosen = max(sweep, key=lambda s: (s["recall_vs_exact"],
+                                                -s["param_value"]))
 
     return {
         "method": ann.method,
@@ -97,10 +117,14 @@ def calibrate_index(ann, item_vecs, target, topk, n_queries, seed,
         "target_recall": float(target),
         "target_reached": bool(reached),
         "calibrated_param_value": chosen["param_value"],
+        "selected_param_value": chosen["param_value"],
         "achieved_recall_vs_exact": float(chosen["recall_vs_exact"]),
         "latency_ms_at_calibrated": chosen["latency_ms"],
         "topk": int(topk),
         "n_calibration_queries": int(Q.shape[0]),
+        "modality": modality,
+        "query_source": source,
+        "query_fingerprint": query_fingerprint,
         "seed": int(seed),
         "sweep": sweep,
     }
@@ -110,6 +134,9 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--item_vecs", required=True)
     ap.add_argument("--index", required=True)
+    ap.add_argument("--query_vecs", default=None,
+                    help="optional modality query-vector .npy/.npz input")
+    ap.add_argument("--modality", choices=["u2i", "i2i"], default=None)
     ap.add_argument("--target", type=float, default=0.95,
                     help="target recall@topk vs exact Flat search")
     ap.add_argument("--topk", type=int, default=100)
@@ -137,10 +164,17 @@ def main():
     N, D = item_vecs.shape
     ann = load_ann_index(args.index, D, N)
 
+    query_vectors = None
+    if args.query_vecs:
+        loaded = np.load(args.query_vecs)
+        query_vectors = (loaded["query_vectors"] if isinstance(loaded, np.lib.npyio.NpzFile)
+                         else loaded)
     result = calibrate_index(ann, item_vecs, args.target, args.topk,
                              args.queries, args.seed,
                              param_grid=args.param_grid,
-                             timed_queries=args.timed_queries)
+                             timed_queries=args.timed_queries,
+                             query_vectors=query_vectors,
+                             modality=args.modality)
     dataset = args.dataset or Path(args.index).name
     result.update({"dataset": dataset, "weighting": args.weighting,
                    "index_path": str(args.index), "N": int(N), "D": int(D)})
@@ -149,7 +183,7 @@ def main():
         out_path = Path(args.out)
     else:
         out_path = Path(RESULTS["calibration"]) / (
-            f"{dataset}__{args.weighting}__d{D}__{ann.method}"
+            f"{dataset}__{args.weighting}__d{D}__{args.modality or 'catalog'}__{ann.method}"
             f"__target_{args.target:.2f}.json")
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as f:

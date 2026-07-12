@@ -92,7 +92,7 @@ CLAIMS = [
      "moderate for cost, none for quality",
      ["scale_stress"],
      "Build time, index size, RSS, and calibrated latency are measured on "
-     "the complete 75-cell synthetic grid up to 1M items "
+     "the complete 20-cell synthetic grid up to 1M items at d=128 "
      "(quality_measured=false on every row).",
      "Claiming recommendation quality at production scale; real datasets "
      "top out at ML-20M/Amazon Books."),
