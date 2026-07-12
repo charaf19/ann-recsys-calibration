@@ -117,6 +117,19 @@ def main():
         sys.exit(1)
 
     df = pd.DataFrame(rows)
+
+    # Natural-key columns cannot contain null values. These dimensions are
+    # intentionally absent for metrics where they do not apply, so use explicit
+    # sentinel values while preserving metric-level uniqueness.
+    df["k"] = pd.to_numeric(df["k"], errors="coerce").fillna(-1).astype(int)
+    df["decile"] = (
+        pd.to_numeric(df["decile"], errors="coerce")
+        .fillna(-1)
+        .astype(int)
+    )
+    df["group"] = df["group"].fillna("__all__").astype(str)
+    df["seed"] = pd.to_numeric(df["seed"], errors="coerce").fillna(-1).astype(int)
+
     out_dir.mkdir(parents=True, exist_ok=True)
     write_dataframe_atomic(df, all_path, mode=args.write_mode,
                            key=KEY, sort_by=KEY)
