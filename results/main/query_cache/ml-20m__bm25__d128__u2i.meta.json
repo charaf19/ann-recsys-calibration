@@ -1,0 +1,18 @@
+{
+  "cache_version": 1,
+  "dataset": "ml-20m",
+  "dim": 128,
+  "embedding_fingerprint": "bf14ca225e177c6f",
+  "max_queries": "10000",
+  "metric_topk": 10,
+  "min_user_interactions": 5,
+  "modality": "u2i",
+  "n_items": 22884,
+  "n_queries": 10000,
+  "query_construction": "mean_training_history_v1",
+  "query_fingerprint": "a28bf676ab8a3509",
+  "seed": 42,
+  "split_protocol": "temporal_leave_one_out_v1",
+  "topk": 100,
+  "weighting": "bm25"
+}

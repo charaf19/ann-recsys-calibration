@@ -1,34 +1,34 @@
 {
   "dataset": "ml-20m",
   "dim": 128,
-  "finished_at_utc": "2026-07-11T16:38:56.125036+00:00",
+  "finished_at_utc": "2026-07-12T17:32:51.020168+00:00",
   "method": "flat",
   "overall": "ok",
-  "started_at_utc": "2026-07-11T16:37:55.045724+00:00",
+  "started_at_utc": "2026-07-12T17:32:24.973786+00:00",
   "steps": {
     "build": {
       "error": null,
-      "finished_at_utc": "2026-07-11T16:37:55.050719+00:00",
+      "finished_at_utc": "2026-07-12T17:32:24.976956+00:00",
       "status": "ok"
     },
     "calibration": {
       "error": null,
-      "finished_at_utc": "2026-07-11T16:37:55.052207+00:00",
+      "finished_at_utc": "2026-07-12T17:32:45.028918+00:00",
       "status": "skipped"
     },
     "eval_i2i": {
       "error": null,
-      "finished_at_utc": "2026-07-11T16:38:56.119890+00:00",
+      "finished_at_utc": "2026-07-12T17:32:51.005675+00:00",
       "status": "ok"
     },
     "eval_u2i": {
       "error": null,
-      "finished_at_utc": "2026-07-11T16:38:29.876044+00:00",
+      "finished_at_utc": "2026-07-12T17:32:45.014690+00:00",
       "status": "ok"
     },
     "latency": {
       "error": null,
-      "finished_at_utc": "2026-07-11T16:37:56.208374+00:00",
+      "finished_at_utc": "2026-07-12T17:32:46.109154+00:00",
       "status": "ok"
     }
   },

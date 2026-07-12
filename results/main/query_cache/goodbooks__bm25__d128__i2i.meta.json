@@ -1,0 +1,18 @@
+{
+  "cache_version": 1,
+  "dataset": "goodbooks",
+  "dim": 128,
+  "embedding_fingerprint": "032cbafa513089bd",
+  "max_queries": "10000",
+  "metric_topk": 10,
+  "min_user_interactions": 5,
+  "modality": "i2i",
+  "n_items": 10000,
+  "n_queries": 10000,
+  "query_construction": "last_training_item_v1",
+  "query_fingerprint": "f53d2c9f047ccc82",
+  "seed": 42,
+  "split_protocol": "temporal_leave_one_out_v1",
+  "topk": 100,
+  "weighting": "bm25"
+}

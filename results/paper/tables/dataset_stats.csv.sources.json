@@ -2,8 +2,8 @@
   "artifact": "dataset_stats.csv",
   "artifact_path": "results/paper/tables/dataset_stats.csv",
   "config_hash": "12d2e2806429",
-  "generated_at_utc": "2026-07-11T16:37:06.461507+00:00",
-  "git_commit": "067154a33f58811146b5d0780072d872d512e079",
+  "generated_at_utc": "2026-07-12T17:30:23.637337+00:00",
+  "git_commit": "fdcf37d2f4bc1c75ea30916730e4e218c0a9d0d8",
   "script": "dataset_stats",
   "source_file_hashes": {
     "data/amazon_books.csv": "0efc7e4344f8d07b6e6407ff69deef5e385e128237a96b20ad0b511a579750ac",

@@ -1,0 +1,77 @@
+{
+  "achieved_recall_vs_exact": 0.96932,
+  "calibrated_param_value": 16,
+  "calibration_fingerprint": "69140e25f0e56f1d",
+  "dataset": "amazon-books",
+  "dim": 128,
+  "latency_ms_at_calibrated": {
+    "mean": 0.35381260000212933,
+    "p50": 0.3408999991734163,
+    "p95": 0.5188150005778879,
+    "p99": 0.5719960000715217
+  },
+  "method": "ivfflat",
+  "modality": "i2i",
+  "n_calibration_queries": 1000,
+  "param_name": "nprobe",
+  "query_fingerprint": "5bcf673ba09a7b9f",
+  "query_source": "shared_modality_query_cache",
+  "seed": 42,
+  "selected_param_value": 16,
+  "sweep": [
+    {
+      "latency_ms": {
+        "mean": 0.048431799998070346,
+        "p50": 0.04374999934952939,
+        "p95": 0.08160999923347843,
+        "p99": 0.1167079991319042
+      },
+      "param_value": 1,
+      "recall_vs_exact": 0.59891
+    },
+    {
+      "latency_ms": {
+        "mean": 0.07414899996001623,
+        "p50": 0.06800000119255856,
+        "p95": 0.1266499999474035,
+        "p99": 0.15493600078116285
+      },
+      "param_value": 2,
+      "recall_vs_exact": 0.75758
+    },
+    {
+      "latency_ms": {
+        "mean": 0.12590920004004147,
+        "p50": 0.11644999904092401,
+        "p95": 0.21287999961714368,
+        "p99": 0.24698900098883306
+      },
+      "param_value": 4,
+      "recall_vs_exact": 0.86767
+    },
+    {
+      "latency_ms": {
+        "mean": 0.2101520000032906,
+        "p50": 0.19855000027746428,
+        "p95": 0.32073000011223474,
+        "p99": 0.42782700147654396
+      },
+      "param_value": 8,
+      "recall_vs_exact": 0.93439
+    },
+    {
+      "latency_ms": {
+        "mean": 0.35381260000212933,
+        "p50": 0.3408999991734163,
+        "p95": 0.5188150005778879,
+        "p99": 0.5719960000715217
+      },
+      "param_value": 16,
+      "recall_vs_exact": 0.96932
+    }
+  ],
+  "target_reached": true,
+  "target_recall": 0.95,
+  "topk": 100,
+  "weighting": "bm25"
+}

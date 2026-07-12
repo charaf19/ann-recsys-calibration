@@ -22,6 +22,7 @@
   "nprobe": 16,
   "precision_at_k_mean": 0.0032700000000000003,
   "queries": 10000,
+  "query_fingerprint": "5bcf673ba09a7b9f",
   "recall_at_100_mean": 0.0778,
   "recall_at_k_mean": 0.0327,
   "seed": 42,

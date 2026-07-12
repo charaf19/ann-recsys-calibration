@@ -1,0 +1,117 @@
+{
+  "achieved_recall_vs_exact": 0.83777,
+  "calibrated_param_value": 256,
+  "calibration_fingerprint": "69140e25f0e56f1d",
+  "dataset": "amazon-books",
+  "dim": 128,
+  "latency_ms_at_calibrated": {
+    "mean": 1.804132999968715,
+    "p50": 1.5065999996295432,
+    "p95": 3.790550000212531,
+    "p99": 4.4575179998173535
+  },
+  "method": "ivfpq",
+  "modality": "i2i",
+  "n_calibration_queries": 1000,
+  "param_name": "nprobe",
+  "query_fingerprint": "5bcf673ba09a7b9f",
+  "query_source": "shared_modality_query_cache",
+  "seed": 42,
+  "selected_param_value": 256,
+  "sweep": [
+    {
+      "latency_ms": {
+        "mean": 0.04975719998401473,
+        "p50": 0.04270000044925837,
+        "p95": 0.09705500006020878,
+        "p99": 0.14630599896918284
+      },
+      "param_value": 1,
+      "recall_vs_exact": 0.55577
+    },
+    {
+      "latency_ms": {
+        "mean": 0.055199000031279866,
+        "p50": 0.053699999625678174,
+        "p95": 0.07060000098135788,
+        "p99": 0.09453000106077522
+      },
+      "param_value": 2,
+      "recall_vs_exact": 0.69164
+    },
+    {
+      "latency_ms": {
+        "mean": 0.17578659997525392,
+        "p50": 0.16089999917312525,
+        "p95": 0.3105000007053603,
+        "p99": 0.380110001315188
+      },
+      "param_value": 4,
+      "recall_vs_exact": 0.77329
+    },
+    {
+      "latency_ms": {
+        "mean": 0.21608040003411588,
+        "p50": 0.19770000017160783,
+        "p95": 0.3851199994642228,
+        "p99": 0.4668190004304049
+      },
+      "param_value": 8,
+      "recall_vs_exact": 0.81159
+    },
+    {
+      "latency_ms": {
+        "mean": 0.2700353999643994,
+        "p50": 0.2549999990151264,
+        "p95": 0.5168049989151768,
+        "p99": 0.6036730005689604
+      },
+      "param_value": 16,
+      "recall_vs_exact": 0.82747
+    },
+    {
+      "latency_ms": {
+        "mean": 0.3260711999682826,
+        "p50": 0.25305000053776894,
+        "p95": 0.7614650012328628,
+        "p99": 0.9481199989750165
+      },
+      "param_value": 32,
+      "recall_vs_exact": 0.83368
+    },
+    {
+      "latency_ms": {
+        "mean": 0.5970640000159619,
+        "p50": 0.4476000003705849,
+        "p95": 1.3454099997943554,
+        "p99": 1.5347510013634742
+      },
+      "param_value": 64,
+      "recall_vs_exact": 0.83606
+    },
+    {
+      "latency_ms": {
+        "mean": 0.9333964000143169,
+        "p50": 0.8379999999306165,
+        "p95": 1.8203399991762124,
+        "p99": 2.286856999944575
+      },
+      "param_value": 128,
+      "recall_vs_exact": 0.83719
+    },
+    {
+      "latency_ms": {
+        "mean": 1.804132999968715,
+        "p50": 1.5065999996295432,
+        "p95": 3.790550000212531,
+        "p99": 4.4575179998173535
+      },
+      "param_value": 256,
+      "recall_vs_exact": 0.83777
+    }
+  ],
+  "target_reached": false,
+  "target_recall": 0.9,
+  "topk": 100,
+  "weighting": "bm25"
+}

@@ -1,0 +1,87 @@
+{
+  "achieved_recall_vs_exact": 0.96869,
+  "calibrated_param_value": 32,
+  "calibration_fingerprint": "471ea40a22b928c7",
+  "dataset": "goodbooks",
+  "dim": 128,
+  "latency_ms_at_calibrated": {
+    "mean": 0.10880819996418722,
+    "p50": 0.08914999989428907,
+    "p95": 0.19985499993708786,
+    "p99": 0.23600800001076994
+  },
+  "method": "ivfflat",
+  "modality": "u2i",
+  "n_calibration_queries": 1000,
+  "param_name": "nprobe",
+  "query_fingerprint": "20fda5956a2183be",
+  "query_source": "shared_modality_query_cache",
+  "seed": 42,
+  "selected_param_value": 32,
+  "sweep": [
+    {
+      "latency_ms": {
+        "mean": 0.011376599977666046,
+        "p50": 0.010700000075303251,
+        "p95": 0.015825000218683247,
+        "p99": 0.02420599965262226
+      },
+      "param_value": 1,
+      "recall_vs_exact": 0.29409
+    },
+    {
+      "latency_ms": {
+        "mean": 0.014336999969600583,
+        "p50": 0.013800000033370452,
+        "p95": 0.01919999976962572,
+        "p99": 0.024205000545407526
+      },
+      "param_value": 2,
+      "recall_vs_exact": 0.45461
+    },
+    {
+      "latency_ms": {
+        "mean": 0.0213096000115911,
+        "p50": 0.01874999998108251,
+        "p95": 0.033849999999802045,
+        "p99": 0.060840000032840146
+      },
+      "param_value": 4,
+      "recall_vs_exact": 0.62292
+    },
+    {
+      "latency_ms": {
+        "mean": 0.02753859999393171,
+        "p50": 0.025999999706982635,
+        "p95": 0.03801500010922608,
+        "p99": 0.06133200034128083
+      },
+      "param_value": 8,
+      "recall_vs_exact": 0.77545
+    },
+    {
+      "latency_ms": {
+        "mean": 0.06285379998189455,
+        "p50": 0.04154999987804331,
+        "p95": 0.13340499986043142,
+        "p99": 0.1637110004776332
+      },
+      "param_value": 16,
+      "recall_vs_exact": 0.89739
+    },
+    {
+      "latency_ms": {
+        "mean": 0.10880819996418722,
+        "p50": 0.08914999989428907,
+        "p95": 0.19985499993708786,
+        "p99": 0.23600800001076994
+      },
+      "param_value": 32,
+      "recall_vs_exact": 0.96869
+    }
+  ],
+  "target_reached": true,
+  "target_recall": 0.95,
+  "topk": 100,
+  "weighting": "bm25"
+}

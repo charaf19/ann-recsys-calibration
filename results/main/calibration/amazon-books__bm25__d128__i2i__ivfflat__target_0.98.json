@@ -1,0 +1,87 @@
+{
+  "achieved_recall_vs_exact": 0.98616,
+  "calibrated_param_value": 32,
+  "calibration_fingerprint": "69140e25f0e56f1d",
+  "dataset": "amazon-books",
+  "dim": 128,
+  "latency_ms_at_calibrated": {
+    "mean": 0.6209434000229521,
+    "p50": 0.6024000003890251,
+    "p95": 0.8783299997048741,
+    "p99": 1.0298979989966026
+  },
+  "method": "ivfflat",
+  "modality": "i2i",
+  "n_calibration_queries": 1000,
+  "param_name": "nprobe",
+  "query_fingerprint": "5bcf673ba09a7b9f",
+  "query_source": "shared_modality_query_cache",
+  "seed": 42,
+  "selected_param_value": 32,
+  "sweep": [
+    {
+      "latency_ms": {
+        "mean": 0.051250600001367275,
+        "p50": 0.04495000030146912,
+        "p95": 0.09474500075157262,
+        "p99": 0.14120700014245813
+      },
+      "param_value": 1,
+      "recall_vs_exact": 0.59891
+    },
+    {
+      "latency_ms": {
+        "mean": 0.07774500004961737,
+        "p50": 0.0685499999235617,
+        "p95": 0.13999500106365295,
+        "p99": 0.18063200106553257
+      },
+      "param_value": 2,
+      "recall_vs_exact": 0.75758
+    },
+    {
+      "latency_ms": {
+        "mean": 0.12261439995199908,
+        "p50": 0.112749999971129,
+        "p95": 0.19718999838005394,
+        "p99": 0.2493079991108966
+      },
+      "param_value": 4,
+      "recall_vs_exact": 0.86767
+    },
+    {
+      "latency_ms": {
+        "mean": 0.20555220000096597,
+        "p50": 0.19144999987474876,
+        "p95": 0.3263249998781248,
+        "p99": 0.36840600028881454
+      },
+      "param_value": 8,
+      "recall_vs_exact": 0.93439
+    },
+    {
+      "latency_ms": {
+        "mean": 0.3550283999647945,
+        "p50": 0.3416500003368128,
+        "p95": 0.5178600010367518,
+        "p99": 0.6586439999591676
+      },
+      "param_value": 16,
+      "recall_vs_exact": 0.96932
+    },
+    {
+      "latency_ms": {
+        "mean": 0.6209434000229521,
+        "p50": 0.6024000003890251,
+        "p95": 0.8783299997048741,
+        "p99": 1.0298979989966026
+      },
+      "param_value": 32,
+      "recall_vs_exact": 0.98616
+    }
+  ],
+  "target_reached": true,
+  "target_recall": 0.98,
+  "topk": 100,
+  "weighting": "bm25"
+}

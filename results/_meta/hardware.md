@@ -1,6 +1,6 @@
 # Hardware / environment capture
 
-- Captured (UTC): 2026-07-12T17:29:37.704236+00:00
+- Captured (UTC): 2026-07-12T17:30:24.271838+00:00
 - Accelerator present on machine: True
 - Accelerator used in main experiments: **False**
 

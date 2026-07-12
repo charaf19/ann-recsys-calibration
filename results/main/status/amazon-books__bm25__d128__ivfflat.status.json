@@ -1,33 +1,34 @@
 {
   "dataset": "amazon-books",
   "dim": 128,
+  "finished_at_utc": "2026-07-12T17:44:55.869043+00:00",
   "method": "ivfflat",
-  "overall": "running",
-  "started_at_utc": "2026-07-11T16:54:35.674820+00:00",
+  "overall": "ok",
+  "started_at_utc": "2026-07-12T17:43:20.066275+00:00",
   "steps": {
     "build": {
       "error": null,
-      "finished_at_utc": "2026-07-11T16:54:35.676346+00:00",
+      "finished_at_utc": "2026-07-12T17:43:20.068275+00:00",
       "status": "ok"
     },
     "calibration": {
       "error": null,
-      "finished_at_utc": "2026-07-11T16:54:50.484328+00:00",
+      "finished_at_utc": "2026-07-12T17:44:31.763785+00:00",
       "status": "ok"
     },
     "eval_i2i": {
       "error": null,
-      "finished_at_utc": null,
-      "status": "pending"
+      "finished_at_utc": "2026-07-12T17:44:55.854213+00:00",
+      "status": "ok"
     },
     "eval_u2i": {
       "error": null,
-      "finished_at_utc": "2026-07-11T16:56:07.754684+00:00",
+      "finished_at_utc": "2026-07-12T17:44:21.384254+00:00",
       "status": "ok"
     },
     "latency": {
       "error": null,
-      "finished_at_utc": "2026-07-11T16:54:51.834335+00:00",
+      "finished_at_utc": "2026-07-12T17:44:33.082005+00:00",
       "status": "ok"
     }
   },

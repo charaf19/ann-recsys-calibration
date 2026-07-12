@@ -1,0 +1,67 @@
+{
+  "achieved_recall_vs_exact": 0.97967,
+  "calibrated_param_value": 64,
+  "calibration_fingerprint": "d0c2fece682790a7",
+  "dataset": "ml-20m",
+  "dim": 128,
+  "latency_ms_at_calibrated": {
+    "mean": 0.05555960001402127,
+    "p50": 0.05030000011174707,
+    "p95": 0.08925499982979085,
+    "p99": 0.11862300084430896
+  },
+  "method": "hnsw",
+  "modality": "u2i",
+  "n_calibration_queries": 1000,
+  "param_name": "ef",
+  "query_fingerprint": "a28bf676ab8a3509",
+  "query_source": "shared_modality_query_cache",
+  "seed": 42,
+  "selected_param_value": 64,
+  "sweep": [
+    {
+      "latency_ms": {
+        "mean": 0.02657159998852876,
+        "p50": 0.023999999939405825,
+        "p95": 0.04751000060423393,
+        "p99": 0.06661599963081243
+      },
+      "param_value": 8,
+      "recall_vs_exact": 0.5617
+    },
+    {
+      "latency_ms": {
+        "mean": 0.07110859999556851,
+        "p50": 0.06844999961685971,
+        "p95": 0.10733499943853528,
+        "p99": 0.16884500020751145
+      },
+      "param_value": 16,
+      "recall_vs_exact": 0.73091
+    },
+    {
+      "latency_ms": {
+        "mean": 0.04572440000993083,
+        "p50": 0.031149999813351315,
+        "p95": 0.12027499942632851,
+        "p99": 0.17334299991489385
+      },
+      "param_value": 32,
+      "recall_vs_exact": 0.89402
+    },
+    {
+      "latency_ms": {
+        "mean": 0.05555960001402127,
+        "p50": 0.05030000011174707,
+        "p95": 0.08925499982979085,
+        "p99": 0.11862300084430896
+      },
+      "param_value": 64,
+      "recall_vs_exact": 0.97967
+    }
+  ],
+  "target_reached": true,
+  "target_recall": 0.95,
+  "topk": 100,
+  "weighting": "bm25"
+}

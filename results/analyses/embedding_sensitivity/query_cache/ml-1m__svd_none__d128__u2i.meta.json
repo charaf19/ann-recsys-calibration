@@ -1,0 +1,14 @@
+{
+  "cache_version": 1,
+  "dataset": "ml-1m",
+  "dim": 128,
+  "max_queries": "10000",
+  "min_user_interactions": 5,
+  "modality": "u2i",
+  "n_items": 3533,
+  "n_queries": 6034,
+  "query_fingerprint": "91ee1112fd102368",
+  "seed": 42,
+  "split_protocol": "temporal_leave_one_out_v1",
+  "weighting": "svd_none"
+}

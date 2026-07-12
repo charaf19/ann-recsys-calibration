@@ -1,34 +1,34 @@
 {
   "dataset": "amazon-books",
   "dim": 128,
-  "finished_at_utc": "2026-07-11T16:51:19.602030+00:00",
+  "finished_at_utc": "2026-07-12T17:41:43.030765+00:00",
   "method": "flat",
   "overall": "ok",
-  "started_at_utc": "2026-07-11T16:46:50.266791+00:00",
+  "started_at_utc": "2026-07-12T17:38:09.584719+00:00",
   "steps": {
     "build": {
       "error": null,
-      "finished_at_utc": "2026-07-11T16:46:50.272033+00:00",
+      "finished_at_utc": "2026-07-12T17:38:09.589324+00:00",
       "status": "ok"
     },
     "calibration": {
       "error": null,
-      "finished_at_utc": "2026-07-11T16:46:50.275279+00:00",
+      "finished_at_utc": "2026-07-12T17:40:09.942836+00:00",
       "status": "skipped"
     },
     "eval_i2i": {
       "error": null,
-      "finished_at_utc": "2026-07-11T16:51:19.599541+00:00",
+      "finished_at_utc": "2026-07-12T17:41:43.018845+00:00",
       "status": "ok"
     },
     "eval_u2i": {
       "error": null,
-      "finished_at_utc": "2026-07-11T16:49:20.998486+00:00",
+      "finished_at_utc": "2026-07-12T17:40:09.914809+00:00",
       "status": "ok"
     },
     "latency": {
       "error": null,
-      "finished_at_utc": "2026-07-11T16:47:17.026686+00:00",
+      "finished_at_utc": "2026-07-12T17:40:37.862563+00:00",
       "status": "ok"
     }
   },

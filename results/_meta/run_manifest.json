@@ -18,13 +18,13 @@
     "torch": "2.13.0"
   },
   "failed_combinations": [],
-  "finished_at_utc": null,
-  "git_commit": "067154a33f58811146b5d0780072d872d512e079",
+  "finished_at_utc": "2026-07-12T17:50:46.213827+00:00",
+  "git_commit": "fdcf37d2f4bc1c75ea30916730e4e218c0a9d0d8",
   "git_dirty_state": true,
   "hardware": {
     "accelerator_note": "The presence of an accelerator is environment metadata only. No GPU was used by the canonical experiments.",
     "accelerator_present": true,
-    "captured_at_utc": "2026-07-11T16:37:06.974433+00:00",
+    "captured_at_utc": "2026-07-12T17:30:24.271838+00:00",
     "cpu": {
       "freq": {
         "current_mhz": 2000.0,
@@ -32,6 +32,7 @@
         "min_mhz": 0.0
       },
       "logical_cores": 16,
+      "model": "Intel(R) Core(TM) Ultra 7 255H",
       "physical_cores": 16
     },
     "main_experiments_accelerator_used": false,
@@ -83,7 +84,8 @@
     "i2i"
   ],
   "outputs": [
-    "results\\main\\run_config.json"
+    "results\\main\\run_config.json",
+    "results\\main\\summary_main.csv"
   ],
   "project": "IndexWise-Recsys",
   "python_version": "3.11.0 (main, Oct 24 2022, 18:26:48) [MSC v.1933 64 bit (AMD64)]",
@@ -170,8 +172,8 @@
       "bootstrap_iterations": 2000
     }
   },
-  "run_id": "20260711T163706Z__12d2e2806429",
+  "run_id": "20260712T173025Z__12d2e2806429",
   "script": "run_revision_experiments",
-  "started_at_utc": "2026-07-11T16:37:06.982986+00:00",
-  "status": "running"
+  "started_at_utc": "2026-07-12T17:30:25.517021+00:00",
+  "status": "completed"
 }

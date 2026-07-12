@@ -1,34 +1,34 @@
 {
   "dataset": "goodbooks",
   "dim": 128,
-  "finished_at_utc": "2026-07-11T16:46:50.137170+00:00",
+  "finished_at_utc": "2026-07-12T17:36:08.304270+00:00",
   "method": "flatpq",
   "overall": "ok",
-  "started_at_utc": "2026-07-11T16:46:16.788930+00:00",
+  "started_at_utc": "2026-07-12T17:36:00.383302+00:00",
   "steps": {
     "build": {
       "error": null,
-      "finished_at_utc": "2026-07-11T16:46:20.846791+00:00",
+      "finished_at_utc": "2026-07-12T17:36:00.384664+00:00",
       "status": "ok"
     },
     "calibration": {
       "error": null,
-      "finished_at_utc": "2026-07-11T16:46:20.848967+00:00",
+      "finished_at_utc": "2026-07-12T17:36:05.010123+00:00",
       "status": "skipped"
     },
     "eval_i2i": {
       "error": null,
-      "finished_at_utc": "2026-07-11T16:46:50.134170+00:00",
+      "finished_at_utc": "2026-07-12T17:36:08.283757+00:00",
       "status": "ok"
     },
     "eval_u2i": {
       "error": null,
-      "finished_at_utc": "2026-07-11T16:46:37.615864+00:00",
+      "finished_at_utc": "2026-07-12T17:36:04.998871+00:00",
       "status": "ok"
     },
     "latency": {
       "error": null,
-      "finished_at_utc": "2026-07-11T16:46:21.321474+00:00",
+      "finished_at_utc": "2026-07-12T17:36:05.506005+00:00",
       "status": "ok"
     }
   },
