@@ -1,34 +1,34 @@
 {
   "dataset": "ml-20m",
   "dim": 128,
-  "finished_at_utc": "2026-07-11T02:04:04.227260+00:00",
+  "finished_at_utc": "2026-07-11T16:43:13.244708+00:00",
   "method": "ivfpq",
-  "overall": "failed",
-  "started_at_utc": "2026-07-11T02:02:11.501191+00:00",
+  "overall": "ok",
+  "started_at_utc": "2026-07-11T16:41:36.073571+00:00",
   "steps": {
     "build": {
       "error": null,
-      "finished_at_utc": "2026-07-11T02:02:31.626040+00:00",
+      "finished_at_utc": "2026-07-11T16:41:36.073571+00:00",
       "status": "ok"
     },
     "calibration": {
       "error": null,
-      "finished_at_utc": "2026-07-11T02:02:39.329963+00:00",
+      "finished_at_utc": "2026-07-11T16:41:42.096970+00:00",
       "status": "ok"
     },
     "eval_i2i": {
-      "error": "command failed (exit 1): C:\\Users\\pc\\Desktop\\PROJECTS\\ann-recsys-calibration\\.venv\\Scripts\\python.exe src/eval_modalities.py --interactions data/ml20m.csv --item_vecs data/emb_ml20m_bm25_d128/item_vecs.npy --index data/index_ml20m_bm25_d128_ivfpq --ann_method ivfpq --modality i2i --queries 10000 --topk 100 --metric_topk 10 --ef 128 --nprobe 256 --seed 42 --dataset ml-20m --weighting bm25 --config configs\\main_cpu.yml --aggregate_dir results\\main\\aggregates --perquery_dir results/main/perquery --write_mode fail_if_exists",
-      "finished_at_utc": "2026-07-11T02:04:04.209980+00:00",
-      "status": "failed"
+      "error": null,
+      "finished_at_utc": "2026-07-11T16:43:13.233560+00:00",
+      "status": "ok"
     },
     "eval_u2i": {
-      "error": "command failed (exit 1): C:\\Users\\pc\\Desktop\\PROJECTS\\ann-recsys-calibration\\.venv\\Scripts\\python.exe src/eval_modalities.py --interactions data/ml20m.csv --item_vecs data/emb_ml20m_bm25_d128/item_vecs.npy --index data/index_ml20m_bm25_d128_ivfpq --ann_method ivfpq --modality u2i --queries 10000 --topk 100 --metric_topk 10 --ef 128 --nprobe 256 --seed 42 --dataset ml-20m --weighting bm25 --config configs\\main_cpu.yml --aggregate_dir results\\main\\aggregates --perquery_dir results/main/perquery --write_mode fail_if_exists",
-      "finished_at_utc": "2026-07-11T02:03:27.169248+00:00",
-      "status": "failed"
+      "error": null,
+      "finished_at_utc": "2026-07-11T16:42:35.532723+00:00",
+      "status": "ok"
     },
     "latency": {
       "error": null,
-      "finished_at_utc": "2026-07-11T02:02:40.418167+00:00",
+      "finished_at_utc": "2026-07-11T16:41:43.140728+00:00",
       "status": "ok"
     }
   },

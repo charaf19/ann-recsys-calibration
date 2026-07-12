@@ -25,7 +25,42 @@ import pandas as pd
 
 WRITE_MODES = ("fail_if_exists", "replace", "merge")
 
+import random
+import time
 
+
+def _replace_with_retry(
+    source: Path,
+    destination: Path,
+    *,
+    attempts: int = 8,
+    initial_delay_s: float = 0.05,
+) -> None:
+    """Atomically replace destination, retrying transient Windows locks."""
+
+    delay = initial_delay_s
+    last_error: PermissionError | None = None
+
+    for attempt in range(1, attempts + 1):
+        try:
+            os.replace(source, destination)
+            return
+        except PermissionError as exc:
+            last_error = exc
+
+            if attempt == attempts:
+                break
+
+            # Small jitter prevents repeated collisions with scanners/watchers.
+            time.sleep(delay + random.uniform(0.0, delay * 0.2))
+            delay = min(delay * 2.0, 1.0)
+
+    assert last_error is not None
+    raise PermissionError(
+        f"Unable to atomically replace {destination} after "
+        f"{attempts} attempts. Temporary file remains at {source}. "
+        f"Another process may be holding the destination open."
+    ) from last_error
 class ResultExistsError(FileExistsError):
     """Target evidence file exists and write mode is fail_if_exists."""
 
@@ -71,7 +106,7 @@ def _atomic_write_text(text: str, path: Path):
             f.write(text)
             f.flush()
             os.fsync(f.fileno())
-        os.replace(tmp, path)
+        _replace_with_retry(tmp, path)
     except BaseException:
         try:
             os.unlink(tmp)
@@ -292,7 +327,7 @@ def write_npz_atomic(path, mode: str = "fail_if_exists", **arrays):
     try:
         np.savez_compressed(tmp, **arrays)
         _fsync_written_file(tmp)
-        os.replace(tmp, path)
+        _replace_with_retry(tmp, path)
     except BaseException:
         try:
             os.unlink(tmp)

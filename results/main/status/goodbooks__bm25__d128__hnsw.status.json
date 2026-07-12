@@ -1,34 +1,34 @@
 {
   "dataset": "goodbooks",
   "dim": 128,
-  "finished_at_utc": "2026-07-11T02:06:28.723783+00:00",
+  "finished_at_utc": "2026-07-11T16:45:22.133536+00:00",
   "method": "hnsw",
-  "overall": "failed",
-  "started_at_utc": "2026-07-11T02:06:06.787275+00:00",
+  "overall": "ok",
+  "started_at_utc": "2026-07-11T16:44:58.155018+00:00",
   "steps": {
     "build": {
       "error": null,
-      "finished_at_utc": "2026-07-11T02:06:07.742758+00:00",
+      "finished_at_utc": "2026-07-11T16:44:58.157061+00:00",
       "status": "ok"
     },
     "calibration": {
       "error": null,
-      "finished_at_utc": "2026-07-11T02:06:09.007928+00:00",
+      "finished_at_utc": "2026-07-11T16:44:59.586312+00:00",
       "status": "ok"
     },
     "eval_i2i": {
-      "error": "command failed (exit 1): C:\\Users\\pc\\Desktop\\PROJECTS\\ann-recsys-calibration\\.venv\\Scripts\\python.exe src/eval_modalities.py --interactions data/goodbooks.csv --item_vecs data/emb_goodbooks_bm25_d128/item_vecs.npy --index data/index_goodbooks_bm25_d128_hnsw --ann_method hnsw --modality i2i --queries 10000 --topk 100 --metric_topk 10 --ef 64 --nprobe 16 --seed 42 --dataset goodbooks --weighting bm25 --config configs\\main_cpu.yml --aggregate_dir results\\main\\aggregates --perquery_dir results/main/perquery --write_mode fail_if_exists",
-      "finished_at_utc": "2026-07-11T02:06:28.720217+00:00",
-      "status": "failed"
+      "error": null,
+      "finished_at_utc": "2026-07-11T16:45:22.122732+00:00",
+      "status": "ok"
     },
     "eval_u2i": {
-      "error": "command failed (exit 1): C:\\Users\\pc\\Desktop\\PROJECTS\\ann-recsys-calibration\\.venv\\Scripts\\python.exe src/eval_modalities.py --interactions data/goodbooks.csv --item_vecs data/emb_goodbooks_bm25_d128/item_vecs.npy --index data/index_goodbooks_bm25_d128_hnsw --ann_method hnsw --modality u2i --queries 10000 --topk 100 --metric_topk 10 --ef 64 --nprobe 16 --seed 42 --dataset goodbooks --weighting bm25 --config configs\\main_cpu.yml --aggregate_dir results\\main\\aggregates --perquery_dir results/main/perquery --write_mode fail_if_exists",
-      "finished_at_utc": "2026-07-11T02:06:19.456042+00:00",
-      "status": "failed"
+      "error": null,
+      "finished_at_utc": "2026-07-11T16:45:11.826929+00:00",
+      "status": "ok"
     },
     "latency": {
       "error": null,
-      "finished_at_utc": "2026-07-11T02:06:09.361937+00:00",
+      "finished_at_utc": "2026-07-11T16:44:59.926971+00:00",
       "status": "ok"
     }
   },

@@ -8,7 +8,7 @@
     0.95,
     0.98
   ],
-  "config_hash": "c1e6c45561d6",
+  "config_hash": "12d2e2806429",
   "cpu_only": true,
   "datasets": [
     "ml-1m",
@@ -26,6 +26,7 @@
     "flatpq"
   ],
   "metric_topk": 10,
+  "min_user_interactions": 5,
   "modalities": [
     "u2i",
     "i2i"
@@ -35,7 +36,7 @@
   "primary_target": 0.95,
   "queries_large": "10000",
   "queries_ml1m": "full",
-  "run_id": "20260711T015610Z__c1e6c45561d6",
+  "run_id": "20260711T163706Z__12d2e2806429",
   "seed": 42,
   "topk": 100,
   "weighting": "bm25"

@@ -1,0 +1,36 @@
+{
+  "dataset": "amazon-books",
+  "dim": 128,
+  "finished_at_utc": "2026-07-11T16:54:35.673178+00:00",
+  "method": "hnsw",
+  "overall": "ok",
+  "started_at_utc": "2026-07-11T16:51:19.603514+00:00",
+  "steps": {
+    "build": {
+      "error": null,
+      "finished_at_utc": "2026-07-11T16:51:19.606519+00:00",
+      "status": "ok"
+    },
+    "calibration": {
+      "error": null,
+      "finished_at_utc": "2026-07-11T16:51:33.573626+00:00",
+      "status": "ok"
+    },
+    "eval_i2i": {
+      "error": null,
+      "finished_at_utc": "2026-07-11T16:54:35.662443+00:00",
+      "status": "ok"
+    },
+    "eval_u2i": {
+      "error": null,
+      "finished_at_utc": "2026-07-11T16:53:09.498827+00:00",
+      "status": "ok"
+    },
+    "latency": {
+      "error": null,
+      "finished_at_utc": "2026-07-11T16:51:34.621946+00:00",
+      "status": "ok"
+    }
+  },
+  "weighting": "bm25"
+}

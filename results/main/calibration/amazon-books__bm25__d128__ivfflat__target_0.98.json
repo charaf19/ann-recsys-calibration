@@ -1,0 +1,75 @@
+{
+  "achieved_recall_vs_exact": 0.99036,
+  "calibrated_param_value": 32,
+  "dataset": "amazon-books",
+  "dim": 128,
+  "latency_ms_at_calibrated": {
+    "mean": 0.7025173999645631,
+    "p50": 0.6836499997007195,
+    "p95": 1.0017100004006352
+  },
+  "method": "ivfflat",
+  "n_calibration_queries": 1000,
+  "param_name": "nprobe",
+  "seed": 42,
+  "sweep": [
+    {
+      "latency_ms": {
+        "mean": 0.05306499996368075,
+        "p50": 0.04515000000537839,
+        "p95": 0.11575000053198888
+      },
+      "param_value": 1,
+      "recall_vs_exact": 0.60759
+    },
+    {
+      "latency_ms": {
+        "mean": 0.09363380002469057,
+        "p50": 0.08054999943851726,
+        "p95": 0.17975000064325264
+      },
+      "param_value": 2,
+      "recall_vs_exact": 0.7554
+    },
+    {
+      "latency_ms": {
+        "mean": 0.14096560002144543,
+        "p50": 0.12570000035339035,
+        "p95": 0.26221000025543606
+      },
+      "param_value": 4,
+      "recall_vs_exact": 0.87258
+    },
+    {
+      "latency_ms": {
+        "mean": 0.24380960003327345,
+        "p50": 0.22725000053469557,
+        "p95": 0.41787000091062493
+      },
+      "param_value": 8,
+      "recall_vs_exact": 0.94194
+    },
+    {
+      "latency_ms": {
+        "mean": 0.40726139996695565,
+        "p50": 0.37769999926240416,
+        "p95": 0.6471349996900244
+      },
+      "param_value": 16,
+      "recall_vs_exact": 0.97649
+    },
+    {
+      "latency_ms": {
+        "mean": 0.7025173999645631,
+        "p50": 0.6836499997007195,
+        "p95": 1.0017100004006352
+      },
+      "param_value": 32,
+      "recall_vs_exact": 0.99036
+    }
+  ],
+  "target_reached": true,
+  "target_recall": 0.98,
+  "topk": 100,
+  "weighting": "bm25"
+}
