@@ -37,6 +37,7 @@ from utils.fingerprints import fingerprint
 from utils.modality_queries import (build_query_population, item_id_map,
                                     write_query_cache)
 from utils.paths import dataset_csv, dataset_stem, RESULTS
+from utils.preprocessing import filter_min_user_interactions
 from utils.provenance import make_run_id, provenance_columns
 from utils.result_io import (preflight_output, write_dataframe_atomic,
                              ResultExistsError)
@@ -134,8 +135,25 @@ def _require_embedding_metadata(emb, expected, backbone):
             f"refusing stale {backbone} embeddings in {emb}: {mismatch}")
 
 
+def _expected_filtered_population(csv, min_user_interactions):
+    """Filtered (k-core) population counts for the canonical CSV, or None when
+    it cannot be obtained safely/cheaply. Used to reject neural embeddings whose
+    stored population predates the min_user_interactions filter."""
+    try:
+        df = pd.read_csv(csv, usecols=["user_id", "item_id"])
+    except (OSError, ValueError):
+        return None
+    df = filter_min_user_interactions(
+        df, min_user_interactions=min_user_interactions)
+    if df.empty:
+        return None
+    return {"n_users": int(df["user_id"].nunique()),
+            "n_items": int(df["item_id"].nunique()),
+            "n_interactions": int(len(df))}
+
+
 def ensure_embeddings(backbone, dataset, dim, normalize, seed, es_cfg,
-                      embedding_cfg, cfg_hash):
+                      embedding_cfg, cfg_hash, min_user_interactions):
     """Train (or reuse) embeddings for a backbone; returns emb dir or None
     when an optional dependency is missing."""
     csv = dataset_csv(dataset)
@@ -176,6 +194,7 @@ def ensure_embeddings(backbone, dataset, dim, normalize, seed, es_cfg,
         hp = cfg_get(es_cfg, hp_name, required=True)
         expected = {"embedding_backend": backbone, "dim": dim,
                     "normalize": normalize, "seed": seed,
+                    "min_user_interactions": int(min_user_interactions),
                     "epochs": int(cfg_get(hp, "epochs", required=True)),
                     "lr": float(cfg_get(hp, "lr", required=True))}
         if backbone == "bpr_matrix_factorization":
@@ -188,6 +207,10 @@ def ensure_embeddings(backbone, dataset, dim, normalize, seed, es_cfg,
                 "hidden_dim": int(cfg_get(hp, "hidden_dim", required=True)),
                 "batch_size": int(cfg_get(hp, "batch_size", required=True)),
             })
+        # Reject embeddings whose stored population predates k-core filtering.
+        expected_pop = _expected_filtered_population(csv, min_user_interactions)
+        if expected_pop is not None:
+            expected.update(expected_pop)
         _require_embedding_metadata(emb, expected, backbone)
         return emb
     if backbone == "two_tower_mlp":
@@ -202,6 +225,7 @@ def ensure_embeddings(backbone, dataset, dim, normalize, seed, es_cfg,
     cmd = ["python", "src/train_neural_embeddings.py", "--interactions", csv,
            "--backbone", backbone, "--dim", str(dim), "--normalize", normalize,
            "--seed", str(seed), "--config_hash", cfg_hash,
+           "--min_user_interactions", str(min_user_interactions),
            "--out_dir", emb,
            "--epochs", str(cfg_get(hp, "epochs", required=True)),
            "--lr", str(cfg_get(hp, "lr", required=True))]
@@ -341,7 +365,8 @@ def main():
                     continue
                 print(f"[{SCRIPT}] main BM25 rows not reusable: {reason}; recomputing")
             emb = ensure_embeddings(backbone, dataset, dim, normalize, seed, es,
-                                    embedding_cfg, cfg_hash)
+                                    embedding_cfg, cfg_hash,
+                                    min_user_interactions)
             if emb is None:
                 # optional backbone with missing dependency: keep it visible
                 # in the schema instead of silently dropping it

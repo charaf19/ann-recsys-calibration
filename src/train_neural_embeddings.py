@@ -23,6 +23,7 @@ import numpy as np
 import pandas as pd
 
 from utils.common import set_global_seed
+from utils.preprocessing import filter_min_user_interactions
 
 SCRIPT = "train_neural_embeddings"
 BACKBONES = ("bpr_matrix_factorization", "two_tower_mlp")
@@ -141,6 +142,13 @@ def main():
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--config_hash", default="unknown",
                     help="resolved experiment configuration hash")
+    ap.add_argument(
+        "--min_user_interactions",
+        type=int,
+        default=5,
+        help="Minimum interactions required per user before neural embedding "
+             "training.",
+    )
     ap.add_argument("--out_dir", required=True)
     args = ap.parse_args()
 
@@ -150,9 +158,39 @@ def main():
 
     set_global_seed(args.seed)
 
-    df = pd.read_csv(args.interactions)
+    df_raw = pd.read_csv(args.interactions)
+    raw_interactions = len(df_raw)
+    raw_users = df_raw["user_id"].nunique()
+    raw_items = df_raw["item_id"].nunique()
+
+    # Canonical k-core population: filter BEFORE encoding so the neural
+    # backbones train on exactly the population used by the main experiments.
+    df = filter_min_user_interactions(
+        df_raw,
+        min_user_interactions=args.min_user_interactions,
+    )
+    if df.empty:
+        raise SystemExit(
+            f"[{SCRIPT}] ERROR: no interactions remain after filtering with "
+            f"min_user_interactions={args.min_user_interactions}; refusing to "
+            f"train on an empty population.")
+
     u, i, user_cats, item_cats = _encode(df)
     n_users, n_items = len(user_cats), len(item_cats)
+    if n_users < 2 or n_items < 2:
+        raise SystemExit(
+            f"[{SCRIPT}] ERROR: filtered population is degenerate "
+            f"(users={n_users}, items={n_items}); need >= 2 users and "
+            f">= 2 items after min_user_interactions="
+            f"{args.min_user_interactions}.")
+
+    print(f"[{SCRIPT}] raw users={raw_users}")
+    print(f"[{SCRIPT}] raw items={raw_items}")
+    print(f"[{SCRIPT}] raw interactions={raw_interactions}")
+    print(f"[{SCRIPT}] filtered users={n_users}")
+    print(f"[{SCRIPT}] filtered items={n_items}")
+    print(f"[{SCRIPT}] filtered interactions={len(df)}")
+    print(f"[{SCRIPT}] min_user_interactions={args.min_user_interactions}")
     print(f"[{SCRIPT}] backbone={args.backbone} users={n_users} items={n_items} "
           f"interactions={len(df)}")
 
@@ -180,6 +218,10 @@ def main():
     meta = {
         "interactions": str(args.interactions),
         "embedding_backend": args.backbone,
+        "min_user_interactions": int(args.min_user_interactions),
+        "raw_n_users": int(raw_users),
+        "raw_n_items": int(raw_items),
+        "raw_n_interactions": int(raw_interactions),
         "n_users": int(n_users), "n_items": int(n_items),
         "n_interactions": int(len(df)),
         "dim": int(args.dim), "epochs": int(epochs), "lr": float(lr),
