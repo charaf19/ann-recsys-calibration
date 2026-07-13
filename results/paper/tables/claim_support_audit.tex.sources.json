@@ -2,11 +2,11 @@
   "artifact": "claim_support_audit.tex",
   "artifact_path": "results/paper/tables/claim_support_audit.tex",
   "config_hash": "12d2e2806429",
-  "generated_at_utc": "2026-07-13T07:59:23.686434+00:00",
-  "git_commit": "0f54626c567f37514b4e6283e8d76a9b9e44032c",
+  "generated_at_utc": "2026-07-13T11:23:49.009421+00:00",
+  "git_commit": "2ea972921390c7495f9c9a7c98f36e18b39e00fe",
   "script": "claim_support_audit",
   "source_file_hashes": {
-    "results/_meta/validation_report.json": "e47ecd463cffd079c7310b0943b4b3665541670ceedbf09d3c0e661d2fd528cc"
+    "results/_meta/validation_report.json": "cf2c940db84756e3e8c06131c9e749436cfadd1bda0364335504339004b09c42"
   },
   "source_paths": [
     "results/_meta/validation_report.json"
@@ -14,7 +14,7 @@
   "sources": [
     {
       "path": "results/_meta/validation_report.json",
-      "sha256": "e47ecd463cffd079c7310b0943b4b3665541670ceedbf09d3c0e661d2fd528cc"
+      "sha256": "cf2c940db84756e3e8c06131c9e749436cfadd1bda0364335504339004b09c42"
     }
   ]
 }
