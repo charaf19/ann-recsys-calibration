@@ -1,0 +1,20 @@
+{
+  "artifact": "embedding_backbone_sensitivity_summary.csv",
+  "artifact_path": "results/paper/tables/embedding_backbone_sensitivity_summary.csv",
+  "config_hash": "12d2e2806429",
+  "generated_at_utc": "2026-07-13T07:59:13.993430+00:00",
+  "git_commit": "0f54626c567f37514b4e6283e8d76a9b9e44032c",
+  "script": "tables_paper",
+  "source_file_hashes": {
+    "results/analyses/embedding_sensitivity/embedding_backbone_sensitivity_all.csv": "0dfc47f55d6f0f4693ff9ef4e177b6d3ff8ab0a79a614c6da3cc32a49d9b8075"
+  },
+  "source_paths": [
+    "results/analyses/embedding_sensitivity/embedding_backbone_sensitivity_all.csv"
+  ],
+  "sources": [
+    {
+      "path": "results/analyses/embedding_sensitivity/embedding_backbone_sensitivity_all.csv",
+      "sha256": "0dfc47f55d6f0f4693ff9ef4e177b6d3ff8ab0a79a614c6da3cc32a49d9b8075"
+    }
+  ]
+}

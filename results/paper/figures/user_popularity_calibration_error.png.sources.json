@@ -1,0 +1,20 @@
+{
+  "artifact": "user_popularity_calibration_error.png",
+  "artifact_path": "results/paper/figures/user_popularity_calibration_error.png",
+  "config_hash": "12d2e2806429",
+  "generated_at_utc": "2026-07-13T07:59:20.532423+00:00",
+  "git_commit": "0f54626c567f37514b4e6283e8d76a9b9e44032c",
+  "script": "figures_paper",
+  "source_file_hashes": {
+    "results/analyses/exposure/exposure_analysis_all.csv": "8a765399fb2fd76cadcd5b8c1e7b8de43a919866b70cad1a1895e51c00f26f87"
+  },
+  "source_paths": [
+    "results/analyses/exposure/exposure_analysis_all.csv"
+  ],
+  "sources": [
+    {
+      "path": "results/analyses/exposure/exposure_analysis_all.csv",
+      "sha256": "8a765399fb2fd76cadcd5b8c1e7b8de43a919866b70cad1a1895e51c00f26f87"
+    }
+  ]
+}

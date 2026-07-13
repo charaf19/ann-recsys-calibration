@@ -1,0 +1,20 @@
+{
+  "artifact": "fig_effect_sizes.png",
+  "artifact_path": "results/paper/figures/fig_effect_sizes.png",
+  "config_hash": "12d2e2806429",
+  "generated_at_utc": "2026-07-13T07:59:18.644643+00:00",
+  "git_commit": "0f54626c567f37514b4e6283e8d76a9b9e44032c",
+  "script": "figures_paper",
+  "source_file_hashes": {
+    "results/analyses/effect_sizes/effect_sizes.csv": "0e13ee1fbacb2c93eabe1815c1f71bf3ededbdcb050e0c40844e587b4c887b33"
+  },
+  "source_paths": [
+    "results/analyses/effect_sizes/effect_sizes.csv"
+  ],
+  "sources": [
+    {
+      "path": "results/analyses/effect_sizes/effect_sizes.csv",
+      "sha256": "0e13ee1fbacb2c93eabe1815c1f71bf3ededbdcb050e0c40844e587b4c887b33"
+    }
+  ]
+}

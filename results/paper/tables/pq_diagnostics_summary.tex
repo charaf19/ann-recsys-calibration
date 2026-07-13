@@ -1,0 +1,14 @@
+\begin{tabular}{llrlrrrrrrrrrrrrrlrrrrrr}
+\toprule
+dataset & weighting & dim & method & seed & reconstruction_error_rel_mean & norm_distortion_mean & pairwise_distance_distortion & neighbor_overlap_at_10 & neighbor_overlap_at_100 & score_variance_flat & score_variance_pq & score_variance_ratio & long_tail_exposure_flat & long_tail_exposure_pq & long_tail_exposure_shift & delta_ndcg_vs_flat & interpretation_label & nprobe_used & n_sample_vectors & n_sample_queries & corr_recon_error_vs_delta_ndcg & corr_neighbor_overlap_vs_delta_ndcg & corr_n_points \\
+\midrule
+amazon-books & bm25 & 128 & flatpq & 42 & 0.2621 & 0.0479 & 0.0489 & 0.6751 & 0.7432 & 0.0053 & 0.0039 & 0.7419 & 0.3100 & 0.3184 & 0.0084 & -0.0033 & compression_preserves_quality & -1 & 5000 & 1000 & -0.5714 & -0.4524 & 8 \\
+amazon-books & bm25 & 128 & ivfpq & 42 & 0.1971 & 0.0247 & 0.0266 & 0.5800 & 0.5621 & 0.0053 & 0.0064 & 1.2088 & 0.3100 & 0.3035 & -0.0065 & -0.0013 & compression_preserves_quality & 1 & 5000 & 1000 & -0.5714 & -0.4524 & 8 \\
+goodbooks & bm25 & 128 & flatpq & 42 & 0.2112 & 0.0294 & 0.0296 & 0.8700 & 0.9326 & 0.0603 & 0.0557 & 0.9237 & 0.1333 & 0.1387 & 0.0054 & -0.0030 & compression_preserves_quality & -1 & 5000 & 1000 & -0.5714 & -0.4524 & 8 \\
+goodbooks & bm25 & 128 & ivfpq & 42 & 0.1673 & 0.0176 & 0.0186 & 0.8060 & 0.6195 & 0.0603 & 0.0784 & 1.3013 & 0.1333 & 0.1410 & 0.0077 & -0.0023 & compression_preserves_quality & 1 & 5000 & 1000 & -0.5714 & -0.4524 & 8 \\
+ml-1m & bm25 & 128 & flatpq & 42 & 0.2471 & 0.0378 & 0.0388 & 0.8535 & 0.8693 & 0.0356 & 0.0308 & 0.8655 & 0.0959 & 0.1061 & 0.0102 & -0.0030 & compression_preserves_quality & -1 & 3533 & 1000 & -0.5714 & -0.4524 & 8 \\
+ml-1m & bm25 & 128 & ivfpq & 42 & 0.2100 & 0.0265 & 0.0280 & 0.6618 & 0.3692 & 0.0356 & 0.0711 & 1.9965 & 0.0959 & 0.1134 & 0.0175 & -0.0009 & compression_preserves_quality & 1 & 3533 & 1000 & -0.5714 & -0.4524 & 8 \\
+ml-20m & bm25 & 128 & flatpq & 42 & 0.2362 & 0.0344 & 0.0385 & 0.8166 & 0.8500 & 0.0156 & 0.0133 & 0.8551 & 0.2000 & 0.2085 & 0.0085 & -0.0001 & compression_preserves_quality & -1 & 5000 & 1000 & -0.5714 & -0.4524 & 8 \\
+ml-20m & bm25 & 128 & ivfpq & 42 & 0.1838 & 0.0228 & 0.0251 & 0.6314 & 0.4409 & 0.0156 & 0.0262 & 1.6772 & 0.2000 & 0.2071 & 0.0071 & 0.0006 & compression_preserves_quality & 1 & 5000 & 1000 & -0.5714 & -0.4524 & 8 \\
+\bottomrule
+\end{tabular}

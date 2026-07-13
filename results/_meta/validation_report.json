@@ -1,0 +1,1375 @@
+{
+  "contract_version": 3,
+  "manifest": "configs\\paper_evidence_manifest.yml",
+  "n_checks": 245,
+  "n_critical_failures": 0,
+  "n_failures": 0,
+  "n_optional_failures": 0,
+  "sections": {
+    "bootstrap": {
+      "associated_paper_evidence": [
+        "Paired statistical significance"
+      ],
+      "checks": [
+        {
+          "check": "cis_file_exists",
+          "detail": "results\\analyses\\bootstrap\\bootstrap_cis.csv",
+          "status": "pass"
+        },
+        {
+          "check": "tests_file_exists",
+          "detail": "results\\analyses\\bootstrap\\paired_tests.csv",
+          "status": "pass"
+        },
+        {
+          "check": "cis_required_columns",
+          "detail": "all present",
+          "status": "pass"
+        },
+        {
+          "check": "cis_no_duplicate_keys",
+          "detail": "0 rows have duplicate key ['dataset', 'weighting', 'dim', 'modality', 'method', 'metric', 'seed', 'n_boot']; sample=[]",
+          "status": "pass"
+        },
+        {
+          "check": "cis_weighting",
+          "detail": "weighting='bm25' on every row",
+          "status": "pass"
+        },
+        {
+          "check": "cis_dim",
+          "detail": "dim=128 on every row",
+          "status": "pass"
+        },
+        {
+          "check": "cis_seed",
+          "detail": "seed=42 on every row",
+          "status": "pass"
+        },
+        {
+          "check": "cis_n_boot",
+          "detail": "n_boot=2000 on every row",
+          "status": "pass"
+        },
+        {
+          "check": "cis_exact_grid",
+          "detail": "expected=280, actual=280, missing=0 sample_missing=[], unexpected=0 sample_unexpected=[]",
+          "status": "pass"
+        },
+        {
+          "check": "cis_expected_row_count",
+          "detail": "expected 280, found 280",
+          "status": "pass"
+        },
+        {
+          "check": "cis_no_nulls_mean",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "cis_no_nulls_ci_low",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "cis_no_nulls_ci_high",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "cis_no_nulls_n",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "cis_no_nulls_n_boot",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "tests_required_columns",
+          "detail": "all present",
+          "status": "pass"
+        },
+        {
+          "check": "tests_no_duplicate_keys",
+          "detail": "0 rows have duplicate key ['dataset', 'weighting', 'dim', 'modality', 'method', 'baseline', 'metric', 'seed', 'n_boot']; sample=[]",
+          "status": "pass"
+        },
+        {
+          "check": "tests_weighting",
+          "detail": "weighting='bm25' on every row",
+          "status": "pass"
+        },
+        {
+          "check": "tests_dim",
+          "detail": "dim=128 on every row",
+          "status": "pass"
+        },
+        {
+          "check": "tests_seed",
+          "detail": "seed=42 on every row",
+          "status": "pass"
+        },
+        {
+          "check": "tests_n_boot",
+          "detail": "n_boot=2000 on every row",
+          "status": "pass"
+        },
+        {
+          "check": "tests_exact_grid",
+          "detail": "expected=192, actual=192, missing=0 sample_missing=[], unexpected=0 sample_unexpected=[]",
+          "status": "pass"
+        },
+        {
+          "check": "tests_expected_row_count",
+          "detail": "expected 192, found 192",
+          "status": "pass"
+        },
+        {
+          "check": "tests_no_nulls_mean_diff",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "tests_no_nulls_ci_low",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "tests_no_nulls_ci_high",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "tests_no_nulls_p_value",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "tests_no_nulls_n",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "tests_no_nulls_n_boot",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "tests_flat_baseline",
+          "detail": "baseline='flat' on every row",
+          "status": "pass"
+        }
+      ],
+      "severity": "critical",
+      "status": "pass"
+    },
+    "calibration_sensitivity": {
+      "associated_paper_evidence": [
+        "Calibration-sensitivity analysis"
+      ],
+      "checks": [
+        {
+          "check": "file_exists",
+          "detail": "results\\analyses\\calibration_sensitivity\\calibration_sensitivity.csv",
+          "status": "pass"
+        },
+        {
+          "check": "required_columns",
+          "detail": "all present",
+          "status": "pass"
+        },
+        {
+          "check": "no_duplicate_keys",
+          "detail": "0 rows have duplicate key ['dataset', 'weighting', 'dim', 'modality', 'method', 'target_recall', 'seed']; sample=[]",
+          "status": "pass"
+        },
+        {
+          "check": "uniform_weighting",
+          "detail": "weighting='bm25' on every row",
+          "status": "pass"
+        },
+        {
+          "check": "uniform_dim",
+          "detail": "dim=128 on every row",
+          "status": "pass"
+        },
+        {
+          "check": "uniform_seed",
+          "detail": "seed=42 on every row",
+          "status": "pass"
+        },
+        {
+          "check": "exact_grid",
+          "detail": "expected=72, actual=72, missing=0 sample_missing=[], unexpected=0 sample_unexpected=[]",
+          "status": "pass"
+        },
+        {
+          "check": "expected_row_count",
+          "detail": "expected 72, found 72",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_target_reached",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_param_name",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_selected_param_value",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_achieved_recall_vs_exact",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_latency_p50_ms",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_latency_p95_ms",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_n_calibration_queries",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "boolean_target_reached",
+          "detail": "values=['false', 'true'], nulls=0",
+          "status": "pass"
+        },
+        {
+          "check": "uniform_n_calibration_queries",
+          "detail": "n_calibration_queries=1000 on every row",
+          "status": "pass"
+        }
+      ],
+      "severity": "critical",
+      "status": "pass"
+    },
+    "claim_support_audit": {
+      "associated_paper_evidence": [
+        "Claim-to-evidence traceability table"
+      ],
+      "checks": [
+        {
+          "check": "file_exists",
+          "detail": "results\\paper\\tables\\claim_support_audit.csv",
+          "status": "pass"
+        },
+        {
+          "check": "required_columns",
+          "detail": "all present",
+          "status": "pass"
+        },
+        {
+          "check": "no_duplicate_keys",
+          "detail": "0 rows have duplicate key ['claim_area']; sample=[]",
+          "status": "pass"
+        },
+        {
+          "check": "expected_row_count",
+          "detail": "expected 9, found 9",
+          "status": "pass"
+        },
+        {
+          "check": "boolean_evidence_supported",
+          "detail": "values=['false', 'true'], nulls=0",
+          "status": "pass"
+        }
+      ],
+      "severity": "optional",
+      "status": "pass"
+    },
+    "dataset_stats": {
+      "associated_paper_evidence": [
+        "Dataset statistics"
+      ],
+      "checks": [
+        {
+          "check": "file_exists",
+          "detail": "results\\paper\\tables\\dataset_stats.csv",
+          "status": "pass"
+        },
+        {
+          "check": "required_columns",
+          "detail": "all present",
+          "status": "pass"
+        },
+        {
+          "check": "no_duplicate_keys",
+          "detail": "0 rows have duplicate key ['dataset']; sample=[]",
+          "status": "pass"
+        },
+        {
+          "check": "exact_datasets",
+          "detail": "expected=['amazon-books', 'goodbooks', 'ml-1m', 'ml-20m'], found=['amazon-books', 'goodbooks', 'ml-1m', 'ml-20m']",
+          "status": "pass"
+        },
+        {
+          "check": "expected_row_count",
+          "detail": "expected 4, found 4",
+          "status": "pass"
+        },
+        {
+          "check": "required_value_min_user_interactions_filter",
+          "detail": "min_user_interactions_filter=5 on every row",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_users",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_items",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_interactions",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_density",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_inter_per_user_median",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_inter_per_user_p95",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_train_interactions",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_test_users",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_popularity_gini",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_min_user_interactions_filter",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        }
+      ],
+      "severity": "critical",
+      "status": "pass"
+    },
+    "decision_framework": {
+      "associated_paper_evidence": [
+        "ANN selection decision framework"
+      ],
+      "checks": [
+        {
+          "check": "file_exists",
+          "detail": "results\\analyses\\decision_framework\\ann_decision_framework_scores.csv",
+          "status": "pass"
+        },
+        {
+          "check": "required_columns",
+          "detail": "all present",
+          "status": "pass"
+        },
+        {
+          "check": "no_duplicate_keys",
+          "detail": "0 rows have duplicate key ['dataset', 'weighting', 'dim', 'modality', 'method', 'seed']; sample=[]",
+          "status": "pass"
+        },
+        {
+          "check": "uniform_weighting",
+          "detail": "weighting='bm25' on every row",
+          "status": "pass"
+        },
+        {
+          "check": "uniform_dim",
+          "detail": "dim=128 on every row",
+          "status": "pass"
+        },
+        {
+          "check": "uniform_seed",
+          "detail": "seed=42 on every row",
+          "status": "pass"
+        },
+        {
+          "check": "exact_grid",
+          "detail": "expected=40, actual=40, missing=0 sample_missing=[], unexpected=0 sample_unexpected=[]",
+          "status": "pass"
+        },
+        {
+          "check": "expected_row_count",
+          "detail": "expected 40, found 40",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_deployment_score",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_deployment_rank",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_recommended_use_case",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_recommendation_reason",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "required_value_w_quality",
+          "detail": "w_quality=0.45 on every row",
+          "status": "pass"
+        },
+        {
+          "check": "required_value_w_latency",
+          "detail": "w_latency=0.3 on every row",
+          "status": "pass"
+        },
+        {
+          "check": "required_value_w_memory",
+          "detail": "w_memory=0.15 on every row",
+          "status": "pass"
+        },
+        {
+          "check": "required_value_w_exposure",
+          "detail": "w_exposure=0.1 on every row",
+          "status": "pass"
+        }
+      ],
+      "severity": "critical",
+      "status": "pass"
+    },
+    "effect_sizes": {
+      "associated_paper_evidence": [
+        "Paired effect-size analysis"
+      ],
+      "checks": [
+        {
+          "check": "file_exists",
+          "detail": "results\\analyses\\effect_sizes\\effect_sizes.csv",
+          "status": "pass"
+        },
+        {
+          "check": "required_columns",
+          "detail": "all present",
+          "status": "pass"
+        },
+        {
+          "check": "no_duplicate_keys",
+          "detail": "0 rows have duplicate key ['dataset', 'weighting', 'dim', 'modality', 'method', 'baseline', 'metric', 'seed']; sample=[]",
+          "status": "pass"
+        },
+        {
+          "check": "uniform_weighting",
+          "detail": "weighting='bm25' on every row",
+          "status": "pass"
+        },
+        {
+          "check": "uniform_dim",
+          "detail": "dim=128 on every row",
+          "status": "pass"
+        },
+        {
+          "check": "uniform_seed",
+          "detail": "seed=42 on every row",
+          "status": "pass"
+        },
+        {
+          "check": "uniform_baseline",
+          "detail": "baseline='flat' on every row",
+          "status": "pass"
+        },
+        {
+          "check": "exact_grid",
+          "detail": "expected=192, actual=192, missing=0 sample_missing=[], unexpected=0 sample_unexpected=[]",
+          "status": "pass"
+        },
+        {
+          "check": "expected_row_count",
+          "detail": "expected 192, found 192",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_cohens_d",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_cliffs_delta",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_cohens_d_magnitude",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_cliffs_delta_magnitude",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_n",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        }
+      ],
+      "severity": "critical",
+      "status": "pass"
+    },
+    "embedding_sensitivity": {
+      "associated_paper_evidence": [
+        "Embedding-backbone sensitivity"
+      ],
+      "checks": [
+        {
+          "check": "file_exists",
+          "detail": "results\\analyses\\embedding_sensitivity\\embedding_backbone_sensitivity_all.csv",
+          "status": "pass"
+        },
+        {
+          "check": "required_columns",
+          "detail": "all present",
+          "status": "pass"
+        },
+        {
+          "check": "no_unexpected_backbones",
+          "detail": "unexpected=[]",
+          "status": "pass"
+        },
+        {
+          "check": "no_duplicate_keys",
+          "detail": "0 rows have duplicate key ['dataset', 'backbone', 'modality', 'method', 'dim', 'seed']; sample=[]",
+          "status": "pass"
+        },
+        {
+          "check": "exact_grid",
+          "detail": "expected=20, actual=20, missing=0 sample_missing=[], unexpected=0 sample_unexpected=[]",
+          "status": "pass"
+        },
+        {
+          "check": "expected_row_count",
+          "detail": "expected 20, found 20",
+          "status": "pass"
+        },
+        {
+          "check": "uniform_dim",
+          "detail": "dim=128 on every row",
+          "status": "pass"
+        },
+        {
+          "check": "uniform_seed",
+          "detail": "seed=42 on every row",
+          "status": "pass"
+        },
+        {
+          "check": "uniform_backend_available",
+          "detail": "backend_available=True on every row",
+          "status": "pass"
+        },
+        {
+          "check": "uniform_status",
+          "detail": "status='ok' on every row",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_ndcg_at_10",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_recall_at_10",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_ann_recall_vs_exact_at_k_mean",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "ranking_stability_reported",
+          "detail": "bpr_matrix_factorization:5, svd_bm25:5, svd_none:5, svd_tfidf:5 (values are not judged by sign)",
+          "status": "pass"
+        }
+      ],
+      "severity": "critical",
+      "status": "pass"
+    },
+    "exposure": {
+      "associated_paper_evidence": [
+        "Long-tail exposure and popularity-proxy analysis"
+      ],
+      "checks": [
+        {
+          "check": "file_exists",
+          "detail": "results\\analyses\\exposure\\exposure_analysis_all.csv",
+          "status": "pass"
+        },
+        {
+          "check": "required_columns",
+          "detail": "all present",
+          "status": "pass"
+        },
+        {
+          "check": "no_duplicate_keys",
+          "detail": "0 rows have duplicate key ['dataset', 'weighting', 'dim', 'modality', 'method', 'metric', 'k', 'decile', 'group', 'seed']; sample=[]",
+          "status": "pass"
+        },
+        {
+          "check": "uniform_weighting",
+          "detail": "weighting='bm25' on every row",
+          "status": "pass"
+        },
+        {
+          "check": "uniform_dim",
+          "detail": "dim=128 on every row",
+          "status": "pass"
+        },
+        {
+          "check": "uniform_seed",
+          "detail": "seed=42 on every row",
+          "status": "pass"
+        },
+        {
+          "check": "minimum_row_count",
+          "detail": "expected at least 840, found 840",
+          "status": "pass"
+        },
+        {
+          "check": "all_runs_present",
+          "detail": "expected=40, actual=40, missing=0 sample_missing=[], unexpected=0 sample_unexpected=[]",
+          "status": "pass"
+        },
+        {
+          "check": "required_metrics_per_run",
+          "detail": "expected=280, actual=280, missing=0 sample_missing=[], unexpected=0 sample_unexpected=[]",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_value",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_fairness_scope",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "scope_restricted_to_proxies",
+          "detail": "allowed=['long_tail_exposure_proxy_only', 'popularity_calibration_proxy', 'provider_proxy_if_metadata_available'], invalid=[]",
+          "status": "pass"
+        }
+      ],
+      "severity": "critical",
+      "status": "pass"
+    },
+    "hardware": {
+      "associated_paper_evidence": [
+        "CPU-only scope",
+        "Hardware provenance"
+      ],
+      "checks": [
+        {
+          "check": "file_exists",
+          "detail": "results\\_meta\\hardware.json",
+          "status": "pass"
+        },
+        {
+          "check": "required_fields",
+          "detail": "missing fields: []",
+          "status": "pass"
+        },
+        {
+          "check": "required_value_main_experiments_accelerator_used",
+          "detail": "expected=False, found=False",
+          "status": "pass"
+        },
+        {
+          "check": "accelerator_present_is_boolean",
+          "detail": "found=True",
+          "status": "pass"
+        },
+        {
+          "check": "no_gpu_execution_fields",
+          "detail": "forbidden fields present: []",
+          "status": "pass"
+        }
+      ],
+      "severity": "critical",
+      "status": "pass"
+    },
+    "main": {
+      "associated_paper_evidence": [
+        "Main quality and efficiency results",
+        "Larger-catalog generalization",
+        "U2I versus I2I comparison"
+      ],
+      "checks": [
+        {
+          "check": "file_exists",
+          "detail": "results\\main\\summary_main.csv",
+          "status": "pass"
+        },
+        {
+          "check": "run_config_file_exists",
+          "detail": "results\\main\\run_config.json",
+          "status": "pass"
+        },
+        {
+          "check": "run_config_weighting",
+          "detail": "expected weighting='bm25', found 'bm25'",
+          "status": "pass"
+        },
+        {
+          "check": "run_config_dim",
+          "detail": "expected dim=128, found 128",
+          "status": "pass"
+        },
+        {
+          "check": "run_config_seed",
+          "detail": "expected seed=42, found 42",
+          "status": "pass"
+        },
+        {
+          "check": "run_config_datasets_exact",
+          "detail": "expected=['ml-1m', 'ml-20m', 'goodbooks', 'amazon-books'], found=['ml-1m', 'ml-20m', 'goodbooks', 'amazon-books']",
+          "status": "pass"
+        },
+        {
+          "check": "run_config_modalities_exact",
+          "detail": "expected=['u2i', 'i2i'], found=['u2i', 'i2i']",
+          "status": "pass"
+        },
+        {
+          "check": "run_config_methods_exact",
+          "detail": "expected=['flat', 'hnsw', 'ivfflat', 'ivfpq', 'flatpq'], found=['flat', 'hnsw', 'ivfflat', 'ivfpq', 'flatpq']",
+          "status": "pass"
+        },
+        {
+          "check": "required_columns",
+          "detail": "all present",
+          "status": "pass"
+        },
+        {
+          "check": "no_duplicate_keys",
+          "detail": "0 rows have duplicate key ['dataset', 'weighting', 'dim', 'modality', 'method', 'seed']; sample=[]",
+          "status": "pass"
+        },
+        {
+          "check": "uniform_weighting",
+          "detail": "weighting='bm25' on every row",
+          "status": "pass"
+        },
+        {
+          "check": "uniform_dim",
+          "detail": "dim=128 on every row",
+          "status": "pass"
+        },
+        {
+          "check": "uniform_seed",
+          "detail": "seed=42 on every row",
+          "status": "pass"
+        },
+        {
+          "check": "exact_grid",
+          "detail": "expected=40, actual=40, missing=0 sample_missing=[], unexpected=0 sample_unexpected=[]",
+          "status": "pass"
+        },
+        {
+          "check": "expected_row_count",
+          "detail": "expected 40, found 40",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_queries",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_recall_at_k_mean",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_precision_at_k_mean",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_hr_at_k_mean",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_ndcg_at_k_mean",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_map_at_k_mean",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_mrr_at_k_mean",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_ann_recall_vs_exact_at_k_mean",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_recall_at_100_mean",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_ann_recall_vs_exact_at_100_mean",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_coverage_at_k",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_gini_exposure",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_long_tail_exposure",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_long_tail_uplift",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_latency_p50_ms",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_latency_p95_ms",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_gpu_columns",
+          "detail": "forbidden columns present: []",
+          "status": "pass"
+        }
+      ],
+      "severity": "critical",
+      "status": "pass"
+    },
+    "manifest_contract": {
+      "associated_paper_evidence": [
+        "Evidence-contract integrity"
+      ],
+      "checks": [
+        {
+          "check": "manifest_is_mapping",
+          "detail": "",
+          "status": "pass"
+        },
+        {
+          "check": "section_scope_status",
+          "detail": "status='critical'",
+          "status": "pass"
+        },
+        {
+          "check": "section_scope_paper_evidence",
+          "detail": "associated_paper_evidence=['CPU-only scope']",
+          "status": "pass"
+        },
+        {
+          "check": "section_main_status",
+          "detail": "status='critical'",
+          "status": "pass"
+        },
+        {
+          "check": "section_main_paper_evidence",
+          "detail": "associated_paper_evidence=['Main quality and efficiency results', 'Larger-catalog generalization', 'U2I versus I2I comparison']",
+          "status": "pass"
+        },
+        {
+          "check": "section_calibration_sensitivity_status",
+          "detail": "status='critical'",
+          "status": "pass"
+        },
+        {
+          "check": "section_calibration_sensitivity_paper_evidence",
+          "detail": "associated_paper_evidence=['Calibration-sensitivity analysis']",
+          "status": "pass"
+        },
+        {
+          "check": "section_embedding_sensitivity_status",
+          "detail": "status='critical'",
+          "status": "pass"
+        },
+        {
+          "check": "section_embedding_sensitivity_paper_evidence",
+          "detail": "associated_paper_evidence=['Embedding-backbone sensitivity']",
+          "status": "pass"
+        },
+        {
+          "check": "section_scale_stress_status",
+          "detail": "status='critical'",
+          "status": "pass"
+        },
+        {
+          "check": "section_scale_stress_paper_evidence",
+          "detail": "associated_paper_evidence=['Production-scale cost analysis']",
+          "status": "pass"
+        },
+        {
+          "check": "section_bootstrap_status",
+          "detail": "status='critical'",
+          "status": "pass"
+        },
+        {
+          "check": "section_bootstrap_paper_evidence",
+          "detail": "associated_paper_evidence=['Paired statistical significance']",
+          "status": "pass"
+        },
+        {
+          "check": "section_effect_sizes_status",
+          "detail": "status='critical'",
+          "status": "pass"
+        },
+        {
+          "check": "section_effect_sizes_paper_evidence",
+          "detail": "associated_paper_evidence=['Paired effect-size analysis']",
+          "status": "pass"
+        },
+        {
+          "check": "section_exposure_status",
+          "detail": "status='critical'",
+          "status": "pass"
+        },
+        {
+          "check": "section_exposure_paper_evidence",
+          "detail": "associated_paper_evidence=['Long-tail exposure and popularity-proxy analysis']",
+          "status": "pass"
+        },
+        {
+          "check": "section_pq_diagnostics_status",
+          "detail": "status='critical'",
+          "status": "pass"
+        },
+        {
+          "check": "section_pq_diagnostics_paper_evidence",
+          "detail": "associated_paper_evidence=['Product-quantization diagnostics']",
+          "status": "pass"
+        },
+        {
+          "check": "section_decision_framework_status",
+          "detail": "status='critical'",
+          "status": "pass"
+        },
+        {
+          "check": "section_decision_framework_paper_evidence",
+          "detail": "associated_paper_evidence=['ANN selection decision framework']",
+          "status": "pass"
+        },
+        {
+          "check": "section_dataset_stats_status",
+          "detail": "status='critical'",
+          "status": "pass"
+        },
+        {
+          "check": "section_dataset_stats_paper_evidence",
+          "detail": "associated_paper_evidence=['Dataset statistics']",
+          "status": "pass"
+        },
+        {
+          "check": "section_hardware_status",
+          "detail": "status='critical'",
+          "status": "pass"
+        },
+        {
+          "check": "section_hardware_paper_evidence",
+          "detail": "associated_paper_evidence=['CPU-only scope', 'Hardware provenance']",
+          "status": "pass"
+        },
+        {
+          "check": "section_run_manifest_status",
+          "detail": "status='critical'",
+          "status": "pass"
+        },
+        {
+          "check": "section_run_manifest_paper_evidence",
+          "detail": "associated_paper_evidence=['Full-run provenance', 'CPU-only scope']",
+          "status": "pass"
+        },
+        {
+          "check": "section_claim_support_audit_status",
+          "detail": "status='optional'",
+          "status": "pass"
+        },
+        {
+          "check": "section_claim_support_audit_paper_evidence",
+          "detail": "associated_paper_evidence=['Claim-to-evidence traceability table']",
+          "status": "pass"
+        }
+      ],
+      "severity": "critical",
+      "status": "pass"
+    },
+    "pq_diagnostics": {
+      "associated_paper_evidence": [
+        "Product-quantization diagnostics"
+      ],
+      "checks": [
+        {
+          "check": "file_exists",
+          "detail": "results\\analyses\\pq_diagnostics\\pq_diagnostics_all.csv",
+          "status": "pass"
+        },
+        {
+          "check": "required_columns",
+          "detail": "all present",
+          "status": "pass"
+        },
+        {
+          "check": "no_duplicate_keys",
+          "detail": "0 rows have duplicate key ['dataset', 'weighting', 'dim', 'method', 'metric', 'decile', 'seed']; sample=[]",
+          "status": "pass"
+        },
+        {
+          "check": "uniform_weighting",
+          "detail": "weighting='bm25' on every row",
+          "status": "pass"
+        },
+        {
+          "check": "uniform_dim",
+          "detail": "dim=128 on every row",
+          "status": "pass"
+        },
+        {
+          "check": "uniform_seed",
+          "detail": "seed=42 on every row",
+          "status": "pass"
+        },
+        {
+          "check": "minimum_row_count",
+          "detail": "expected at least 24, found 248",
+          "status": "pass"
+        },
+        {
+          "check": "required_diagnostics_per_dataset_method",
+          "detail": "expected=24, actual=24, missing=0 sample_missing=[], unexpected=0 sample_unexpected=[]",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_value",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        }
+      ],
+      "severity": "critical",
+      "status": "pass"
+    },
+    "run_manifest": {
+      "associated_paper_evidence": [
+        "Full-run provenance",
+        "CPU-only scope"
+      ],
+      "checks": [
+        {
+          "check": "file_exists",
+          "detail": "results\\_meta\\run_manifest.json",
+          "status": "pass"
+        },
+        {
+          "check": "required_fields",
+          "detail": "missing fields: []",
+          "status": "pass"
+        },
+        {
+          "check": "required_value_project",
+          "detail": "expected='IndexWise-Recsys', found='IndexWise-Recsys'",
+          "status": "pass"
+        },
+        {
+          "check": "required_value_status",
+          "detail": "expected='completed', found='completed'",
+          "status": "pass"
+        },
+        {
+          "check": "exact_datasets",
+          "detail": "expected=['ml-1m', 'ml-20m', 'goodbooks', 'amazon-books'], found=['ml-1m', 'ml-20m', 'goodbooks', 'amazon-books']",
+          "status": "pass"
+        },
+        {
+          "check": "exact_methods",
+          "detail": "expected=['flat', 'hnsw', 'ivfflat', 'ivfpq', 'flatpq'], found=['flat', 'hnsw', 'ivfflat', 'ivfpq', 'flatpq']",
+          "status": "pass"
+        },
+        {
+          "check": "exact_modalities",
+          "detail": "expected=['u2i', 'i2i'], found=['u2i', 'i2i']",
+          "status": "pass"
+        },
+        {
+          "check": "no_failed_combinations",
+          "detail": "failed_combinations=[]",
+          "status": "pass"
+        },
+        {
+          "check": "required_output_recorded",
+          "detail": "required='results/main/summary_main.csv', outputs=['results/main/run_config.json', 'results/main/summary_main.csv']",
+          "status": "pass"
+        },
+        {
+          "check": "resolved_configuration_mapping",
+          "detail": "type=dict",
+          "status": "pass"
+        },
+        {
+          "check": "resolved_project.name",
+          "detail": "expected='IndexWise-Recsys', found='IndexWise-Recsys'",
+          "status": "pass"
+        },
+        {
+          "check": "resolved_reproducibility.seed",
+          "detail": "expected=42, found=42",
+          "status": "pass"
+        },
+        {
+          "check": "resolved_embedding.weighting",
+          "detail": "expected='bm25', found='bm25'",
+          "status": "pass"
+        },
+        {
+          "check": "resolved_embedding.dim",
+          "detail": "expected=128, found=128",
+          "status": "pass"
+        },
+        {
+          "check": "resolved_hardware.cpu_only",
+          "detail": "expected=True, found=True",
+          "status": "pass"
+        },
+        {
+          "check": "resolved_datasets_exact",
+          "detail": "expected=['ml-1m', 'ml-20m', 'goodbooks', 'amazon-books'], found=['ml-1m', 'ml-20m', 'goodbooks', 'amazon-books']",
+          "status": "pass"
+        },
+        {
+          "check": "resolved_retrieval.methods_exact",
+          "detail": "expected=['flat', 'hnsw', 'ivfflat', 'ivfpq', 'flatpq'], found=['flat', 'hnsw', 'ivfflat', 'ivfpq', 'flatpq']",
+          "status": "pass"
+        },
+        {
+          "check": "resolved_retrieval.modalities_exact",
+          "detail": "expected=['u2i', 'i2i'], found=['u2i', 'i2i']",
+          "status": "pass"
+        },
+        {
+          "check": "configuration_hash_matches",
+          "detail": "expected=12d2e2806429, found=12d2e2806429",
+          "status": "pass"
+        },
+        {
+          "check": "run_id_contains_config_hash",
+          "detail": "run_id='20260712T173025Z__12d2e2806429'",
+          "status": "pass"
+        },
+        {
+          "check": "started_at_utc_populated",
+          "detail": "found='2026-07-12T17:30:25.517021+00:00'",
+          "status": "pass"
+        },
+        {
+          "check": "finished_at_utc_populated",
+          "detail": "found='2026-07-12T17:50:46.213827+00:00'",
+          "status": "pass"
+        },
+        {
+          "check": "git_commit_populated",
+          "detail": "found='fdcf37d2f4bc1c75ea30916730e4e218c0a9d0d8'",
+          "status": "pass"
+        },
+        {
+          "check": "python_version_populated",
+          "detail": "found='3.11.0 (main, Oct 24 2022, 18:26:48) [MSC v.1933 64 bit (AMD64)]'",
+          "status": "pass"
+        },
+        {
+          "check": "manifest_declares_cpu_only",
+          "detail": "main_experiments_accelerator_used=False",
+          "status": "pass"
+        },
+        {
+          "check": "no_gpu_execution_fields",
+          "detail": "forbidden fields present: []",
+          "status": "pass"
+        }
+      ],
+      "severity": "critical",
+      "status": "pass"
+    },
+    "scale_stress": {
+      "associated_paper_evidence": [
+        "Production-scale cost analysis"
+      ],
+      "checks": [
+        {
+          "check": "file_exists",
+          "detail": "results\\analyses\\scale_stress\\scale_stress_all.csv",
+          "status": "pass"
+        },
+        {
+          "check": "required_columns",
+          "detail": "all present",
+          "status": "pass"
+        },
+        {
+          "check": "no_duplicate_keys",
+          "detail": "0 rows have duplicate key ['n_items', 'dim', 'method', 'seed']; sample=[]",
+          "status": "pass"
+        },
+        {
+          "check": "uniform_seed",
+          "detail": "seed=42 on every row",
+          "status": "pass"
+        },
+        {
+          "check": "exact_grid",
+          "detail": "expected=20, actual=20, missing=0 sample_missing=[], unexpected=0 sample_unexpected=[]",
+          "status": "pass"
+        },
+        {
+          "check": "expected_row_count",
+          "detail": "expected 20, found 20",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_build_wall_time_sec",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_index_size_mb",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_rss_mb_after",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_target_reached",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_achieved_recall_vs_exact",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_latency_p50_ms",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "no_nulls_latency_p95_ms",
+          "detail": "0 null value(s)",
+          "status": "pass"
+        },
+        {
+          "check": "boolean_target_reached",
+          "detail": "values=['false', 'true'], nulls=0",
+          "status": "pass"
+        },
+        {
+          "check": "required_value_quality_measured",
+          "detail": "quality_measured=False on every row",
+          "status": "pass"
+        },
+        {
+          "check": "no_synthetic_recommendation_quality",
+          "detail": "quality columns containing values: []",
+          "status": "pass"
+        }
+      ],
+      "severity": "critical",
+      "status": "pass"
+    },
+    "scope": {
+      "associated_paper_evidence": [
+        "CPU-only scope"
+      ],
+      "checks": [
+        {
+          "check": "cpu_only_contract",
+          "detail": "cpu_only=True",
+          "status": "pass"
+        },
+        {
+          "check": "forbidden_path_absent:results/gpu_experiments",
+          "detail": "forbidden result path absent: results\\gpu_experiments",
+          "status": "pass"
+        },
+        {
+          "check": "forbidden_path_absent:results/analyses/gpu_experiments",
+          "detail": "forbidden result path absent: results\\analyses\\gpu_experiments",
+          "status": "pass"
+        },
+        {
+          "check": "no_gpu_columns_in_canonical_csvs",
+          "detail": "none found",
+          "status": "pass"
+        }
+      ],
+      "severity": "critical",
+      "status": "pass"
+    }
+  },
+  "valid": true
+}

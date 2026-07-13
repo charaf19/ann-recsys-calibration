@@ -1,0 +1,5 @@
+dataset,backbone,ndcg_at_10_best,ann_ranking_stability,backend_available,n_methods
+ml-1m,bpr_matrix_factorization,0.0338087167777334,-0.2294157338705617,True,5
+ml-1m,svd_bm25,0.0487619590968895,1.0,True,5
+ml-1m,svd_none,0.0371690857312726,0.2294157338705617,True,5
+ml-1m,svd_tfidf,0.0422165746812501,0.9176629354822472,True,5

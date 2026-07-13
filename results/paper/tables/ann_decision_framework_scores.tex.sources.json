@@ -1,0 +1,20 @@
+{
+  "artifact": "ann_decision_framework_scores.tex",
+  "artifact_path": "results/paper/tables/ann_decision_framework_scores.tex",
+  "config_hash": "12d2e2806429",
+  "generated_at_utc": "2026-07-13T07:59:14.410578+00:00",
+  "git_commit": "0f54626c567f37514b4e6283e8d76a9b9e44032c",
+  "script": "tables_paper",
+  "source_file_hashes": {
+    "results/analyses/decision_framework/ann_decision_framework_scores.csv": "d397a03e05eee6c573c42e6e77f755a725b918a011c0ac6c03fe0212585e437f"
+  },
+  "source_paths": [
+    "results/analyses/decision_framework/ann_decision_framework_scores.csv"
+  ],
+  "sources": [
+    {
+      "path": "results/analyses/decision_framework/ann_decision_framework_scores.csv",
+      "sha256": "d397a03e05eee6c573c42e6e77f755a725b918a011c0ac6c03fe0212585e437f"
+    }
+  ]
+}

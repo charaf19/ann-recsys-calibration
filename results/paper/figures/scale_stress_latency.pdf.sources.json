@@ -1,0 +1,20 @@
+{
+  "artifact": "scale_stress_latency.pdf",
+  "artifact_path": "results/paper/figures/scale_stress_latency.pdf",
+  "config_hash": "12d2e2806429",
+  "generated_at_utc": "2026-07-13T07:59:21.571883+00:00",
+  "git_commit": "0f54626c567f37514b4e6283e8d76a9b9e44032c",
+  "script": "figures_paper",
+  "source_file_hashes": {
+    "results/analyses/scale_stress/scale_stress_all.csv": "c3a944ab3e0b0f9651ae1652dd62d7127aeab2f7cafb8a460ba09bd1d9191bf3"
+  },
+  "source_paths": [
+    "results/analyses/scale_stress/scale_stress_all.csv"
+  ],
+  "sources": [
+    {
+      "path": "results/analyses/scale_stress/scale_stress_all.csv",
+      "sha256": "c3a944ab3e0b0f9651ae1652dd62d7127aeab2f7cafb8a460ba09bd1d9191bf3"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "artifact": "pq_popularity_decile_effect.pdf",
+  "artifact_path": "results/paper/figures/pq_popularity_decile_effect.pdf",
+  "config_hash": "12d2e2806429",
+  "generated_at_utc": "2026-07-13T07:59:19.750168+00:00",
+  "git_commit": "0f54626c567f37514b4e6283e8d76a9b9e44032c",
+  "script": "figures_paper",
+  "source_file_hashes": {
+    "results/analyses/pq_diagnostics/pq_diagnostics_all.csv": "c005fb07f36d7e797fbb69a5096372e0bc98e3e60aec9263409d52d018ddb701"
+  },
+  "source_paths": [
+    "results/analyses/pq_diagnostics/pq_diagnostics_all.csv"
+  ],
+  "sources": [
+    {
+      "path": "results/analyses/pq_diagnostics/pq_diagnostics_all.csv",
+      "sha256": "c005fb07f36d7e797fbb69a5096372e0bc98e3e60aec9263409d52d018ddb701"
+    }
+  ]
+}

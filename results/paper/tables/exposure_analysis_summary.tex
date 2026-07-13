@@ -1,0 +1,46 @@
+\begin{tabular}{llllrrrrrrrrl}
+\toprule
+dataset & weighting & modality & method & coverage_at_10 & coverage_at_100 & gini_exposure_at_10 & gini_exposure_at_100 & long_tail_exposure_at_10 & long_tail_exposure_at_100 & long_tail_uplift_at_10 & user_popularity_calibration_error_at_10 & fairness_scope \\
+\midrule
+amazon-books & bm25 & i2i & flat & 0.1698 & 0.6218 & 0.8828 & 0.7047 & 0.2822 & 0.3019 & 0.2141 & 1.4723 & not_full_fairness_evaluation \\
+amazon-books & bm25 & i2i & flatpq & 0.1665 & 0.5951 & 0.8867 & 0.7251 & 0.2929 & 0.3147 & 0.2248 & 1.4863 & not_full_fairness_evaluation \\
+amazon-books & bm25 & i2i & hnsw & 0.1695 & 0.6115 & 0.8831 & 0.7100 & 0.2827 & 0.3035 & 0.2145 & 1.4750 & not_full_fairness_evaluation \\
+amazon-books & bm25 & i2i & ivfflat & 0.1692 & 0.6087 & 0.8834 & 0.7118 & 0.2821 & 0.3021 & 0.2140 & 1.4708 & not_full_fairness_evaluation \\
+amazon-books & bm25 & i2i & ivfpq & 0.1700 & 0.6394 & 0.8827 & 0.6942 & 0.2813 & 0.2988 & 0.2132 & 1.4749 & not_full_fairness_evaluation \\
+amazon-books & bm25 & u2i & flat & 0.1498 & 0.5277 & 0.9044 & 0.7790 & 0.2358 & 0.2647 & 0.1676 & 1.3428 & not_full_fairness_evaluation \\
+amazon-books & bm25 & u2i & flatpq & 0.1241 & 0.4601 & 0.9306 & 0.8173 & 0.2709 & 0.2922 & 0.2027 & 1.3760 & not_full_fairness_evaluation \\
+amazon-books & bm25 & u2i & hnsw & 0.1491 & 0.5192 & 0.9051 & 0.7833 & 0.2378 & 0.2671 & 0.1696 & 1.3492 & not_full_fairness_evaluation \\
+amazon-books & bm25 & u2i & ivfflat & 0.1495 & 0.5219 & 0.9048 & 0.7816 & 0.2361 & 0.2648 & 0.1680 & 1.3422 & not_full_fairness_evaluation \\
+amazon-books & bm25 & u2i & ivfpq & 0.1445 & 0.5403 & 0.9106 & 0.7750 & 0.2332 & 0.2552 & 0.1651 & 1.3329 & not_full_fairness_evaluation \\
+goodbooks & bm25 & i2i & flat & 0.9124 & 0.9997 & 0.5708 & 0.4146 & 0.0964 & 0.1703 & 0.0613 & 1.5104 & not_full_fairness_evaluation \\
+goodbooks & bm25 & i2i & flatpq & 0.9093 & 0.9999 & 0.5707 & 0.4134 & 0.1029 & 0.1779 & 0.0678 & 1.5403 & not_full_fairness_evaluation \\
+goodbooks & bm25 & i2i & hnsw & 0.9124 & 0.9997 & 0.5708 & 0.4163 & 0.0963 & 0.1708 & 0.0612 & 1.5104 & not_full_fairness_evaluation \\
+goodbooks & bm25 & i2i & ivfflat & 0.9116 & 0.9995 & 0.5709 & 0.4167 & 0.0962 & 0.1699 & 0.0611 & 1.5109 & not_full_fairness_evaluation \\
+goodbooks & bm25 & i2i & ivfpq & 0.9134 & 0.9999 & 0.5689 & 0.4117 & 0.1011 & 0.1769 & 0.0660 & 1.5200 & not_full_fairness_evaluation \\
+goodbooks & bm25 & u2i & flat & 0.6758 & 0.9823 & 0.8307 & 0.6591 & 0.0576 & 0.1034 & 0.0225 & 0.8190 & not_full_fairness_evaluation \\
+goodbooks & bm25 & u2i & flatpq & 0.6009 & 0.9724 & 0.8700 & 0.6929 & 0.0815 & 0.1266 & 0.0464 & 0.8592 & not_full_fairness_evaluation \\
+goodbooks & bm25 & u2i & hnsw & 0.6752 & 0.9795 & 0.8311 & 0.6611 & 0.0575 & 0.1053 & 0.0224 & 0.8198 & not_full_fairness_evaluation \\
+goodbooks & bm25 & u2i & ivfflat & 0.6770 & 0.9827 & 0.8304 & 0.6579 & 0.0580 & 0.1050 & 0.0229 & 0.8196 & not_full_fairness_evaluation \\
+goodbooks & bm25 & u2i & ivfpq & 0.6327 & 0.9768 & 0.8493 & 0.6915 & 0.0887 & 0.1363 & 0.0536 & 0.8121 & not_full_fairness_evaluation \\
+ml-1m & bm25 & i2i & flat & 0.7968 & 0.9949 & 0.6779 & 0.5276 & 0.0166 & 0.0384 & 0.0111 & 0.9121 & not_full_fairness_evaluation \\
+ml-1m & bm25 & i2i & flatpq & 0.8058 & 0.9963 & 0.6781 & 0.5248 & 0.0202 & 0.0469 & 0.0147 & 0.9205 & not_full_fairness_evaluation \\
+ml-1m & bm25 & i2i & hnsw & 0.7968 & 0.9946 & 0.6779 & 0.5272 & 0.0166 & 0.0385 & 0.0111 & 0.9121 & not_full_fairness_evaluation \\
+ml-1m & bm25 & i2i & ivfflat & 0.7965 & 0.9943 & 0.6785 & 0.5318 & 0.0166 & 0.0383 & 0.0111 & 0.9130 & not_full_fairness_evaluation \\
+ml-1m & bm25 & i2i & ivfpq & 0.8087 & 0.9980 & 0.6715 & 0.5139 & 0.0190 & 0.0470 & 0.0135 & 0.9194 & not_full_fairness_evaluation \\
+ml-1m & bm25 & u2i & flat & 0.4073 & 0.8024 & 0.9464 & 0.8639 & 0.0007 & 0.0018 & -0.0048 & 0.6243 & not_full_fairness_evaluation \\
+ml-1m & bm25 & u2i & flatpq & 0.3674 & 0.8075 & 0.9606 & 0.8748 & 0.0010 & 0.0027 & -0.0045 & 0.6335 & not_full_fairness_evaluation \\
+ml-1m & bm25 & u2i & hnsw & 0.4073 & 0.8084 & 0.9464 & 0.8628 & 0.0007 & 0.0019 & -0.0048 & 0.6245 & not_full_fairness_evaluation \\
+ml-1m & bm25 & u2i & ivfflat & 0.4067 & 0.8016 & 0.9464 & 0.8646 & 0.0007 & 0.0018 & -0.0048 & 0.6245 & not_full_fairness_evaluation \\
+ml-1m & bm25 & u2i & ivfpq & 0.4152 & 0.8324 & 0.9431 & 0.8599 & 0.0007 & 0.0027 & -0.0048 & 0.5690 & not_full_fairness_evaluation \\
+ml-20m & bm25 & i2i & flat & 0.3467 & 0.6638 & 0.8873 & 0.7971 & 0.0028 & 0.0080 & 0.0022 & 1.5063 & not_full_fairness_evaluation \\
+ml-20m & bm25 & i2i & flatpq & 0.3465 & 0.6827 & 0.8887 & 0.7965 & 0.0033 & 0.0104 & 0.0027 & 1.5051 & not_full_fairness_evaluation \\
+ml-20m & bm25 & i2i & hnsw & 0.3466 & 0.6591 & 0.8874 & 0.7987 & 0.0030 & 0.0079 & 0.0024 & 1.5059 & not_full_fairness_evaluation \\
+ml-20m & bm25 & i2i & ivfflat & 0.3462 & 0.6607 & 0.8879 & 0.8012 & 0.0030 & 0.0079 & 0.0024 & 1.5038 & not_full_fairness_evaluation \\
+ml-20m & bm25 & i2i & ivfpq & 0.3473 & 0.6853 & 0.8882 & 0.7972 & 0.0035 & 0.0111 & 0.0029 & 1.4864 & not_full_fairness_evaluation \\
+ml-20m & bm25 & u2i & flat & 0.2030 & 0.4508 & 0.9663 & 0.9215 & 0.0000 & 0.0001 & -0.0006 & 0.6212 & not_full_fairness_evaluation \\
+ml-20m & bm25 & u2i & flatpq & 0.1676 & 0.4446 & 0.9786 & 0.9360 & 0.0001 & 0.0003 & -0.0004 & 0.6278 & not_full_fairness_evaluation \\
+ml-20m & bm25 & u2i & hnsw & 0.2032 & 0.4552 & 0.9662 & 0.9212 & 0.0000 & 0.0001 & -0.0006 & 0.6227 & not_full_fairness_evaluation \\
+ml-20m & bm25 & u2i & ivfflat & 0.2038 & 0.4536 & 0.9664 & 0.9225 & 0.0000 & 0.0001 & -0.0006 & 0.6202 & not_full_fairness_evaluation \\
+ml-20m & bm25 & u2i & ivfpq & 0.1776 & 0.4629 & 0.9745 & 0.9372 & 0.0001 & 0.0004 & -0.0005 & 0.4873 & not_full_fairness_evaluation \\
+\bottomrule
+\end{tabular}

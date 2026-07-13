@@ -1,0 +1,20 @@
+{
+  "artifact": "fig_calibration_sensitivity.pdf",
+  "artifact_path": "results/paper/figures/fig_calibration_sensitivity.pdf",
+  "config_hash": "12d2e2806429",
+  "generated_at_utc": "2026-07-13T07:59:18.237316+00:00",
+  "git_commit": "0f54626c567f37514b4e6283e8d76a9b9e44032c",
+  "script": "figures_paper",
+  "source_file_hashes": {
+    "results/analyses/calibration_sensitivity/calibration_sensitivity.csv": "372fb78deeafda0ad2d2903b311dd87a5b684f27230163ea0afd994ea0a3f420"
+  },
+  "source_paths": [
+    "results/analyses/calibration_sensitivity/calibration_sensitivity.csv"
+  ],
+  "sources": [
+    {
+      "path": "results/analyses/calibration_sensitivity/calibration_sensitivity.csv",
+      "sha256": "372fb78deeafda0ad2d2903b311dd87a5b684f27230163ea0afd994ea0a3f420"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "artifact": "pq_neighbor_overlap_vs_quality_delta.png",
+  "artifact_path": "results/paper/figures/pq_neighbor_overlap_vs_quality_delta.png",
+  "config_hash": "12d2e2806429",
+  "generated_at_utc": "2026-07-13T07:59:19.299227+00:00",
+  "git_commit": "0f54626c567f37514b4e6283e8d76a9b9e44032c",
+  "script": "figures_paper",
+  "source_file_hashes": {
+    "results/analyses/pq_diagnostics/pq_diagnostics_summary.csv": "c94828d50a0c620cf88447f2c688b334dd025de09b4847149bc8190c2a4d8107"
+  },
+  "source_paths": [
+    "results/analyses/pq_diagnostics/pq_diagnostics_summary.csv"
+  ],
+  "sources": [
+    {
+      "path": "results/analyses/pq_diagnostics/pq_diagnostics_summary.csv",
+      "sha256": "c94828d50a0c620cf88447f2c688b334dd025de09b4847149bc8190c2a4d8107"
+    }
+  ]
+}

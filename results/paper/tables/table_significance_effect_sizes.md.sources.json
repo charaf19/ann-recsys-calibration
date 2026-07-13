@@ -1,0 +1,26 @@
+{
+  "artifact": "table_significance_effect_sizes.md",
+  "artifact_path": "results/paper/tables/table_significance_effect_sizes.md",
+  "config_hash": "12d2e2806429",
+  "generated_at_utc": "2026-07-13T07:59:13.926976+00:00",
+  "git_commit": "0f54626c567f37514b4e6283e8d76a9b9e44032c",
+  "script": "tables_paper",
+  "source_file_hashes": {
+    "results/analyses/bootstrap/paired_tests.csv": "7c9fee0481dcf3c2d25745c3eaf814ff4742ba7aaad8e873bcd4d694a2020476",
+    "results/analyses/effect_sizes/effect_sizes.csv": "0e13ee1fbacb2c93eabe1815c1f71bf3ededbdcb050e0c40844e587b4c887b33"
+  },
+  "source_paths": [
+    "results/analyses/bootstrap/paired_tests.csv",
+    "results/analyses/effect_sizes/effect_sizes.csv"
+  ],
+  "sources": [
+    {
+      "path": "results/analyses/bootstrap/paired_tests.csv",
+      "sha256": "7c9fee0481dcf3c2d25745c3eaf814ff4742ba7aaad8e873bcd4d694a2020476"
+    },
+    {
+      "path": "results/analyses/effect_sizes/effect_sizes.csv",
+      "sha256": "0e13ee1fbacb2c93eabe1815c1f71bf3ededbdcb050e0c40844e587b4c887b33"
+    }
+  ]
+}
